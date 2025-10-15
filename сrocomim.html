@@ -145,8 +145,31 @@
     }
     .select{ width:100% }
     .chip{
-      padding:8px 12px;border-radius:999px;
-      background:#22304a;border:1px solid rgba(255,255,255,.06);color:#cbd5e1
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:8px 12px;
+      border-radius:999px;
+      background:#22304a;
+      border:1px solid rgba(255,255,255,.06);
+      color:#cbd5e1;
+    }
+    .chip input[type="checkbox"]{ margin-right:6px; accent-color:var(--accent); }
+    .chip.check-only{
+      width:44px;
+      height:44px;
+      padding:0;
+      justify-content:center;
+    }
+    .chip.check-only input[type="checkbox"]{
+      margin-right:0;
+      width:20px;
+      height:20px;
+    }
+    .pts-controls{
+      display:flex;
+      align-items:center;
+      gap:12px;
     }
 
     /* Word card */
@@ -174,30 +197,31 @@
     }
     .team-grid{
       display:grid;
-      gap:16px;
-      grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+      gap:10px;
+      grid-template-columns:repeat(auto-fit, minmax(90px, 1fr));
     }
     .team-card{
+      padding:10px;
       display:flex;
       flex-direction:column;
       align-items:center;
-      gap:12px;
+      gap:8px;
       text-align:center;
     }
     .team-card-top{
       display:flex;
       flex-direction:column;
       align-items:center;
-      gap:8px;
+      gap:6px;
     }
     .team-avatar{
-      width:96px;
-      height:96px;
+      width:64px;
+      height:64px;
       border-radius:20px;
       display:flex;
       align-items:center;
       justify-content:center;
-      font-size:42px;
+      font-size:28px;
       background-size:cover;
       background-position:center;
       color:#0b0b0b;
@@ -206,40 +230,34 @@
       pointer-events:none;
     }
     .team-avatar span{ filter:drop-shadow(0 2px 4px rgba(0,0,0,.45)); }
-    .team-label{
-      font-size:13px;
-      font-weight:600;
-      text-transform:uppercase;
-      letter-spacing:.4px;
-      color:var(--muted);
-    }
     .team-body{
       width:100%;
       display:flex;
-      justify-content:space-between;
+      flex-direction:column;
       align-items:center;
-      gap:10px;
+      gap:6px;
     }
     .team-name{
-      font-size:18px;
+      font-size:14px;
       font-weight:700;
       color:var(--text-strong);
-      text-align:left;
+      text-align:center;
+      word-break:break-word;
     }
     .team-delete{
-      width:42px;
-      height:42px;
+      width:32px;
+      height:32px;
       border-radius:12px;
-      border:1px solid rgba(255,255,255,.08);
-      background:var(--panel-2);
-      color:var(--text);
+      border:1px solid rgba(239,68,68,.35);
+      background:rgba(239,68,68,.18);
+      color:#fecaca;
       display:flex;
       align-items:center;
       justify-content:center;
       cursor:pointer;
       transition:background .2s ease, transform .1s ease;
     }
-    .team-delete:hover{ background:#1f2a41; }
+    .team-delete:hover{ background:rgba(239,68,68,.28); }
     .team-delete:active{ transform:scale(.95); }
     .team-chip{ display:flex; align-items:center; gap:8px; }
     .team-chip-icon{ font-size:20px; line-height:1; }
@@ -305,23 +323,27 @@
 
         <div class="menu-block">
           <div class="menu-block-title">Таймер</div>
-          <div class="row" style="gap:12px; flex-wrap:wrap; align-items:center">
-            <label class="chip"><input type="checkbox" id="quickTimerToggle"> С таймером</label>
-            <button class="btn ghost" id="quickTimeMinus">− 30с</button>
-            <div class="chip" id="quickTimeLabel">60 c</div>
-            <button class="btn ghost" id="quickTimePlus">+ 30с</button>
+          <div class="row" style="gap:12px; align-items:center; flex-wrap:nowrap; overflow-x:auto">
+            <label class="chip check-only" title="Таймер">
+              <input type="checkbox" id="quickTimerToggle" aria-label="Включить таймер">
+            </label>
+            <button class="btn ghost" id="quickTimeMinus" title="−30 секунд">−</button>
+            <div class="chip" id="quickTimeLabel">60 с</div>
+            <button class="btn ghost" id="quickTimePlus" title="+30 секунд">+</button>
           </div>
           <div class="muted" style="margin-top:8px">Шаг изменения времени: <span class="kbd">30с</span></div>
         </div>
 
         <div class="menu-block">
-          <div class="menu-block-title">Очки</div>
-          <div class="row" style="gap:12px; flex-wrap:wrap; align-items:center">
-            <label class="chip"><input type="checkbox" id="quickPtsToggle"> Очки до победы</label>
-            <div class="row" id="quickPtsControls" style="gap:12px; display:none">
-              <button class="btn ghost" id="quickPtsMinus">−</button>
+          <div class="menu-block-title">Очки до победы</div>
+          <div class="row" style="gap:12px; align-items:center; flex-wrap:nowrap; overflow-x:auto">
+            <label class="chip check-only" title="Очки до победы">
+              <input type="checkbox" id="quickPtsToggle" aria-label="Включить очки до победы">
+            </label>
+            <div class="pts-controls" id="quickPtsControls" style="display:none">
+              <button class="btn ghost" id="quickPtsMinus" title="Минус одно очко">−</button>
               <div class="chip" id="quickPtsLabel">10</div>
-              <button class="btn ghost" id="quickPtsPlus">+</button>
+              <button class="btn ghost" id="quickPtsPlus" title="Плюс одно очко">+</button>
             </div>
           </div>
         </div>
@@ -390,18 +412,22 @@
     <div class="section">
       <h2>Таймер и очки до победы</h2>
       <div class="stack">
-        <div class="row">
-          <label class="chip"><input type="checkbox" id="teamTimerToggle"> С таймером</label>
-          <button class="btn ghost" id="teamTimeMinus">− 30с</button>
-          <div class="chip" id="teamTimeLabel">60 c</div>
-          <button class="btn ghost" id="teamTimePlus">+ 30с</button>
+        <div class="row" style="gap:12px; align-items:center; flex-wrap:nowrap; overflow-x:auto">
+          <label class="chip check-only" title="Таймер">
+            <input type="checkbox" id="teamTimerToggle" aria-label="Включить таймер">
+          </label>
+          <button class="btn ghost" id="teamTimeMinus" title="−30 секунд">−</button>
+          <div class="chip" id="teamTimeLabel">60 с</div>
+          <button class="btn ghost" id="teamTimePlus" title="+30 секунд">+</button>
         </div>
-        <div class="row" style="flex-wrap:wrap; align-items:center; gap:12px">
-          <label class="chip"><input type="checkbox" id="teamPtsToggle" checked> Очки до победы</label>
-          <div class="row" id="ptsControls">
-            <button class="btn ghost" id="ptsMinus">−</button>
+        <div class="row" style="gap:12px; align-items:center; flex-wrap:nowrap; overflow-x:auto">
+          <label class="chip check-only" title="Очки до победы">
+            <input type="checkbox" id="teamPtsToggle" checked aria-label="Включить очки до победы">
+          </label>
+          <div class="pts-controls" id="ptsControls">
+            <button class="btn ghost" id="ptsMinus" title="Минус одно очко">−</button>
             <div class="chip" id="ptsLabel">10</div>
-            <button class="btn ghost" id="ptsPlus">+</button>
+            <button class="btn ghost" id="ptsPlus" title="Плюс одно очко">+</button>
           </div>
         </div>
       </div>
@@ -564,7 +590,7 @@
     ptsLabel: $('#quickPtsLabel'),
     start: $('#startQuick')
   };
-  const upQuickTime = () => qs.timeLabel.textContent = qs.time+' c';
+  const upQuickTime = () => qs.timeLabel.textContent = qs.time+' с';
   const upQuickPts = () => qs.ptsLabel.textContent = qs.pts;
   upQuickTime();
   upQuickPts();
@@ -707,7 +733,6 @@
           <div class="team-avatar" style="background:${iconDef.bg};color:${iconDef.color}">
             <span>${iconDef.emoji}</span>
           </div>
-          <div class="team-label">Имя команды</div>
         </div>
         <div class="team-body">
           <div class="team-name">${escapeHtml(team.name)}</div>
@@ -760,7 +785,7 @@
     ptsControls: $('#ptsControls'),
     pts: 10, ptsMinus: $('#ptsMinus'), ptsPlus: $('#ptsPlus'), ptsLabel: $('#ptsLabel')
   };
-  const upTeamTime = () => ts.timeLabel.textContent = ts.time+' c';
+  const upTeamTime = () => ts.timeLabel.textContent = ts.time+' с';
   const upPts = () => ts.ptsLabel.textContent = ts.pts;
   upTeamTime(); upPts();
   ts.timeMinus.onclick = ()=>{ ts.time = Math.max(30, ts.time-30); upTeamTime(); };
