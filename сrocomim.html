@@ -132,7 +132,8 @@
     .mode-row{ display:grid; gap:12px; grid-template-columns:repeat(2, minmax(0,1fr)); }
     .mode-btn{
       display:flex; flex-direction:column; align-items:center; justify-content:center;
-      gap:6px; padding:18px 12px; border-radius:18px;
+      gap:6px; padding:26px 14px; border-radius:18px;
+      min-height:110px;
       background:var(--panel-2);
       border:1px solid var(--panel-border);
       color:var(--text);
@@ -150,10 +151,10 @@
     .theme-section{ display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
     .theme-switch{ display:flex; align-items:center; gap:16px; width:100%; flex-wrap:wrap; }
     .theme-switch-label{ font-weight:700; color:var(--text-strong); font-size:16px; flex:0 0 auto; }
-    .theme-slider{ display:flex; align-items:center; gap:12px; flex:1; }
+    .theme-slider{ display:flex; align-items:center; gap:10px; flex:0 0 auto; }
     .theme-slider span{ font-size:18px; }
     .theme-slider input[type="range"]{
-      flex:1;
+      width:72px;
       height:6px;
       border-radius:999px;
       background:var(--panel-border);
@@ -615,6 +616,7 @@
   const helpBtn = $('#btnHelp');
   const modeQuickBtn = $('#modeQuick');
   const themeSlider = $('#themeSlider');
+  const themeSection = $('#themeSection');
   const bodyEl = document.body;
   const THEME_KEY = 'croc-theme';
 
@@ -697,6 +699,7 @@
     });
     $('#'+v).style.display='flex';
     screen = v;
+    if (themeSection) themeSection.style.display = v==='viewMenu' ? 'flex' : 'none';
     if (v==='viewMenu'){
       backBtn.style.visibility = 'hidden';
       backBtn.style.pointerEvents = 'none';
