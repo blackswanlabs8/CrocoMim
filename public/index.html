@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>КрокоМим</title>
+  <meta name="description" content="Праздничная игра "КрокоМим" с быстрым и командным режимами." />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="./icons/icon.svg" />
+  <meta name="theme-color" content="#22c55e" />
+  <link rel="stylesheet" href="./styles/main.css" />
+</head>
+<body class="theme-light">
+<div class="app" id="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="icon-btn" id="btnBack" title="Назад в меню" aria-label="Назад">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M15 6L9 12L15 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="title">КрокоМим</div>
+    <div class="icon-btn" id="btnHelp" title="Справка" aria-label="Справка">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10s10-4.477 10-10S17.523 2 12 2Zm0 14.25a1.25 1.25 0 1 1 0 2.5a1.25 1.25 0 0 1 0-2.5Zm0-10a3.25 3.25 0 0 1 3.25 3.25c0 1.35-.79 2.3-1.74 3.02c-.81.6-1.26 1.03-1.26 1.98v.25a1 1 0 1 1-2 0v-.25c0-1.62.85-2.47 1.69-3.1c.85-.64 1.31-1.06 1.31-1.9A1.25 1.25 0 0 0 12 7.25a1.25 1.25 0 0 0-1.25 1.25a1 1 0 1 1-2 0A3.25 3.25 0 0 1 12 6.25Z" fill="currentColor"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="section theme-section" id="themeSection">
+    <div class="theme-switch">
+      <div class="theme-switch-label">Тема</div>
+      <div class="theme-slider">
+        <span aria-hidden="true">🌞</span>
+        <input type="range" id="themeSlider" min="0" max="1" step="1" value="0" aria-label="Переключатель темы">
+        <span aria-hidden="true">🌙</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN VIEWS -->
+  <div id="viewMenu" class="stack">
+    <div class="section stack" style="gap:20px">
+      <h2>Выбери режим игры</h2>
+      <div class="mode-row">
+        <button class="mode-btn active" id="modeQuick" type="button">
+          <span class="mode-icon">⚡</span>
+          Быстрый
+        </button>
+        <button class="mode-btn" id="goTeam" type="button">
+          <span class="mode-icon">👥</span>
+          Команда
+        </button>
+      </div>
+
+      <div class="stack" style="gap:16px">
+        <div class="menu-block">
+          <div class="menu-block-title">Словарь</div>
+          <select class="select" id="quickDict">
+            <option value="easy">Лёгкий</option>
+            <option value="medium">Средний</option>
+            <option value="hard">Сложный</option>
+            <option value="films_series">Фильмы и сериалы</option>
+            <option value="geography">География</option>
+            <option value="kids">Детский</option>
+            <option value="custom">Свой словарь</option>
+          </select>
+          <div id="quickCustomBox" class="stack" style="display:none; margin-top:10px">
+            <label class="muted">Вставьте слова через запятую или перенос строки</label>
+            <textarea class="input" id="quickCustomWords" rows="4" placeholder="яблоко, корабль, радуга..."></textarea>
+          </div>
+        </div>
+
+        <div class="menu-block">
+          <div class="menu-block-title">Таймер</div>
+          <div class="row" style="gap:12px; align-items:center; flex-wrap:nowrap; overflow-x:auto">
+            <label class="chip check-only" title="Таймер">
+              <input type="checkbox" id="quickTimerToggle" aria-label="Включить таймер">
+            </label>
+            <button class="btn ghost" id="quickTimeMinus" title="−30 секунд">−</button>
+            <div class="chip" id="quickTimeLabel">60 с</div>
+            <button class="btn ghost" id="quickTimePlus" title="+30 секунд">+</button>
+          </div>
+          <div class="muted" style="margin-top:8px">Шаг изменения времени: <span class="kbd">30с</span></div>
+        </div>
+
+        <div class="menu-block">
+          <div class="menu-block-title">Очки до победы</div>
+          <div class="row" style="gap:12px; align-items:center; flex-wrap:nowrap; overflow-x:auto">
+            <label class="chip check-only" title="Очки до победы">
+              <input type="checkbox" id="quickPtsToggle" aria-label="Включить очки до победы">
+            </label>
+            <div class="pts-controls" id="quickPtsControls" style="display:none">
+              <button class="btn ghost" id="quickPtsMinus" title="Минус одно очко">−</button>
+              <div class="chip" id="quickPtsLabel">10</div>
+              <button class="btn ghost" id="quickPtsPlus" title="Плюс одно очко">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <button class="btn btn-full" id="startQuick">Начать игру</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- QUICK GAME -->
+  <div id="viewQuickGame" class="stack" style="display:none">
+    <div class="section row" style="justify-content:space-between; align-items:center">
+      <div class="row" style="gap:10px; flex-wrap:wrap">
+        <div class="chip">Угадано: <span id="qHit">0</span></div>
+        <div class="chip">Пропущено: <span id="qMiss">0</span></div>
+        <div class="chip" id="qTimerBox" style="display:none">⏱ <span id="qTimer">00:00</span></div>
+      </div>
+      <button class="btn ghost" id="qStatsBtn" type="button">Статистика</button>
+    </div>
+
+    <div class="word-card">
+      <div id="qWord" class="word">—</div>
+    </div>
+
+    <!-- Кнопки под словом в 2 строки по требованию -->
+    <div class="section">
+      <div class="grid-3">
+        <button class="btn ghost" id="qNext">Следующее слово</button>
+        <button class="btn" id="qHitBtn">Угадано</button>
+        <button class="btn warn" id="qSkipBtn">Пропустить</button>
+      </div>
+      <div class="stack" style="margin-top:10px">
+        <button class="btn ghost" id="qHideBtn">Скрыть слово</button>
+        <button class="btn ghost" id="qMeaningBtn">Значение слова (Википедия)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TEAM SETTINGS -->
+  <div id="viewTeamSetup" class="stack" style="display:none">
+    <div class="section">
+      <h2>Команды</h2>
+      <div id="teamList" class="team-grid"></div>
+      <div class="row team-actions">
+        <button class="btn ghost" id="teamAdd">+ Добавить команду</button>
+        <button class="btn ghost" id="teamRename">✏️ Редактировать названия</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Словарь</h2>
+      <select class="select" id="teamDict">
+        <option value="easy">Лёгкий</option>
+        <option value="medium">Средний</option>
+        <option value="hard">Сложный</option>
+        <option value="films_series">Фильмы и сериалы</option>
+        <option value="geography">География</option>
+        <option value="kids">Детский</option>
+        <option value="custom">Свой словарь</option>
+      </select>
+      <div id="teamCustomBox" class="stack" style="display:none; margin-top:10px">
+        <label class="muted">Вставьте слова через запятую или перенос строки</label>
+        <textarea class="input" id="teamCustomWords" rows="4" placeholder="яблоко, корабль, радуга..."></textarea>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Таймер</h2>
+      <div class="row" style="gap:12px; align-items:center; flex-wrap:nowrap; overflow-x:auto">
+        <label class="chip check-only" title="Таймер">
+          <input type="checkbox" id="teamTimerToggle" aria-label="Включить таймер">
+        </label>
+        <button class="btn ghost" id="teamTimeMinus" title="−30 секунд">−</button>
+        <div class="chip" id="teamTimeLabel">60 с</div>
+        <button class="btn ghost" id="teamTimePlus" title="+30 секунд">+</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Очки до победы</h2>
+      <div class="row" style="gap:12px; align-items:center; flex-wrap:nowrap; overflow-x:auto">
+        <label class="chip check-only" title="Очки до победы">
+          <input type="checkbox" id="teamPtsToggle" checked aria-label="Включить очки до победы">
+        </label>
+        <div class="pts-controls" id="ptsControls">
+          <button class="btn ghost" id="ptsMinus" title="Минус одно очко">−</button>
+          <div class="chip" id="ptsLabel">10</div>
+          <button class="btn ghost" id="ptsPlus" title="Плюс одно очко">+</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <button class="btn btn-full" id="startTeam">Начать игру</button>
+    </div>
+  </div>
+
+  <!-- TEAM GAME -->
+  <div id="viewTeamGame" class="stack" style="display:none">
+    <div class="section">
+      <div class="row" style="justify-content:space-between; align-items:center">
+        <div class="chip">Ход: <strong id="turnTeamName">Команда 1</strong></div>
+        <div class="chip" id="tTimerBox" style="display:none">⏱ <span id="tTimer">00:00</span></div>
+      </div>
+    </div>
+
+    <div class="word-card">
+      <div id="tWord" class="word">—</div>
+    </div>
+
+    <div class="section stack" style="gap:12px; align-items:stretch">
+      <div class="round-status" id="tRoundStatus">—</div>
+      <div class="stack" style="gap:12px">
+        <button class="btn btn-full" id="tStartRound">Начать раунд</button>
+        <button class="btn warn" id="tEndRound" style="display:none">Закончить</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="grid-3">
+        <button class="btn ghost" id="tNext">Следующее слово</button>
+        <button class="btn" id="tHitBtn">Угадано</button>
+        <button class="btn warn" id="tSkipBtn">Пропустить</button>
+      </div>
+      <div class="stack" style="margin-top:10px">
+        <button class="btn ghost" id="tHideBtn">Скрыть слово</button>
+        <button class="btn ghost" id="tMeaningBtn">Значение слова (Википедия)</button>
+      </div>
+    </div>
+
+    <div class="section stack" style="gap:12px">
+      <button class="btn ghost btn-full" id="tStatsBtn" type="button">Статистика</button>
+      <div id="scoreTable" class="stack"></div>
+    </div>
+  </div>
+
+  <!-- FOOTER (опц.) -->
+  <div class="footer" id="globalFooter" style="display:none"></div>
+</div>
+
+  <script src="./scripts/app.js"></script>
+</body>
+</html>
