@@ -1,6 +1,7 @@
 // --- Utilities & state ---
 const $ = sel => document.querySelector(sel);
-let screen = 'menu';
+const VIEWS = ['viewMenu','viewQuickGame','viewTeamSetup','viewTeamGame'];
+let screen = 'viewMenu';
 let qTimerId = null;
 let tTimerId = null;
 const backBtn = $('#btnBack');
@@ -10,6 +11,9 @@ const themeSlider = $('#themeSlider');
 const themeSection = $('#themeSection');
 const bodyEl = document.body;
 const THEME_KEY = 'croc-theme';
+const SCREEN_KEY = 'croc-screen';
+const QUICK_STATS_KEY = 'croc-quick-stats';
+const TEAM_STATS_KEY = 'croc-team-stats';
 
 const applyTheme = mode => {
   const themeClass = mode === 'dark' ? 'theme-dark' : 'theme-light';
@@ -23,6 +27,26 @@ const readThemePref = () => {
 };
 const writeThemePref = mode => {
   try{ localStorage.setItem(THEME_KEY, mode); }
+  catch{}
+};
+const readScreenPref = () => {
+  try{ return localStorage.getItem(SCREEN_KEY); }
+  catch{ return null; }
+};
+const writeScreenPref = value => {
+  try{ localStorage.setItem(SCREEN_KEY, value); }
+  catch{}
+};
+const readJson = (key, fallback) => {
+  try{
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw);
+  }
+  catch{ return fallback; }
+};
+const writeJson = (key, value) => {
+  try{ localStorage.setItem(key, JSON.stringify(value)); }
   catch{}
 };
 const initialTheme = readThemePref();
@@ -57,6 +81,30 @@ const TEAM_ICONS = [
 const defaultTeamName = idx => `Команда ${idx+1}`;
 const makeTeam = (name, icon) => ({name, icon, points:0, hit:0, miss:0, hitWords:[], missWords:[]});
 const getTeamIcon = id => TEAM_ICONS.find(icon=>icon.id===id) || TEAM_ICONS[0];
+function sanitizeTeam(team, idx){
+  const base = makeTeam(defaultTeamName(idx), TEAM_ICONS[idx % TEAM_ICONS.length].id);
+  const name = typeof team?.name === 'string' && team.name.trim() ? team.name.trim() : base.name;
+  const iconId = TEAM_ICONS.some(icon=>icon.id === team?.icon) ? team.icon : base.icon;
+  const toCount = value => Number.isFinite(value) ? Math.trunc(value) : 0;
+  return {
+    name,
+    icon: iconId,
+    points: toCount(team?.points),
+    hit: toCount(team?.hit),
+    miss: toCount(team?.miss),
+    hitWords: Array.isArray(team?.hitWords) ? [...team.hitWords] : [],
+    missWords: Array.isArray(team?.missWords) ? [...team.missWords] : []
+  };
+}
+let teams = [];
+const storedTeams = readJson(TEAM_STATS_KEY, null);
+if (Array.isArray(storedTeams) && storedTeams.length){
+  teams = storedTeams.map((team, idx)=>sanitizeTeam(team, idx));
+}
+const persistTeams = () => {
+  teams = teams.map((team, idx)=>sanitizeTeam(team, idx));
+  writeJson(TEAM_STATS_KEY, teams);
+};
 let audioCtx = null;
 function playBuzz(){
   try{
@@ -84,12 +132,13 @@ function playBuzz(){
 
 // Navigation
 const show = v => {
-  ['viewMenu','viewQuickGame','viewTeamSetup','viewTeamGame'].forEach(id=>{
+  VIEWS.forEach(id=>{
     const el = $('#'+id);
     if (el) el.style.display='none';
   });
   $('#'+v).style.display='flex';
   screen = v;
+  writeScreenPref(v);
   if (themeSection) themeSection.style.display = v==='viewMenu' ? 'flex' : 'none';
   if (v==='viewMenu'){
     backBtn.style.visibility = 'hidden';
@@ -174,7 +223,10 @@ if (qs.dict){
 }
 
 // Quick game state
-let qWords=[], qIndex=0, qHide=false, qRemain=0, qHit=0, qMiss=0, qTarget=null, qHitWords=[], qMissWords=[];
+const initialQuickStats = readJson(QUICK_STATS_KEY, {hitWords:[], missWords:[]}) || {hitWords:[], missWords:[]};
+let qHitWords = Array.isArray(initialQuickStats.hitWords) ? [...initialQuickStats.hitWords] : [];
+let qMissWords = Array.isArray(initialQuickStats.missWords) ? [...initialQuickStats.missWords] : [];
+let qWords=[], qIndex=0, qHide=false, qRemain=0, qHit=qHitWords.length, qMiss=qMissWords.length, qTarget=null;
 
 const qUI = {
   word: $('#qWord'),
@@ -184,6 +236,18 @@ const qUI = {
   tBox: $('#qTimerBox'), tLabel: $('#qTimer'),
   statsBtn: $('#qStatsBtn')
 };
+
+const updateQuickCounters = () => {
+  if (qUI.hit) qUI.hit.textContent = String(qHit);
+  if (qUI.miss) qUI.miss.textContent = String(qMiss);
+};
+const persistQuickStats = () => {
+  writeJson(QUICK_STATS_KEY, {
+    hitWords: qHitWords,
+    missWords: qMissWords
+  });
+};
+updateQuickCounters();
 
 const pad = n => String(n).padStart(2,'0');
 const formatWordList = list => list.length ? list.join(', ') : '—';
@@ -211,9 +275,10 @@ function startQuickGame(){
   if (qWords.length===0){ alert('Добавьте хотя бы одно слово'); return; }
   shuffle(qWords);
   qIndex=0; qHide=false; qHit=0; qMiss=0; qTarget = qs.ptsToggle.checked ? qs.pts : null;
-  qUI.hit.textContent = '0'; qUI.miss.textContent = '0';
   qHitWords = [];
   qMissWords = [];
+  persistQuickStats();
+  updateQuickCounters();
   qUI.word.textContent = qWords[qIndex];
   qUI.hideBtn.textContent = 'Скрыть слово';
 
@@ -250,9 +315,10 @@ function nextWord(){
 qUI.next.onclick = nextWord;
 qUI.hitBtn.onclick = ()=>{
   qHit++;
-  qUI.hit.textContent=qHit;
   const current = qWords[qIndex];
   if (current) qHitWords.push(current);
+  persistQuickStats();
+  updateQuickCounters();
   if (qTarget!==null && qHit>=qTarget){
     if (qTimerId){ clearInterval(qTimerId); qTimerId=null; }
     playBuzz();
@@ -266,7 +332,8 @@ qUI.skipBtn.onclick = ()=>{
   const current = qWords[qIndex];
   if (current) qMissWords.push(current);
   qMiss++;
-  qUI.miss.textContent=qMiss;
+  persistQuickStats();
+  updateQuickCounters();
   nextWord();
 };
 qUI.hideBtn.onclick = ()=>{
@@ -282,7 +349,6 @@ if (qUI.statsBtn){
 }
 
 // Team setup & game
-let teams = [];
 function ensureTeamsSeed(){
   if (teams.length===0){
     teams = [
@@ -290,17 +356,9 @@ function ensureTeamsSeed(){
       makeTeam(defaultTeamName(1), TEAM_ICONS[1].id)
     ];
   } else {
-    teams = teams.map((team, idx)=>({
-      ...team,
-      name: team.name || defaultTeamName(idx),
-      icon: team.icon || TEAM_ICONS[idx % TEAM_ICONS.length].id,
-      points: team.points ?? 0,
-      hit: team.hit ?? 0,
-      miss: team.miss ?? 0,
-      hitWords: Array.isArray(team.hitWords) ? team.hitWords : [],
-      missWords: Array.isArray(team.missWords) ? team.missWords : []
-    }));
+    teams = teams.map((team, idx)=>sanitizeTeam(team, idx));
   }
+  persistTeams();
 }
 const teamList = $('#teamList');
 const teamRenameBtn = $('#teamRename');
@@ -329,6 +387,7 @@ function renderTeams(){
         if (!confirm(`Удалить команду «${team.name || defaultTeamName(index)}»?`)) return;
         teams.splice(index, 1);
         renderTeams();
+        persistTeams();
       };
     }
     teamList.appendChild(card);
@@ -338,6 +397,7 @@ $('#teamAdd').onclick = ()=>{
   const icon = TEAM_ICONS[teams.length % TEAM_ICONS.length].id;
   teams.push(makeTeam(defaultTeamName(teams.length), icon));
   renderTeams();
+  persistTeams();
 };
 if (teamRenameBtn){
   teamRenameBtn.onclick = ()=>{
@@ -353,6 +413,7 @@ if (teamRenameBtn){
     const trimmed = next.trim();
     teams[idx].name = trimmed || defaultTeamName(idx);
     renderTeams();
+    persistTeams();
   };
 }
 
@@ -529,6 +590,7 @@ function startTeamGame(){
       missWords:[]
     }
   ));
+  persistTeams();
   tIndex=-1; tHide=false; turn=0; roundActive=false; timerExpired=false;
   teamTimerEnabled = !!ts.timerToggle?.checked;
   teamPointsEnabled = !!ts.ptsToggle?.checked;
@@ -687,6 +749,7 @@ tUI.hit.onclick = ()=>{
   teams[turn].hit++;
   if (teamPointsEnabled) teams[turn].points++;
   renderScore();
+  persistTeams();
   if (teamPointsEnabled && teams[turn].points >= teamPointGoal){
     declareWinner(teams[turn]);
     return;
@@ -704,6 +767,7 @@ tUI.skip.onclick = ()=>{
   teams[turn].miss++;
   if (teamPointsEnabled) teams[turn].points--;
   renderScore();
+  persistTeams();
   if (timerExpired){
     lockFinalActions();
     return;
@@ -722,7 +786,36 @@ const escapeHtml = str => str
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } return a }
 
 // initial
-show('viewMenu');
+function restoreInitialView(){
+  const stored = readScreenPref();
+  if (stored && VIEWS.includes(stored)){
+    if (stored === 'viewTeamSetup'){
+      ensureTeamsSeed();
+      renderTeams();
+      syncTeamSettingsFromMenu();
+    }
+    if (stored === 'viewTeamGame'){
+      ensureTeamsSeed();
+      renderTeams();
+      syncTeamSettingsFromMenu();
+      renderScore();
+      updateTurnHeader();
+      resetWordView();
+      setRoundControlsEnabled(false);
+      if (tUI.endRound) tUI.endRound.style.display='none';
+      if (tUI.startRound){
+        tUI.startRound.style.display='inline-flex';
+        tUI.startRound.disabled=false;
+      }
+      if (tUI.tBox) tUI.tBox.style.display = teamTimerEnabled ? 'inline-flex' : 'none';
+      setStatus('Нажмите «Начать раунд», чтобы начать игру.');
+    }
+    show(stored);
+    return;
+  }
+  show('viewMenu');
+}
+restoreInitialView();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
