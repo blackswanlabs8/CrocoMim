@@ -299,6 +299,12 @@
       gap:10px;
       grid-template-columns:repeat(auto-fit, minmax(90px, 1fr));
     }
+    .team-actions{
+      justify-content:center;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-top:12px;
+    }
     .team-card{
       padding:10px;
       display:flex;
@@ -509,7 +515,7 @@
     <div class="section">
       <h2>Команды</h2>
       <div id="teamList" class="team-grid"></div>
-      <div class="row">
+      <div class="row team-actions">
         <button class="btn ghost" id="teamAdd">+ Добавить команду</button>
         <button class="btn ghost" id="teamRename">✏️ Редактировать названия</button>
       </div>
@@ -727,6 +733,7 @@
   $('#goTeam').onclick = () => {
     ensureTeamsSeed();
     renderTeams();
+    syncTeamSettingsFromMenu();
     show('viewTeamSetup');
   };
 
@@ -981,6 +988,33 @@
   };
   ts.ptsToggle.onchange = updatePtsUI;
   updatePtsUI();
+
+  function syncTeamSettingsFromMenu(){
+    if (!qs || !ts) return;
+    if (qs.dict && ts.dict){
+      const dictValue = qs.dict.value || 'medium';
+      ts.dict.value = dictValue;
+      ts.dict.dispatchEvent(new Event('change'));
+      if (dictValue === 'custom' && ts.customText && qs.customText){
+        ts.customText.value = qs.customText.value;
+      }
+    }
+    if (typeof qs.time === 'number'){
+      ts.time = qs.time;
+      upTeamTime();
+    }
+    if (ts.timerToggle && qs.timerToggle){
+      ts.timerToggle.checked = qs.timerToggle.checked;
+    }
+    if (typeof qs.pts === 'number'){
+      ts.pts = qs.pts;
+      upPts();
+    }
+    if (ts.ptsToggle && qs.ptsToggle){
+      ts.ptsToggle.checked = qs.ptsToggle.checked;
+    }
+    updatePtsUI();
+  }
 
   // Team game state
   let tWords=[], tIndex=-1, tHide=false, tRemain=0, turn=0, roundActive=false, timerExpired=false;
