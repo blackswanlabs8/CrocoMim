@@ -1,0 +1,18 @@
+{
+  "name": "КрокоМим",
+  "short_name": "КрокоМим",
+  "description": "Праздничная командная игра «КрокоМим» с быстрым и командным режимами.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#22c55e",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

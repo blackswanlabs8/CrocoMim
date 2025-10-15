@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22c55e" />
+      <stop offset="100%" stop-color="#16a34a" />
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#g)" />
+  <g fill="#042f1a" font-family="'Nunito', 'Segoe UI', sans-serif" font-weight="700">
+    <text x="50%" y="54%" font-size="44" text-anchor="middle">К</text>
+    <text x="50%" y="86%" font-size="36" text-anchor="middle">М</text>
+  </g>
+</svg>
