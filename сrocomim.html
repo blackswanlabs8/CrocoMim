@@ -177,12 +177,16 @@
       background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02)), var(--card);
       border:1px solid rgba(255,255,255,.08);
       border-radius:22px;
-      padding:28px 20px;
+      padding:36px 24px;
+      min-height:220px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
       text-align:center;
       box-shadow:var(--shadow);
     }
     .word{
-      font-size:clamp(28px, 6.5vw, 52px);
+      font-size:clamp(36px, 8vw, 64px);
       font-weight:800;
       letter-spacing:.5px;
       color:#f1f5f9;
@@ -195,6 +199,7 @@
       display:grid; gap:10px;
       grid-template-columns:repeat(3, minmax(0,1fr));
     }
+    .btn-full{ width:100%; display:block; }
     .team-grid{
       display:grid;
       gap:10px;
@@ -272,6 +277,7 @@
       display:flex; gap:10px; flex-wrap:wrap; justify-content:center;
       margin-top:auto;
     }
+    .footer .btn-full{ flex:1 1 100%; }
     @media (max-width:600px){
       .grid-3{ grid-template-columns:1fr }
       .header{ grid-template-columns:44px 1fr 44px }
@@ -284,9 +290,17 @@
 
   <!-- HEADER -->
   <div class="header">
-    <div class="icon-btn" id="btnBack" title="Назад в меню" aria-label="Назад">←</div>
+    <div class="icon-btn" id="btnBack" title="Назад в меню" aria-label="Назад">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M15 6L9 12L15 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
     <div class="title">КрокоМим</div>
-    <div class="icon-btn" id="btnHelp" title="Справка" aria-label="Справка">？</div>
+    <div class="icon-btn" id="btnHelp" title="Справка" aria-label="Справка">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10s10-4.477 10-10S17.523 2 12 2Zm0 14.25a1.25 1.25 0 1 1 0 2.5a1.25 1.25 0 0 1 0-2.5Zm0-10a3.25 3.25 0 0 1 3.25 3.25c0 1.35-.79 2.3-1.74 3.02c-.81.6-1.26 1.03-1.26 1.98v.25a1 1 0 1 1-2 0v-.25c0-1.62.85-2.47 1.69-3.1c.85-.64 1.31-1.06 1.31-1.9A1.25 1.25 0 0 0 12 7.25a1.25 1.25 0 0 0-1.25 1.25a1 1 0 1 1-2 0A3.25 3.25 0 0 1 12 6.25Z" fill="currentColor"/>
+      </svg>
+    </div>
   </div>
 
   <!-- MAIN VIEWS -->
@@ -350,17 +364,20 @@
       </div>
 
       <div class="footer">
-        <button class="btn" id="startQuick">Начать игру</button>
+        <button class="btn btn-full" id="startQuick">Начать игру</button>
       </div>
     </div>
   </div>
 
   <!-- QUICK GAME -->
   <div id="viewQuickGame" class="stack" style="display:none">
-    <div class="section row">
-      <div class="chip">Угадано: <span id="qHit">0</span></div>
-      <div class="chip">Пропущено: <span id="qMiss">0</span></div>
-      <div class="chip" id="qTimerBox" style="display:none">⏱ <span id="qTimer">00:00</span></div>
+    <div class="section row" style="justify-content:space-between; align-items:center">
+      <div class="row" style="gap:10px; flex-wrap:wrap">
+        <div class="chip">Угадано: <span id="qHit">0</span></div>
+        <div class="chip">Пропущено: <span id="qMiss">0</span></div>
+        <div class="chip" id="qTimerBox" style="display:none">⏱ <span id="qTimer">00:00</span></div>
+      </div>
+      <button class="btn ghost" id="qStatsBtn" type="button">Статистика</button>
     </div>
 
     <div class="word-card">
@@ -436,7 +453,7 @@
     </div>
 
     <div class="footer">
-      <button class="btn" id="startTeam">Начать игру</button>
+      <button class="btn btn-full" id="startTeam">Начать игру</button>
     </div>
   </div>
 
@@ -447,17 +464,16 @@
         <div class="chip">Ход: <strong id="turnTeamName">Команда 1</strong></div>
         <div class="chip" id="tTimerBox" style="display:none">⏱ <span id="tTimer">00:00</span></div>
       </div>
-      <div id="scoreTable" class="stack" style="margin-top:10px"></div>
     </div>
 
     <div class="word-card">
       <div id="tWord" class="word">—</div>
     </div>
 
-    <div class="section stack" style="gap:12px; align-items:center">
+    <div class="section stack" style="gap:12px; align-items:stretch">
       <div class="round-status" id="tRoundStatus">—</div>
-      <div class="row" style="gap:12px; justify-content:center">
-        <button class="btn" id="tStartRound">Начать раунд</button>
+      <div class="stack" style="gap:12px">
+        <button class="btn btn-full" id="tStartRound">Начать раунд</button>
         <button class="btn warn" id="tEndRound" style="display:none">Закончить</button>
       </div>
     </div>
@@ -472,6 +488,11 @@
         <button class="btn ghost" id="tHideBtn">Скрыть слово</button>
         <button class="btn ghost" id="tMeaningBtn">Значение слова (Википедия)</button>
       </div>
+    </div>
+
+    <div class="section stack" style="gap:12px">
+      <button class="btn ghost btn-full" id="tStatsBtn" type="button">Статистика</button>
+      <div id="scoreTable" class="stack"></div>
     </div>
   </div>
 
@@ -509,7 +530,7 @@
     {id:'snow', emoji:'❄️', bg:'linear-gradient(135deg,#bfdbfe,#60a5fa)', color:'#1e3a8a'}
   ];
   const defaultTeamName = idx => `Команда ${idx+1}`;
-  const makeTeam = (name, icon) => ({name, icon, points:0, hit:0, miss:0});
+  const makeTeam = (name, icon) => ({name, icon, points:0, hit:0, miss:0, hitWords:[], missWords:[]});
   const getTeamIcon = id => TEAM_ICONS.find(icon=>icon.id===id) || TEAM_ICONS[0];
   let audioCtx = null;
   function playBuzz(){
@@ -616,17 +637,23 @@
   }
 
   // Quick game state
-  let qWords=[], qIndex=0, qHide=false, qRemain=0, qHit=0, qMiss=0, qTarget=null;
+  let qWords=[], qIndex=0, qHide=false, qRemain=0, qHit=0, qMiss=0, qTarget=null, qHitWords=[], qMissWords=[];
 
   const qUI = {
     word: $('#qWord'),
     hit: $('#qHit'), miss: $('#qMiss'),
     next: $('#qNext'), hitBtn: $('#qHitBtn'), skipBtn: $('#qSkipBtn'),
     hideBtn: $('#qHideBtn'), meaningBtn: $('#qMeaningBtn'),
-    tBox: $('#qTimerBox'), tLabel: $('#qTimer')
+    tBox: $('#qTimerBox'), tLabel: $('#qTimer'),
+    statsBtn: $('#qStatsBtn')
   };
 
   const pad = n => String(n).padStart(2,'0');
+  const formatWordList = list => list.length ? list.join(', ') : '—';
+
+  function showWordStats(title, hitList, missList){
+    alert(`${title}\n\nУгаданные (${hitList.length}):\n${formatWordList(hitList)}\n\nПропущенные (${missList.length}):\n${formatWordList(missList)}`);
+  }
 
   function startQuickGame(){
     // build words
@@ -648,6 +675,8 @@
     shuffle(qWords);
     qIndex=0; qHide=false; qHit=0; qMiss=0; qTarget = qs.ptsToggle.checked ? qs.pts : null;
     qUI.hit.textContent = '0'; qUI.miss.textContent = '0';
+    qHitWords = [];
+    qMissWords = [];
     qUI.word.textContent = qWords[qIndex];
     qUI.hideBtn.textContent = 'Скрыть слово';
 
@@ -672,6 +701,7 @@
     show('viewQuickGame');
   }
   $('#startQuick').onclick = startQuickGame;
+  if (modeQuickBtn) modeQuickBtn.onclick = startQuickGame;
 
   function nextWord(){
     qIndex = (qIndex+1) % qWords.length;
@@ -684,6 +714,8 @@
   qUI.hitBtn.onclick = ()=>{
     qHit++;
     qUI.hit.textContent=qHit;
+    const current = qWords[qIndex];
+    if (current) qHitWords.push(current);
     if (qTarget!==null && qHit>=qTarget){
       if (qTimerId){ clearInterval(qTimerId); qTimerId=null; }
       playBuzz();
@@ -693,13 +725,24 @@
     }
     nextWord();
   };
-  qUI.skipBtn.onclick = ()=>{ qMiss++; qUI.miss.textContent=qMiss; nextWord(); };
+  qUI.skipBtn.onclick = ()=>{
+    const current = qWords[qIndex];
+    if (current) qMissWords.push(current);
+    qMiss++;
+    qUI.miss.textContent=qMiss;
+    nextWord();
+  };
   qUI.hideBtn.onclick = ()=>{
     qHide = !qHide;
     qUI.word.textContent = qHide ? '•••' : qWords[qIndex];
     qUI.hideBtn.textContent = qHide ? 'Показать слово' : 'Скрыть слово';
   };
   qUI.meaningBtn.onclick = ()=> window.open('https://ru.wikipedia.org/wiki/'+encodeURIComponent(qWords[qIndex]), '_blank');
+  if (qUI.statsBtn){
+    qUI.statsBtn.onclick = ()=>{
+      showWordStats('Быстрый режим', qHitWords, qMissWords);
+    };
+  }
 
   // Team setup & game
   let teams = [];
@@ -716,7 +759,9 @@
         icon: team.icon || TEAM_ICONS[idx % TEAM_ICONS.length].id,
         points: team.points ?? 0,
         hit: team.hit ?? 0,
-        miss: team.miss ?? 0
+        miss: team.miss ?? 0,
+        hitWords: Array.isArray(team.hitWords) ? team.hitWords : [],
+        missWords: Array.isArray(team.missWords) ? team.missWords : []
       }));
     }
   }
@@ -813,7 +858,8 @@
     next: $('#tNext'), hit: $('#tHitBtn'), skip: $('#tSkipBtn'),
     hideBtn: $('#tHideBtn'), meaning: $('#tMeaningBtn'),
     startRound: $('#tStartRound'), endRound: $('#tEndRound'),
-    status: $('#tRoundStatus')
+    status: $('#tRoundStatus'),
+    statsBtn: $('#tStatsBtn')
   };
 
   function updateTurnHeader(){
@@ -898,7 +944,11 @@
       {
         name: t.name || defaultTeamName(idx),
         icon: t.icon || TEAM_ICONS[idx % TEAM_ICONS.length].id,
-        points:0, hit:0, miss:0
+        points:0,
+        hit:0,
+        miss:0,
+        hitWords:[],
+        missWords:[]
       }
     ));
     tIndex=-1; tHide=false; turn=0; roundActive=false; timerExpired=false;
@@ -1033,8 +1083,26 @@
     window.open('https://ru.wikipedia.org/wiki/'+encodeURIComponent(tWords[tIndex]), '_blank');
   };
 
+  if (tUI.statsBtn){
+    tUI.statsBtn.onclick = ()=>{
+      if (!teams.length){
+        alert('Статистика пока пуста');
+        return;
+      }
+      const blocks = teams.map((team, idx)=>{
+        const name = team.name || defaultTeamName(idx);
+        const hitList = Array.isArray(team.hitWords) ? team.hitWords : [];
+        const missList = Array.isArray(team.missWords) ? team.missWords : [];
+        return `Команда «${name}»\nУгаданные (${hitList.length}):\n${formatWordList(hitList)}\n\nПропущенные (${missList.length}):\n${formatWordList(missList)}`;
+      });
+      alert(`Статистика команд\n\n${blocks.join('\n\n')}`);
+    };
+  }
+
   tUI.hit.onclick = ()=>{
     if (!roundActive) return;
+    const current = tWords[tIndex];
+    if (current) teams[turn].hitWords.push(current);
     teams[turn].hit++; teams[turn].points++;
     renderScore();
     if (ts.ptsToggle.checked && teams[turn].points >= ts.pts){
@@ -1049,6 +1117,8 @@
   };
   tUI.skip.onclick = ()=>{
     if (!roundActive) return;
+    const current = tWords[tIndex];
+    if (current) teams[turn].missWords.push(current);
     teams[turn].miss++; teams[turn].points--;
     renderScore();
     if (timerExpired){
