@@ -6,27 +6,69 @@
   <title>КрокоМим</title>
   <style>
     :root{
-      --bg:#0f172a;            /* slate-900 */
-      --panel:#111827;         /* gray-900 */
-      --panel-2:#1f2937;       /* gray-800 */
-      --accent:#22c55e;        /* green-500 */
-      --accent-2:#16a34a;      /* green-600 */
-      --muted:#94a3b8;         /* slate-400 */
-      --text:#e5e7eb;          /* gray-200 */
-      --text-strong:#f8fafc;   /* slate-50 */
-      --danger:#ef4444;        /* red-500 */
-      --warning:#f59e0b;       /* amber-500 */
-      --card:#0b1223;          /* dark card */
-      --shadow:0 10px 30px rgba(0,0,0,.35);
+      --accent:#22c55e;
+      --accent-2:#16a34a;
+      --accent-soft:rgba(34,197,94,.16);
+      --danger:#ef4444;
+      --warning:#f59e0b;
       --radius:18px;
+    }
+    body.theme-light{
+      --bg:#eef2ff;
+      --bg-overlay:radial-gradient(1200px 800px at 10% -10%, rgba(148,163,184,.32) 0%, transparent 60%),
+                    radial-gradient(1300px 900px at 110% 10%, rgba(148,163,184,.24) 0%, transparent 55%);
+      --app-bg:rgba(255,255,255,.92);
+      --app-border:rgba(148,163,184,.25);
+      --panel:#ffffff;
+      --panel-2:#f5f7ff;
+      --panel-soft:#edf2ff;
+      --panel-border:rgba(148,163,184,.35);
+      --panel-hover:rgba(148,163,184,.25);
+      --text:#0f172a;
+      --text-strong:#020617;
+      --muted:#475569;
+      --chip-bg:#f1f5f9;
+      --chip-border:rgba(148,163,184,.45);
+      --ghost-bg:#e2e8f0;
+      --ghost-border:rgba(148,163,184,.55);
+      --ghost-color:#0f172a;
+      --shadow:0 18px 40px rgba(15,23,42,.12);
+      --card:#ffffff;
+      --thumb-border:rgba(15,23,42,.2);
+      --thumb-shadow:rgba(34,197,94,.25);
+    }
+    body.theme-dark{
+      --bg:#0f172a;
+      --bg-overlay:radial-gradient(1200px 800px at 10% -10%, #11203d 0%, transparent 60%),
+                    radial-gradient(1300px 900px at 110% 10%, #082631 0%, transparent 55%);
+      --app-bg:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)) , rgba(12,18,34,.65);
+      --app-border:rgba(255,255,255,.06);
+      --panel:#111827;
+      --panel-2:#1f2937;
+      --panel-soft:rgba(15,23,42,.35);
+      --panel-border:rgba(255,255,255,.06);
+      --panel-hover:#263141;
+      --text:#e5e7eb;
+      --text-strong:#f8fafc;
+      --muted:#94a3b8;
+      --chip-bg:#22304a;
+      --chip-border:rgba(255,255,255,.06);
+      --ghost-bg:rgba(255,255,255,.02);
+      --ghost-border:rgba(255,255,255,.08);
+      --ghost-color:#e5e7eb;
+      --shadow:0 10px 30px rgba(0,0,0,.35);
+      --card:#0b1223;
+      --thumb-border:rgba(255,255,255,.35);
+      --thumb-shadow:rgba(34,197,94,.45);
     }
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
       margin:0;
-      background: radial-gradient(1200px 800px at 10% -10%, #11203d 0%, transparent 60%),
-                  radial-gradient(1300px 900px at 110% 10%, #082631 0%, transparent 55%),
-                  var(--bg);
+      background:var(--bg);
+      background-image:var(--bg-overlay);
+      background-repeat:no-repeat;
+      background-attachment:fixed;
       color:var(--text);
       font-family: ui-sans-serif, system-ui, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Noto Color Emoji;
       line-height:1.5;
@@ -38,8 +80,8 @@
       width:min(960px, 96vw);
       min-height:88vh;
       backdrop-filter:saturate(120%) blur(8px);
-      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)) , rgba(12,18,34,.65);
-      border:1px solid rgba(255,255,255,.06);
+      background:var(--app-bg);
+      border:1px solid var(--app-border);
       border-radius:24px;
       box-shadow:var(--shadow);
       padding:20px;
@@ -57,13 +99,13 @@
       width:40px;height:40px;border-radius:12px;
       display:flex;align-items:center;justify-content:center;
       background:var(--panel-2);
-      border:1px solid rgba(255,255,255,.06);
+      border:1px solid var(--panel-border);
       color:var(--text);
       cursor:pointer;
-      transition:transform .1s ease, background .2s ease;
+      transition:transform .1s ease, background .2s ease, border .2s ease;
       user-select:none;
     }
-    .icon-btn:hover{ background:#263141 }
+    .icon-btn:hover{ background:var(--panel-hover); }
     .icon-btn:active{ transform:scale(.96) }
     .title{
       text-align:center;
@@ -75,14 +117,14 @@
 
     /* Sections & cards */
     .section{
-      background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
-      border:1px solid rgba(255,255,255,.06);
+      background:var(--panel);
+      border:1px solid var(--panel-border);
       border-radius:var(--radius);
       padding:16px;
     }
     .section h2{
       margin:0 0 12px 0;
-      font-size:18px;color:#cbd5e1;font-weight:700;
+      font-size:18px;color:var(--text-strong);font-weight:700;
     }
     .row{ display:flex; gap:12px; flex-wrap:wrap; align-items:center }
     .stack{ display:flex; flex-direction:column; gap:12px }
@@ -90,25 +132,70 @@
     .mode-row{ display:grid; gap:12px; grid-template-columns:repeat(2, minmax(0,1fr)); }
     .mode-btn{
       display:flex; flex-direction:column; align-items:center; justify-content:center;
-      gap:6px; padding:18px 12px; border-radius:18px;
+      gap:6px; padding:26px 14px; border-radius:18px;
+      min-height:110px;
       background:var(--panel-2);
-      border:1px solid rgba(255,255,255,.06);
+      border:1px solid var(--panel-border);
       color:var(--text);
       font-weight:700;
       cursor:pointer;
       transition:transform .1s ease, background .2s ease, border .2s ease;
     }
     .mode-btn .mode-icon{ font-size:28px; }
-    .mode-btn:hover{ background:#1f2a41; }
+    .mode-btn:hover{ background:var(--panel-hover); }
     .mode-btn:active{ transform:scale(.97); }
-    .mode-btn.active{ background:rgba(34,197,94,.16); border-color:var(--accent); color:var(--text-strong); }
-    .menu-block{ background:rgba(15,23,42,.35); border:1px solid rgba(255,255,255,.04); border-radius:16px; padding:14px; display:flex; flex-direction:column; gap:12px; }
-    .menu-block-title{ font-weight:700; color:#cbd5e1; font-size:16px; }
+    .mode-btn.active{ background:var(--accent-soft); border-color:var(--accent); color:var(--text-strong); }
+    .menu-block{ background:var(--panel-soft); border:1px solid var(--panel-border); border-radius:16px; padding:14px; display:flex; flex-direction:column; gap:12px; }
+    .menu-block-title{ font-weight:700; color:var(--text-strong); font-size:16px; }
+
+    .theme-section{ display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+    .theme-switch{ display:flex; align-items:center; gap:16px; width:100%; flex-wrap:wrap; }
+    .theme-switch-label{ font-weight:700; color:var(--text-strong); font-size:16px; flex:0 0 auto; }
+    .theme-slider{ display:flex; align-items:center; gap:10px; flex:0 0 auto; }
+    .theme-slider span{ font-size:18px; }
+    .theme-slider input[type="range"]{
+      width:72px;
+      height:6px;
+      border-radius:999px;
+      background:var(--panel-border);
+      outline:none;
+      -webkit-appearance:none;
+    }
+    .theme-slider input[type="range"]::-webkit-slider-runnable-track{
+      height:6px;
+      border-radius:999px;
+      background:var(--panel-border);
+    }
+    .theme-slider input[type="range"]::-webkit-slider-thumb{
+      -webkit-appearance:none;
+      width:24px;
+      height:24px;
+      border-radius:50%;
+      background:var(--accent);
+      border:2px solid var(--thumb-border);
+      box-shadow:0 4px 12px var(--thumb-shadow);
+      margin-top:-9px;
+      cursor:pointer;
+    }
+    .theme-slider input[type="range"]::-moz-range-track{
+      height:6px;
+      border-radius:999px;
+      background:var(--panel-border);
+    }
+    .theme-slider input[type="range"]::-moz-range-thumb{
+      width:24px;
+      height:24px;
+      border-radius:50%;
+      background:var(--accent);
+      border:2px solid var(--thumb-border);
+      box-shadow:0 4px 12px var(--thumb-shadow);
+      cursor:pointer;
+    }
 
     /* Buttons */
     .btn{
       background:var(--accent);
-      color:#07130c;
+      color:#03240f;
       font-weight:700;
       padding:12px 16px;
       border:none;border-radius:14px;
@@ -116,12 +203,23 @@
       box-shadow:0 6px 16px rgba(34,197,94,.25);
       transition:transform .08s ease, box-shadow .2s ease, background .2s ease;
       user-select:none;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
     }
     .btn:hover{ background:var(--accent-2) }
     .btn:active{ transform:translateY(1px) }
+    .btn:disabled{
+      opacity:.5;
+      cursor:not-allowed;
+      box-shadow:none;
+      transform:none;
+    }
     .btn.ghost{
-      background:transparent;color:var(--text);
-      border:1px solid rgba(255,255,255,.08);
+      background:var(--ghost-bg);
+      color:var(--ghost-color);
+      border:1px solid var(--ghost-border);
       box-shadow:none;
     }
     .btn.warn{ background:var(--warning); color:#211a05 }
@@ -134,184 +232,267 @@
       border-radius:12px;
       background:var(--panel-2);
       color:var(--text);
-      border:1px solid rgba(255,255,255,.06);
+      border:1px solid var(--panel-border);
       outline:none;
     }
     .select{ width:100% }
     .chip{
-      padding:8px 12px;border-radius:999px;
-      background:#22304a;border:1px solid rgba(255,255,255,.06);color:#cbd5e1
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:8px 12px;
+      border-radius:999px;
+      background:var(--chip-bg);
+      border:1px solid var(--chip-border);
+      color:var(--text);
+    }
+    .chip.disabled{
+      opacity:.55;
+    }
+    .chip input[type="checkbox"]{ margin-right:6px; accent-color:var(--accent); }
+    .chip.check-only{
+      width:44px;
+      height:44px;
+      padding:0;
+      display:grid;
+      place-items:center;
+    }
+    .chip.check-only input[type="checkbox"]{
+      margin-right:0;
+      width:20px;
+      height:20px;
+      margin:0;
+    }
+    .pts-controls{
+      display:flex;
+      align-items:center;
+      gap:12px;
     }
 
     /* Word card */
     .word-card{
-      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02)), var(--card);
-      border:1px solid rgba(255,255,255,.08);
+      background:linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.05)), var(--card);
+      border:1px solid var(--panel-border);
       border-radius:22px;
-      padding:28px 20px;
+      padding:36px 24px;
+      min-height:220px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
       text-align:center;
       box-shadow:var(--shadow);
     }
     .word{
-      font-size:clamp(28px, 6.5vw, 52px);
+      font-size:clamp(36px, 8vw, 64px);
       font-weight:800;
       letter-spacing:.5px;
-      color:#f1f5f9;
+      color:var(--text-strong);
       word-break:break-word;
     }
     .muted{ color:var(--muted); font-size:14px }
-    .kbd{ background:#1a2236;border:1px solid rgba(255,255,255,.08);border-radius:6px;padding:2px 6px;font-family:ui-monospace, SFMono-Regular, Menlo, monospace }
+    .kbd{ background:var(--panel-2);border:1px solid var(--panel-border);border-radius:6px;padding:2px 6px;font-family:ui-monospace, SFMono-Regular, Menlo, monospace; color:var(--text); }
 
     .grid-3{
       display:grid; gap:10px;
       grid-template-columns:repeat(3, minmax(0,1fr));
     }
+    .btn-full{ width:100%; display:flex; justify-content:center; }
     .team-grid{
       display:grid;
-      gap:16px;
-      grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+      gap:10px;
+      grid-template-columns:repeat(auto-fit, minmax(90px, 1fr));
+    }
+    .team-actions{
+      justify-content:center;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-top:12px;
     }
     .team-card{
+      padding:10px;
       display:flex;
-      gap:14px;
-      align-items:flex-start;
-      flex-wrap:wrap;
+      flex-direction:column;
+      align-items:center;
+      gap:8px;
+      text-align:center;
+    }
+    .team-card-top{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:6px;
     }
     .team-avatar{
-      width:96px;
-      height:96px;
+      width:64px;
+      height:64px;
       border-radius:20px;
-      border:none;
       display:flex;
       align-items:center;
       justify-content:center;
-      font-size:42px;
+      font-size:28px;
       background-size:cover;
       background-position:center;
       color:#0b0b0b;
-      cursor:pointer;
       box-shadow:0 6px 16px rgba(15,23,42,.35);
-      transition:transform .08s ease;
       flex:0 0 auto;
+      pointer-events:none;
     }
     .team-avatar span{ filter:drop-shadow(0 2px 4px rgba(0,0,0,.45)); }
-    .team-avatar:active{ transform:scale(.97); }
     .team-body{
-      flex:1;
+      width:100%;
       display:flex;
       flex-direction:column;
-      gap:10px;
+      align-items:center;
+      gap:6px;
     }
     .team-name{
-      font-size:18px;
+      font-size:14px;
       font-weight:700;
       color:var(--text-strong);
+      text-align:center;
+      word-break:break-word;
     }
-    .team-edit{ align-self:flex-start; }
-    .team-icon-grid{
-      display:grid;
-      gap:8px;
-      grid-template-columns:repeat(auto-fit, minmax(48px, 1fr));
-    }
-    .team-icon-option{
-      height:48px;
-      border-radius:14px;
-      border:1px solid transparent;
+    .team-delete{
+      width:32px;
+      height:32px;
+      border-radius:12px;
+      border:1px solid rgba(239,68,68,.35);
+      background:rgba(239,68,68,.18);
+      color:#fecaca;
       display:flex;
       align-items:center;
       justify-content:center;
-      background:rgba(255,255,255,.08);
-      color:#fff;
       cursor:pointer;
-      transition:transform .08s ease, border .2s ease, background .2s ease;
+      transition:background .2s ease, transform .1s ease;
     }
-    .team-icon-option span{ font-size:22px; }
-    .team-icon-option.active{
-      border-color:var(--accent);
-      background:rgba(34,197,94,.18);
-    }
-    .team-icon-option:active{ transform:scale(.95); }
+    .team-delete:hover{ background:rgba(239,68,68,.28); }
+    .team-delete:active{ transform:scale(.95); }
     .team-chip{ display:flex; align-items:center; gap:8px; }
     .team-chip-icon{ font-size:20px; line-height:1; }
     #turnTeamName{ display:inline-flex; align-items:center; gap:6px; }
+    .round-status{
+      text-align:center;
+      font-weight:600;
+      color:var(--muted);
+    }
     .chip input[type="checkbox"]{ margin-right:6px; accent-color:var(--accent); }
     .footer{
       display:flex; gap:10px; flex-wrap:wrap; justify-content:center;
       margin-top:auto;
     }
+    .footer .btn-full{ flex:1 1 100%; }
     @media (max-width:600px){
       .grid-3{ grid-template-columns:1fr }
       .header{ grid-template-columns:44px 1fr 44px }
+      .mode-row{ grid-template-columns:1fr }
     }
   </style>
 </head>
-<body>
+<body class="theme-light">
 <div class="app" id="app">
 
   <!-- HEADER -->
   <div class="header">
-    <div class="icon-btn" id="btnBack" title="Назад в меню" aria-label="Назад">←</div>
+    <div class="icon-btn" id="btnBack" title="Назад в меню" aria-label="Назад">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M15 6L9 12L15 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
     <div class="title">КрокоМим</div>
-    <div class="icon-btn" id="btnHelp" title="Справка" aria-label="Справка">？</div>
+    <div class="icon-btn" id="btnHelp" title="Справка" aria-label="Справка">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10s10-4.477 10-10S17.523 2 12 2Zm0 14.25a1.25 1.25 0 1 1 0 2.5a1.25 1.25 0 0 1 0-2.5Zm0-10a3.25 3.25 0 0 1 3.25 3.25c0 1.35-.79 2.3-1.74 3.02c-.81.6-1.26 1.03-1.26 1.98v.25a1 1 0 1 1-2 0v-.25c0-1.62.85-2.47 1.69-3.1c.85-.64 1.31-1.06 1.31-1.9A1.25 1.25 0 0 0 12 7.25a1.25 1.25 0 0 0-1.25 1.25a1 1 0 1 1-2 0A3.25 3.25 0 0 1 12 6.25Z" fill="currentColor"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="section theme-section" id="themeSection">
+    <div class="theme-switch">
+      <div class="theme-switch-label">Тема</div>
+      <div class="theme-slider">
+        <span aria-hidden="true">🌞</span>
+        <input type="range" id="themeSlider" min="0" max="1" step="1" value="0" aria-label="Переключатель темы">
+        <span aria-hidden="true">🌙</span>
+      </div>
+    </div>
   </div>
 
   <!-- MAIN VIEWS -->
   <div id="viewMenu" class="stack">
-    <div class="section">
-      <h2>Режимы игры</h2>
-      <div class="stack">
-        <button class="btn" id="menuQuickPlay">Начать быструю игру</button>
-        <button class="btn ghost" id="goQuick">Настроить быстрый режим</button>
-        <button class="btn ghost" id="goTeam">Командный режим</button>
+    <div class="section stack" style="gap:20px">
+      <h2>Выбери режим игры</h2>
+      <div class="mode-row">
+        <button class="mode-btn active" id="modeQuick" type="button">
+          <span class="mode-icon">⚡</span>
+          Быстрый
+        </button>
+        <button class="mode-btn" id="goTeam" type="button">
+          <span class="mode-icon">👥</span>
+          Команда
+        </button>
       </div>
-    </div>
-  </div>
 
-  <!-- QUICK SETTINGS -->
-  <div id="viewQuickSetup" class="stack" style="display:none">
-    <div class="section">
-      <h2>Словарь</h2>
-      <select class="select" id="quickDict">
-        <option value="easy">Лёгкий</option>
-        <option value="medium">Средний</option>
-        <option value="hard">Сложный</option>
-        <option value="films_series">Фильмы и сериалы</option>
-        <option value="geography">География</option>
-        <option value="kids">Детский</option>
-        <option value="custom">Свой словарь</option>
-      </select>
-      <div id="quickCustomBox" class="stack" style="display:none; margin-top:10px">
-        <label class="muted">Вставьте слова через запятую или перенос строки</label>
-        <textarea class="input" id="quickCustomWords" rows="4" placeholder="яблоко, корабль, радуга..."></textarea>
-      </div>
-    </div>
+      <div class="stack" style="gap:16px">
+        <div class="menu-block">
+          <div class="menu-block-title">Словарь</div>
+          <select class="select" id="quickDict">
+            <option value="easy">Лёгкий</option>
+            <option value="medium">Средний</option>
+            <option value="hard">Сложный</option>
+            <option value="films_series">Фильмы и сериалы</option>
+            <option value="geography">География</option>
+            <option value="kids">Детский</option>
+            <option value="custom">Свой словарь</option>
+          </select>
+          <div id="quickCustomBox" class="stack" style="display:none; margin-top:10px">
+            <label class="muted">Вставьте слова через запятую или перенос строки</label>
+            <textarea class="input" id="quickCustomWords" rows="4" placeholder="яблоко, корабль, радуга..."></textarea>
+          </div>
+        </div>
 
-    <div class="section">
-      <h2>Таймер</h2>
-      <div class="row">
-        <label class="chip"><input type="checkbox" id="quickTimerToggle"> С таймером</label>
-        <div class="row">
-          <button class="btn ghost" id="quickTimeMinus">− 30с</button>
-          <div class="chip" id="quickTimeLabel">60 c</div>
-          <button class="btn ghost" id="quickTimePlus">+ 30с</button>
+        <div class="menu-block">
+          <div class="menu-block-title">Таймер</div>
+          <div class="row" style="gap:12px; align-items:center; flex-wrap:nowrap; overflow-x:auto">
+            <label class="chip check-only" title="Таймер">
+              <input type="checkbox" id="quickTimerToggle" aria-label="Включить таймер">
+            </label>
+            <button class="btn ghost" id="quickTimeMinus" title="−30 секунд">−</button>
+            <div class="chip" id="quickTimeLabel">60 с</div>
+            <button class="btn ghost" id="quickTimePlus" title="+30 секунд">+</button>
+          </div>
+          <div class="muted" style="margin-top:8px">Шаг изменения времени: <span class="kbd">30с</span></div>
+        </div>
+
+        <div class="menu-block">
+          <div class="menu-block-title">Очки до победы</div>
+          <div class="row" style="gap:12px; align-items:center; flex-wrap:nowrap; overflow-x:auto">
+            <label class="chip check-only" title="Очки до победы">
+              <input type="checkbox" id="quickPtsToggle" aria-label="Включить очки до победы">
+            </label>
+            <div class="pts-controls" id="quickPtsControls" style="display:none">
+              <button class="btn ghost" id="quickPtsMinus" title="Минус одно очко">−</button>
+              <div class="chip" id="quickPtsLabel">10</div>
+              <button class="btn ghost" id="quickPtsPlus" title="Плюс одно очко">+</button>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="muted" style="margin-top:8px">Шаг изменения времени: <span class="kbd">30с</span></div>
-    </div>
 
-    <!-- Важно: в Быстром режиме настройка очков до победы УДАЛЕНА -->
-
-    <div class="footer">
-      <button class="btn" id="startQuick">Начать игру</button>
+      <div class="footer">
+        <button class="btn btn-full" id="startQuick">Начать игру</button>
+      </div>
     </div>
   </div>
 
   <!-- QUICK GAME -->
   <div id="viewQuickGame" class="stack" style="display:none">
-    <div class="section row">
-      <div class="chip">Угадано: <span id="qHit">0</span></div>
-      <div class="chip">Пропущено: <span id="qMiss">0</span></div>
-      <div class="chip" id="qTimerBox" style="display:none">⏱ <span id="qTimer">00:00</span></div>
+    <div class="section row" style="justify-content:space-between; align-items:center">
+      <div class="row" style="gap:10px; flex-wrap:wrap">
+        <div class="chip">Угадано: <span id="qHit">0</span></div>
+        <div class="chip">Пропущено: <span id="qMiss">0</span></div>
+        <div class="chip" id="qTimerBox" style="display:none">⏱ <span id="qTimer">00:00</span></div>
+      </div>
+      <button class="btn ghost" id="qStatsBtn" type="button">Статистика</button>
     </div>
 
     <div class="word-card">
@@ -337,8 +518,9 @@
     <div class="section">
       <h2>Команды</h2>
       <div id="teamList" class="team-grid"></div>
-      <div class="row">
+      <div class="row team-actions">
         <button class="btn ghost" id="teamAdd">+ Добавить команду</button>
+        <button class="btn ghost" id="teamRename">✏️ Редактировать названия</button>
       </div>
     </div>
 
@@ -360,27 +542,33 @@
     </div>
 
     <div class="section">
-      <h2>Таймер и очки до победы</h2>
-      <div class="stack">
-        <div class="row">
-          <label class="chip"><input type="checkbox" id="teamTimerToggle"> С таймером</label>
-          <button class="btn ghost" id="teamTimeMinus">− 30с</button>
-          <div class="chip" id="teamTimeLabel">60 c</div>
-          <button class="btn ghost" id="teamTimePlus">+ 30с</button>
-        </div>
-        <div class="row" style="flex-wrap:wrap; align-items:center; gap:12px">
-          <label class="chip"><input type="checkbox" id="teamPtsToggle" checked> Очки до победы</label>
-          <div class="row" id="ptsControls">
-            <button class="btn ghost" id="ptsMinus">−</button>
-            <div class="chip" id="ptsLabel">10</div>
-            <button class="btn ghost" id="ptsPlus">+</button>
-          </div>
+      <h2>Таймер</h2>
+      <div class="row" style="gap:12px; align-items:center; flex-wrap:nowrap; overflow-x:auto">
+        <label class="chip check-only" title="Таймер">
+          <input type="checkbox" id="teamTimerToggle" aria-label="Включить таймер">
+        </label>
+        <button class="btn ghost" id="teamTimeMinus" title="−30 секунд">−</button>
+        <div class="chip" id="teamTimeLabel">60 с</div>
+        <button class="btn ghost" id="teamTimePlus" title="+30 секунд">+</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Очки до победы</h2>
+      <div class="row" style="gap:12px; align-items:center; flex-wrap:nowrap; overflow-x:auto">
+        <label class="chip check-only" title="Очки до победы">
+          <input type="checkbox" id="teamPtsToggle" checked aria-label="Включить очки до победы">
+        </label>
+        <div class="pts-controls" id="ptsControls">
+          <button class="btn ghost" id="ptsMinus" title="Минус одно очко">−</button>
+          <div class="chip" id="ptsLabel">10</div>
+          <button class="btn ghost" id="ptsPlus" title="Плюс одно очко">+</button>
         </div>
       </div>
     </div>
 
     <div class="footer">
-      <button class="btn" id="startTeam">Начать игру</button>
+      <button class="btn btn-full" id="startTeam">Начать игру</button>
     </div>
   </div>
 
@@ -391,11 +579,18 @@
         <div class="chip">Ход: <strong id="turnTeamName">Команда 1</strong></div>
         <div class="chip" id="tTimerBox" style="display:none">⏱ <span id="tTimer">00:00</span></div>
       </div>
-      <div id="scoreTable" class="stack" style="margin-top:10px"></div>
     </div>
 
     <div class="word-card">
       <div id="tWord" class="word">—</div>
+    </div>
+
+    <div class="section stack" style="gap:12px; align-items:stretch">
+      <div class="round-status" id="tRoundStatus">—</div>
+      <div class="stack" style="gap:12px">
+        <button class="btn btn-full" id="tStartRound">Начать раунд</button>
+        <button class="btn warn" id="tEndRound" style="display:none">Закончить</button>
+      </div>
     </div>
 
     <div class="section">
@@ -408,6 +603,11 @@
         <button class="btn ghost" id="tHideBtn">Скрыть слово</button>
         <button class="btn ghost" id="tMeaningBtn">Значение слова (Википедия)</button>
       </div>
+    </div>
+
+    <div class="section stack" style="gap:12px">
+      <button class="btn ghost btn-full" id="tStatsBtn" type="button">Статистика</button>
+      <div id="scoreTable" class="stack"></div>
     </div>
   </div>
 
@@ -423,6 +623,35 @@
   let tTimerId = null;
   const backBtn = $('#btnBack');
   const helpBtn = $('#btnHelp');
+  const modeQuickBtn = $('#modeQuick');
+  const themeSlider = $('#themeSlider');
+  const themeSection = $('#themeSection');
+  const bodyEl = document.body;
+  const THEME_KEY = 'croc-theme';
+
+  const applyTheme = mode => {
+    const themeClass = mode === 'dark' ? 'theme-dark' : 'theme-light';
+    bodyEl.classList.remove('theme-light','theme-dark');
+    bodyEl.classList.add(themeClass);
+    if (themeSlider) themeSlider.value = mode === 'dark' ? '1' : '0';
+  };
+  const readThemePref = () => {
+    try{ return localStorage.getItem(THEME_KEY); }
+    catch{ return null; }
+  };
+  const writeThemePref = mode => {
+    try{ localStorage.setItem(THEME_KEY, mode); }
+    catch{}
+  };
+  const initialTheme = readThemePref();
+  applyTheme(initialTheme === 'dark' ? 'dark' : 'light');
+  if (themeSlider){
+    themeSlider.addEventListener('input', e => {
+      const mode = e.target.value === '1' ? 'dark' : 'light';
+      applyTheme(mode);
+      writeThemePref(mode);
+    });
+  }
 
   const DICTS = {
     easy:["дом","кот","собака","мяч","стол","стул","окно","дверь","машина","ручка","карандаш","тетрадь","лампа","книга","телефон","чашка","тарелка","ложка","вилка","нож","яблоко","банан","хлеб","сыр","молоко","чай","кофе","сок","вода","рыба","соль","сахар","масло","яйцо","ботинки","шапка","куртка","зонт","очки","часы","футбол","велосипед","рюкзак","карта","ключ","замок","мост","улица","парк","пальто","свитер","носки","перчатки","шарф","поезд","автобус","самолёт","корабль","дерево","цветок","трава","река","море","гора","облако","солнце","луна","звезда","дождь","снег","ветер","гром","молния","песок","пляж","печенье","торт","конфета","шоколад","мороз","тепло","холод","лето","осень","зима","весна","сумка","кресло","диван","кровать","подушка","одеяло","ковёр","полка","доска","дверца"],
@@ -444,7 +673,7 @@
     {id:'snow', emoji:'❄️', bg:'linear-gradient(135deg,#bfdbfe,#60a5fa)', color:'#1e3a8a'}
   ];
   const defaultTeamName = idx => `Команда ${idx+1}`;
-  const makeTeam = (name, icon) => ({name, icon, points:0, hit:0, miss:0});
+  const makeTeam = (name, icon) => ({name, icon, points:0, hit:0, miss:0, hitWords:[], missWords:[]});
   const getTeamIcon = id => TEAM_ICONS.find(icon=>icon.id===id) || TEAM_ICONS[0];
   let audioCtx = null;
   function playBuzz(){
@@ -473,15 +702,21 @@
 
   // Navigation
   const show = v => {
-    ['viewMenu','viewQuickSetup','viewQuickGame','viewTeamSetup','viewTeamGame'].forEach(id=>$('#'+id).style.display='none');
+    ['viewMenu','viewQuickGame','viewTeamSetup','viewTeamGame'].forEach(id=>{
+      const el = $('#'+id);
+      if (el) el.style.display='none';
+    });
     $('#'+v).style.display='flex';
     screen = v;
+    if (themeSection) themeSection.style.display = v==='viewMenu' ? 'flex' : 'none';
     if (v==='viewMenu'){
       backBtn.style.visibility = 'hidden';
       backBtn.style.pointerEvents = 'none';
+      if (modeQuickBtn) modeQuickBtn.classList.add('active');
     }else{
       backBtn.style.visibility = 'visible';
       backBtn.style.pointerEvents = 'auto';
+      if (modeQuickBtn) modeQuickBtn.classList.remove('active');
     }
   };
 
@@ -498,13 +733,10 @@
     alert('КрокоМим — объясните слово жестами/мимикой. Кнопки: Угадано, Пропустить, Следующее; можно скрыть/показать слово и открыть значение на Википедии. Удачи!');
   };
 
-  const menuQuickBtn = $('#menuQuickPlay');
-
-  // Menu to setups
-  $('#goQuick').onclick = () => show('viewQuickSetup');
   $('#goTeam').onclick = () => {
     ensureTeamsSeed();
     renderTeams();
+    syncTeamSettingsFromMenu();
     show('viewTeamSetup');
   };
 
@@ -518,35 +750,65 @@
     timeMinus: $('#quickTimeMinus'),
     timePlus: $('#quickTimePlus'),
     timeLabel: $('#quickTimeLabel'),
+    ptsToggle: $('#quickPtsToggle'),
+    ptsControls: $('#quickPtsControls'),
+    pts: 10,
+    ptsMinus: $('#quickPtsMinus'),
+    ptsPlus: $('#quickPtsPlus'),
+    ptsLabel: $('#quickPtsLabel'),
     start: $('#startQuick')
   };
-  const upQuickTime = () => qs.timeLabel.textContent = qs.time+' c';
+  const upQuickTime = () => qs.timeLabel.textContent = qs.time+' с';
+  const upQuickPts = () => qs.ptsLabel.textContent = qs.pts;
   upQuickTime();
+  upQuickPts();
+  qs.timerToggle.checked = false;
+  qs.ptsToggle.checked = false;
+  const updateQuickTimerUI = () => {
+    if (!qs.timerToggle) return;
+    const enabled = qs.timerToggle.checked;
+    [qs.timeMinus, qs.timePlus].forEach(btn=>{ if (btn) btn.disabled = !enabled; });
+    if (qs.timeLabel) qs.timeLabel.classList.toggle('disabled', !enabled);
+  };
   qs.timeMinus.onclick = () => { qs.time = Math.max(30, qs.time-30); upQuickTime(); };
   qs.timePlus.onclick = () => { qs.time += 30; upQuickTime(); };
   qs.dict.onchange = () => qs.customBox.style.display = (qs.dict.value==='custom')?'block':'none';
-
-  menuQuickBtn.onclick = () => {
-    qs.dict.value = 'easy';
-    qs.dict.dispatchEvent(new Event('change'));
-    qs.timerToggle.checked = true;
-    qs.time = 60;
-    upQuickTime();
-    startQuickGame();
+  qs.ptsMinus.onclick = () => { qs.pts = Math.max(1, qs.pts-1); upQuickPts(); };
+  qs.ptsPlus.onclick = () => { qs.pts += 1; upQuickPts(); };
+  const updateQuickPts = () => {
+    if (!qs.ptsControls) return;
+    const enabled = qs.ptsToggle.checked;
+    qs.ptsControls.style.display = enabled ? 'flex' : 'none';
+    [qs.ptsMinus, qs.ptsPlus].forEach(btn=>{ if (btn) btn.disabled = !enabled; });
+    if (qs.ptsLabel) qs.ptsLabel.classList.toggle('disabled', !enabled);
   };
+  if (qs.timerToggle) qs.timerToggle.onchange = updateQuickTimerUI;
+  updateQuickTimerUI();
+  qs.ptsToggle.onchange = updateQuickPts;
+  updateQuickPts();
+  if (qs.dict){
+    qs.dict.value = 'medium';
+    qs.dict.dispatchEvent(new Event('change'));
+  }
 
   // Quick game state
-  let qWords=[], qIndex=0, qHide=false, qRemain=0, qHit=0, qMiss=0;
+  let qWords=[], qIndex=0, qHide=false, qRemain=0, qHit=0, qMiss=0, qTarget=null, qHitWords=[], qMissWords=[];
 
   const qUI = {
     word: $('#qWord'),
     hit: $('#qHit'), miss: $('#qMiss'),
     next: $('#qNext'), hitBtn: $('#qHitBtn'), skipBtn: $('#qSkipBtn'),
     hideBtn: $('#qHideBtn'), meaningBtn: $('#qMeaningBtn'),
-    tBox: $('#qTimerBox'), tLabel: $('#qTimer')
+    tBox: $('#qTimerBox'), tLabel: $('#qTimer'),
+    statsBtn: $('#qStatsBtn')
   };
 
   const pad = n => String(n).padStart(2,'0');
+  const formatWordList = list => list.length ? list.join(', ') : '—';
+
+  function showWordStats(title, hitList, missList){
+    alert(`${title}\n\nУгаданные (${hitList.length}):\n${formatWordList(hitList)}\n\nПропущенные (${missList.length}):\n${formatWordList(missList)}`);
+  }
 
   function startQuickGame(){
     // build words
@@ -568,6 +830,8 @@
     shuffle(qWords);
     qIndex=0; qHide=false; qHit=0; qMiss=0; qTarget = qs.ptsToggle.checked ? qs.pts : null;
     qUI.hit.textContent = '0'; qUI.miss.textContent = '0';
+    qHitWords = [];
+    qMissWords = [];
     qUI.word.textContent = qWords[qIndex];
     qUI.hideBtn.textContent = 'Скрыть слово';
 
@@ -592,6 +856,7 @@
     show('viewQuickGame');
   }
   $('#startQuick').onclick = startQuickGame;
+  if (modeQuickBtn) modeQuickBtn.onclick = startQuickGame;
 
   function nextWord(){
     qIndex = (qIndex+1) % qWords.length;
@@ -604,6 +869,8 @@
   qUI.hitBtn.onclick = ()=>{
     qHit++;
     qUI.hit.textContent=qHit;
+    const current = qWords[qIndex];
+    if (current) qHitWords.push(current);
     if (qTarget!==null && qHit>=qTarget){
       if (qTimerId){ clearInterval(qTimerId); qTimerId=null; }
       playBuzz();
@@ -613,13 +880,24 @@
     }
     nextWord();
   };
-  qUI.skipBtn.onclick = ()=>{ qMiss++; qUI.miss.textContent=qMiss; nextWord(); };
+  qUI.skipBtn.onclick = ()=>{
+    const current = qWords[qIndex];
+    if (current) qMissWords.push(current);
+    qMiss++;
+    qUI.miss.textContent=qMiss;
+    nextWord();
+  };
   qUI.hideBtn.onclick = ()=>{
     qHide = !qHide;
     qUI.word.textContent = qHide ? '•••' : qWords[qIndex];
     qUI.hideBtn.textContent = qHide ? 'Показать слово' : 'Скрыть слово';
   };
   qUI.meaningBtn.onclick = ()=> window.open('https://ru.wikipedia.org/wiki/'+encodeURIComponent(qWords[qIndex]), '_blank');
+  if (qUI.statsBtn){
+    qUI.statsBtn.onclick = ()=>{
+      showWordStats('Быстрый режим', qHitWords, qMissWords);
+    };
+  }
 
   // Team setup & game
   let teams = [];
@@ -636,7 +914,9 @@
         icon: team.icon || TEAM_ICONS[idx % TEAM_ICONS.length].id,
         points: team.points ?? 0,
         hit: team.hit ?? 0,
-        miss: team.miss ?? 0
+        miss: team.miss ?? 0,
+        hitWords: Array.isArray(team.hitWords) ? team.hitWords : [],
+        missWords: Array.isArray(team.missWords) ? team.missWords : []
       }));
     }
   }
@@ -651,50 +931,25 @@
       const card=document.createElement('div');
       card.className='section team-card';
       card.innerHTML = `
-        <button class="team-avatar" type="button" data-i="${index}" data-action="cycle" style="background:${iconDef.bg};color:${iconDef.color}">
-          <span>${iconDef.emoji}</span>
-        </button>
+        <div class="team-card-top">
+          <div class="team-avatar" style="background:${iconDef.bg};color:${iconDef.color}">
+            <span>${iconDef.emoji}</span>
+          </div>
+        </div>
         <div class="team-body">
           <div class="team-name">${escapeHtml(team.name)}</div>
-          <button class="btn ghost team-edit" type="button" data-i="${index}" data-action="edit">Редактировать название</button>
-          <div class="team-icon-grid">
-            ${TEAM_ICONS.map(icon=>`
-              <button class="team-icon-option ${icon.id===team.icon?'active':''}" type="button" data-i="${index}" data-icon="${icon.id}" style="background:${icon.bg};color:${icon.color}">
-                <span>${icon.emoji}</span>
-              </button>
-            `).join('')}
-          </div>
+          <button class="team-delete" type="button" title="Удалить команду" data-index="${index}">🗑️</button>
         </div>`;
+      const deleteBtn = card.querySelector('.team-delete');
+      if (deleteBtn){
+        deleteBtn.setAttribute('aria-label', `Удалить команду «${team.name || defaultTeamName(index)}»`);
+        deleteBtn.onclick = () => {
+          if (!confirm(`Удалить команду «${team.name || defaultTeamName(index)}»?`)) return;
+          teams.splice(index, 1);
+          renderTeams();
+        };
+      }
       teamList.appendChild(card);
-    });
-
-    teamList.querySelectorAll('[data-action="edit"]').forEach(btn=>{
-      btn.onclick = ()=>{
-        const idx = +btn.dataset.i;
-        const current = teams[idx].name;
-        const next = prompt('Название команды', current);
-        if (next===null) return;
-        const trimmed = next.trim();
-        teams[idx].name = trimmed || defaultTeamName(idx);
-        renderTeams();
-      };
-    });
-    teamList.querySelectorAll('.team-icon-option').forEach(btn=>{
-      btn.onclick = ()=>{
-        const idx = +btn.dataset.i;
-        teams[idx].icon = btn.dataset.icon;
-        renderTeams();
-      };
-    });
-    teamList.querySelectorAll('[data-action="cycle"]').forEach(btn=>{
-      btn.onclick = ()=>{
-        const idx = +btn.dataset.i;
-        const currentIcon = teams[idx].icon;
-        const foundIndex = TEAM_ICONS.findIndex(icon=>icon.id===currentIcon);
-        const nextIcon = TEAM_ICONS[(foundIndex+1)%TEAM_ICONS.length];
-        teams[idx].icon = nextIcon.id;
-        renderTeams();
-      };
     });
   }
   $('#teamAdd').onclick = ()=>{
@@ -702,6 +957,22 @@
     teams.push(makeTeam(defaultTeamName(teams.length), icon));
     renderTeams();
   };
+  if (teamRenameBtn){
+    teamRenameBtn.onclick = ()=>{
+      if (teams.length===0){ alert('Нет команд для редактирования'); return; }
+      const list = teams.map((team, idx)=>`${idx+1}. ${team.name || defaultTeamName(idx)}`).join('\n');
+      const idxInput = prompt('Введите номер команды для редактирования:\n'+list);
+      if (idxInput===null) return;
+      const idx = parseInt(idxInput, 10) - 1;
+      if (Number.isNaN(idx) || idx<0 || idx>=teams.length){ alert('Некорректный номер команды'); return; }
+      const current = teams[idx].name;
+      const next = prompt('Новое название команды', current);
+      if (next===null) return;
+      const trimmed = next.trim();
+      teams[idx].name = trimmed || defaultTeamName(idx);
+      renderTeams();
+    };
+  }
 
   const ts = {
     dict: $('#teamDict'),
@@ -716,7 +987,7 @@
     ptsControls: $('#ptsControls'),
     pts: 10, ptsMinus: $('#ptsMinus'), ptsPlus: $('#ptsPlus'), ptsLabel: $('#ptsLabel')
   };
-  const upTeamTime = () => ts.timeLabel.textContent = ts.time+' c';
+  const upTeamTime = () => ts.timeLabel.textContent = ts.time+' с';
   const upPts = () => ts.ptsLabel.textContent = ts.pts;
   upTeamTime(); upPts();
   ts.timeMinus.onclick = ()=>{ ts.time = Math.max(30, ts.time-30); upTeamTime(); };
@@ -724,15 +995,56 @@
   ts.ptsMinus.onclick = ()=>{ ts.pts = Math.max(1, ts.pts-1); upPts(); };
   ts.ptsPlus.onclick = ()=>{ ts.pts += 1; upPts(); };
   ts.dict.onchange = ()=> ts.customBox.style.display = (ts.dict.value==='custom')?'block':'none';
+  const updateTeamTimerUI = ()=>{
+    if (!ts.timerToggle) return;
+    const enabled = ts.timerToggle.checked;
+    [ts.timeMinus, ts.timePlus].forEach(btn=>{ if (btn) btn.disabled = !enabled; });
+    if (ts.timeLabel) ts.timeLabel.classList.toggle('disabled', !enabled);
+  };
   const updatePtsUI = ()=>{
     const enabled = ts.ptsToggle.checked;
     ts.ptsControls.style.display = enabled ? 'flex' : 'none';
+    [ts.ptsMinus, ts.ptsPlus].forEach(btn=>{ if (btn) btn.disabled = !enabled; });
+    if (ts.ptsLabel) ts.ptsLabel.classList.toggle('disabled', !enabled);
   };
+  if (ts.timerToggle) ts.timerToggle.onchange = updateTeamTimerUI;
+  updateTeamTimerUI();
   ts.ptsToggle.onchange = updatePtsUI;
   updatePtsUI();
 
+  function syncTeamSettingsFromMenu(){
+    if (!qs || !ts) return;
+    if (qs.dict && ts.dict){
+      const dictValue = qs.dict.value || 'medium';
+      ts.dict.value = dictValue;
+      ts.dict.dispatchEvent(new Event('change'));
+      if (dictValue === 'custom' && ts.customText && qs.customText){
+        ts.customText.value = qs.customText.value;
+      }
+    }
+    if (typeof qs.time === 'number'){
+      ts.time = qs.time;
+      upTeamTime();
+    }
+    if (ts.timerToggle && qs.timerToggle){
+      ts.timerToggle.checked = qs.timerToggle.checked;
+      updateTeamTimerUI();
+    }
+    if (typeof qs.pts === 'number'){
+      ts.pts = qs.pts;
+      upPts();
+    }
+    if (ts.ptsToggle && qs.ptsToggle){
+      ts.ptsToggle.checked = qs.ptsToggle.checked;
+    }
+    updatePtsUI();
+  }
+
   // Team game state
-  let tWords=[], tIndex=0, tHide=false, tRemain=0, turn=0;
+  let tWords=[], tIndex=-1, tHide=false, tRemain=0, turn=0, roundActive=false, timerExpired=false;
+  let teamTimerEnabled = false;
+  let teamPointsEnabled = false;
+  let teamPointGoal = 10;
 
   const tUI = {
     word: $('#tWord'),
@@ -740,12 +1052,17 @@
     tBox: $('#tTimerBox'), tLabel: $('#tTimer'),
     table: $('#scoreTable'),
     next: $('#tNext'), hit: $('#tHitBtn'), skip: $('#tSkipBtn'),
-    hideBtn: $('#tHideBtn'), meaning: $('#tMeaningBtn')
+    hideBtn: $('#tHideBtn'), meaning: $('#tMeaningBtn'),
+    startRound: $('#tStartRound'), endRound: $('#tEndRound'),
+    status: $('#tRoundStatus'),
+    statsBtn: $('#tStatsBtn')
   };
 
   function updateTurnHeader(){
-    const iconDef = getTeamIcon(teams[turn].icon);
-    tUI.turnName.innerHTML = `<span class="team-chip-icon">${iconDef.emoji}</span>${escapeHtml(teams[turn].name || defaultTeamName(turn))}`;
+    if (!teams[turn]) return;
+    const current = teams[turn];
+    const iconDef = getTeamIcon(current.icon);
+    tUI.turnName.innerHTML = `<span class="team-chip-icon">${iconDef.emoji}</span>${escapeHtml(current.name || defaultTeamName(turn))}`;
   }
 
   function renderScore(){
@@ -761,106 +1078,257 @@
         </div>
         <div class="chip">Угадано: ${team.hit}</div>
         <div class="chip">Пропущено: ${team.miss}</div>
-        <div class="chip">Очки: ${team.points}</div>`;
+        ${teamPointsEnabled ? `<div class="chip">Очки: ${team.points}</div>` : ''}`;
       tUI.table.appendChild(row);
     });
   }
 
+  function setRoundControlsEnabled(enabled){
+    [tUI.next, tUI.hit, tUI.skip, tUI.hideBtn, tUI.meaning].forEach(btn=>{
+      if (btn){
+        btn.disabled = !enabled;
+      }
+    });
+  }
+
+  function resetWordView(){
+    tHide = false;
+    if (tUI.word) tUI.word.textContent = '—';
+    if (tUI.hideBtn) tUI.hideBtn.textContent = 'Скрыть слово';
+  }
+
+  function advanceWord(){
+    if (!tWords.length) return;
+    tIndex = (tIndex + 1) % tWords.length;
+    tHide = false;
+    if (tUI.word) tUI.word.textContent = tWords[tIndex];
+    if (tUI.hideBtn) tUI.hideBtn.textContent = 'Скрыть слово';
+  }
+
+  function setStatus(text){
+    if (tUI.status) tUI.status.textContent = text;
+  }
+
+  function preRoundMessage(name, initial){
+    if (!name) return;
+    if (initial){
+      setStatus(`Команда «${name}», приготовьтесь и нажмите «Начать раунд».`);
+    }else{
+      setStatus(`Ход завершён. Передайте устройство команде «${name}» и нажмите «Начать раунд».`);
+    }
+  }
+
   function startTeamGame(){
     if (teams.length<2){ alert('Нужно минимум 2 команды'); return; }
-    // build words
-    if (ts.dict.value==='custom'){
+    let dictKey = ts.dict.value;
+    if (!dictKey || (!DICTS[dictKey] && dictKey !== 'custom')){
+      dictKey = 'medium';
+      if (ts.dict){
+        ts.dict.value = 'medium';
+        ts.dict.dispatchEvent(new Event('change'));
+      }
+    }
+    if (dictKey==='custom'){
       const raw = ts.customText.value || '';
-      tWords = raw.split(/[,\\n]/).map(s=>s.trim()).filter(Boolean);
+      tWords = raw.split(/[,\n]/).map(s=>s.trim()).filter(Boolean);
     }else{
-      tWords = [...DICTS[ts.dict.value]];
+      tWords = [...DICTS[dictKey]];
     }
     if (tWords.length===0){ alert('Добавьте хотя бы одно слово'); return; }
     shuffle(tWords);
-    teams = teams.map((t, idx)=>({
-      name: t.name || defaultTeamName(idx),
-      icon: t.icon || TEAM_ICONS[idx % TEAM_ICONS.length].id,
-      points:0, hit:0, miss:0
-    }));
-    tIndex=0; tHide=false; turn=0;
-    tUI.word.textContent = tWords[tIndex];
-    tUI.hideBtn.textContent = 'Скрыть слово';
+    teams = teams.map((t, idx)=>(
+      {
+        name: t.name || defaultTeamName(idx),
+        icon: t.icon || TEAM_ICONS[idx % TEAM_ICONS.length].id,
+        points:0,
+        hit:0,
+        miss:0,
+        hitWords:[],
+        missWords:[]
+      }
+    ));
+    tIndex=-1; tHide=false; turn=0; roundActive=false; timerExpired=false;
+    teamTimerEnabled = !!ts.timerToggle?.checked;
+    teamPointsEnabled = !!ts.ptsToggle?.checked;
+    teamPointGoal = ts.pts;
     renderScore();
     updateTurnHeader();
-
+    resetWordView();
+    setRoundControlsEnabled(false);
     clearInterval(tTimerId); tTimerId=null;
-    if (ts.timerToggle.checked){
+    if (teamTimerEnabled){
+      tUI.tBox.style.display='inline-flex';
+      tRemain = ts.time;
+      tUI.tLabel.textContent = `${pad(Math.floor(tRemain/60))}:${pad(tRemain%60)}`;
+    }else{
+      tUI.tBox.style.display='none';
+    }
+    if (tUI.startRound){
+      tUI.startRound.style.display='inline-flex';
+      tUI.startRound.disabled=false;
+    }
+    if (tUI.endRound){
+      tUI.endRound.style.display='none';
+    }
+    const currentName = teams[turn]?.name || defaultTeamName(turn);
+    preRoundMessage(currentName, true);
+    show('viewTeamGame');
+  }
+  $('#startTeam').onclick = startTeamGame;
+
+  function beginRound(){
+    if (roundActive) return;
+    roundActive=true;
+    timerExpired=false;
+    setRoundControlsEnabled(true);
+    if (tUI.startRound){
+      tUI.startRound.style.display='none';
+    }
+    if (tUI.endRound){
+      tUI.endRound.style.display='inline-flex';
+      tUI.endRound.disabled=false;
+    }
+    const currentName = teams[turn]?.name || defaultTeamName(turn);
+    setStatus(`Ход команды «${currentName}»`);
+    clearInterval(tTimerId); tTimerId=null;
+    if (teamTimerEnabled){
       tUI.tBox.style.display='inline-flex';
       tRemain = ts.time;
       tUI.tLabel.textContent = `${pad(Math.floor(tRemain/60))}:${pad(tRemain%60)}`;
       tTimerId = setInterval(()=>{
         tRemain--;
-        tUI.tLabel.textContent = `${pad(Math.floor(tRemain/60))}:${pad(tRemain%60)}`;
-        if (tRemain<=0){
+        if (tRemain <= 0){
           clearInterval(tTimerId); tTimerId=null;
-          playBuzz();
-          nextTurn();
+          tUI.tLabel.textContent = '00:00';
+          handleTimerEnd();
+        }else{
+          tUI.tLabel.textContent = `${pad(Math.floor(tRemain/60))}:${pad(tRemain%60)}`;
         }
       },1000);
     }else{
       tUI.tBox.style.display='none';
     }
-    show('viewTeamGame');
+    advanceWord();
   }
-  $('#startTeam').onclick = startTeamGame;
 
-  function nextTurn(){
-    turn = (turn+1) % teams.length;
+  function handleTimerEnd(){
+    if (!roundActive || timerExpired) return;
+    timerExpired=true;
+    playBuzz();
+    setStatus('Время вышло! Завершите объяснение и нажмите «Закончить».');
+    if (tUI.next) tUI.next.disabled = true;
+  }
+
+  function lockFinalActions(){
+    if (tUI.hit) tUI.hit.disabled = true;
+    if (tUI.skip) tUI.skip.disabled = true;
+  }
+
+  function finishRound(){
+    if (!roundActive) return;
+    clearInterval(tTimerId); tTimerId=null;
+    roundActive=false;
+    timerExpired=false;
+    setRoundControlsEnabled(false);
+    if (tUI.endRound){
+      tUI.endRound.style.display='none';
+    }
+    if (tUI.startRound){
+      tUI.startRound.style.display='inline-flex';
+      tUI.startRound.disabled=false;
+    }
+    const nextIndex = (turn + 1) % teams.length;
+    const nextName = teams[nextIndex]?.name || defaultTeamName(nextIndex);
+    turn = nextIndex;
     updateTurnHeader();
-    nextTeamWord();
-    if (ts.timerToggle.checked){
-      clearInterval(tTimerId); tRemain = ts.time;
+    preRoundMessage(nextName, false);
+    resetWordView();
+    if (teamTimerEnabled){
+      tUI.tBox.style.display='inline-flex';
+      tRemain = ts.time;
       tUI.tLabel.textContent = `${pad(Math.floor(tRemain/60))}:${pad(tRemain%60)}`;
-      tTimerId = setInterval(()=>{
-        tRemain--;
-        tUI.tLabel.textContent = `${pad(Math.floor(tRemain/60))}:${pad(tRemain%60)}`;
-        if (tRemain<=0){
-          clearInterval(tTimerId); tTimerId=null;
-          playBuzz();
-          nextTurn();
-        }
-      },1000);
-    } else {
-      clearInterval(tTimerId);
-      tTimerId = null;
+    }else{
+      tUI.tBox.style.display='none';
     }
   }
-  function nextTeamWord(){
-    tIndex = (tIndex+1) % tWords.length;
-    tHide=false;
-    tUI.word.textContent = tWords[tIndex];
-    tUI.hideBtn.textContent = 'Скрыть слово';
+
+  function declareWinner(team){
+    clearInterval(tTimerId); tTimerId=null;
+    roundActive=false;
+    timerExpired=false;
+    alert('Победа: ' + team.name);
+    show('viewMenu');
   }
 
-  tUI.next.onclick = nextTeamWord;
+  if (tUI.startRound){
+    tUI.startRound.onclick = beginRound;
+  }
+  if (tUI.endRound){
+    tUI.endRound.onclick = finishRound;
+  }
+
+  tUI.next.onclick = ()=>{
+    if (!roundActive || timerExpired) return;
+    advanceWord();
+  };
   tUI.hideBtn.onclick = ()=>{
+    if (!roundActive || tIndex<0) return;
     tHide = !tHide;
     tUI.word.textContent = tHide ? '•••' : tWords[tIndex];
     tUI.hideBtn.textContent = tHide ? 'Показать слово' : 'Скрыть слово';
   };
-  tUI.meaning.onclick = ()=> window.open('https://ru.wikipedia.org/wiki/'+encodeURIComponent(tWords[tIndex]), '_blank');
+  tUI.meaning.onclick = ()=>{
+    if (!roundActive || tIndex<0) return;
+    window.open('https://ru.wikipedia.org/wiki/'+encodeURIComponent(tWords[tIndex]), '_blank');
+  };
+
+  if (tUI.statsBtn){
+    tUI.statsBtn.onclick = ()=>{
+      if (!teams.length){
+        alert('Статистика пока пуста');
+        return;
+      }
+      const blocks = teams.map((team, idx)=>{
+        const name = team.name || defaultTeamName(idx);
+        const hitList = Array.isArray(team.hitWords) ? team.hitWords : [];
+        const missList = Array.isArray(team.missWords) ? team.missWords : [];
+        return `Команда «${name}»\nУгаданные (${hitList.length}):\n${formatWordList(hitList)}\n\nПропущенные (${missList.length}):\n${formatWordList(missList)}`;
+      });
+      alert(`Статистика команд\n\n${blocks.join('\n\n')}`);
+    };
+  }
 
   tUI.hit.onclick = ()=>{
-    teams[turn].hit++; teams[turn].points++;
+    if (!roundActive) return;
+    const current = tWords[tIndex];
+    if (current) teams[turn].hitWords.push(current);
+    teams[turn].hit++;
+    if (teamPointsEnabled) teams[turn].points++;
     renderScore();
-    if (ts.ptsToggle.checked && teams[turn].points >= ts.pts){
-      clearInterval(tTimerId); tTimerId=null;
-      alert('Победа: ' + teams[turn].name);
-      show('viewMenu');
+    if (teamPointsEnabled && teams[turn].points >= teamPointGoal){
+      declareWinner(teams[turn]);
       return;
     }
-    nextTurn();
+    if (timerExpired){
+      lockFinalActions();
+      return;
+    }
+    advanceWord();
   };
   tUI.skip.onclick = ()=>{
-    teams[turn].miss++; teams[turn].points--;
+    if (!roundActive) return;
+    const current = tWords[tIndex];
+    if (current) teams[turn].missWords.push(current);
+    teams[turn].miss++;
+    if (teamPointsEnabled) teams[turn].points--;
     renderScore();
-    nextTurn();
+    if (timerExpired){
+      lockFinalActions();
+      return;
+    }
+    advanceWord();
   };
+
 
   // Helpers
   const escapeHtml = str => str
