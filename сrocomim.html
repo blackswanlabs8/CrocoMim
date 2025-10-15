@@ -87,6 +87,23 @@
     .row{ display:flex; gap:12px; flex-wrap:wrap; align-items:center }
     .stack{ display:flex; flex-direction:column; gap:12px }
     .grow{ flex:1 1 0 }
+    .mode-row{ display:grid; gap:12px; grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .mode-btn{
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:6px; padding:18px 12px; border-radius:18px;
+      background:var(--panel-2);
+      border:1px solid rgba(255,255,255,.06);
+      color:var(--text);
+      font-weight:700;
+      cursor:pointer;
+      transition:transform .1s ease, background .2s ease, border .2s ease;
+    }
+    .mode-btn .mode-icon{ font-size:28px; }
+    .mode-btn:hover{ background:#1f2a41; }
+    .mode-btn:active{ transform:scale(.97); }
+    .mode-btn.active{ background:rgba(34,197,94,.16); border-color:var(--accent); color:var(--text-strong); }
+    .menu-block{ background:rgba(15,23,42,.35); border:1px solid rgba(255,255,255,.04); border-radius:16px; padding:14px; display:flex; flex-direction:column; gap:12px; }
+    .menu-block-title{ font-weight:700; color:#cbd5e1; font-size:16px; }
 
     /* Buttons */
     .btn{
@@ -102,6 +119,12 @@
     }
     .btn:hover{ background:var(--accent-2) }
     .btn:active{ transform:translateY(1px) }
+    .btn:disabled{
+      opacity:.5;
+      cursor:not-allowed;
+      box-shadow:none;
+      transform:none;
+    }
     .btn.ghost{
       background:transparent;color:var(--text);
       border:1px solid rgba(255,255,255,.08);
@@ -149,6 +172,84 @@
       display:grid; gap:10px;
       grid-template-columns:repeat(3, minmax(0,1fr));
     }
+    .team-grid{
+      display:grid;
+      gap:16px;
+      grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+    }
+    .team-card{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:12px;
+      text-align:center;
+    }
+    .team-card-top{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:8px;
+    }
+    .team-avatar{
+      width:96px;
+      height:96px;
+      border-radius:20px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:42px;
+      background-size:cover;
+      background-position:center;
+      color:#0b0b0b;
+      box-shadow:0 6px 16px rgba(15,23,42,.35);
+      flex:0 0 auto;
+      pointer-events:none;
+    }
+    .team-avatar span{ filter:drop-shadow(0 2px 4px rgba(0,0,0,.45)); }
+    .team-label{
+      font-size:13px;
+      font-weight:600;
+      text-transform:uppercase;
+      letter-spacing:.4px;
+      color:var(--muted);
+    }
+    .team-body{
+      width:100%;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+    }
+    .team-name{
+      font-size:18px;
+      font-weight:700;
+      color:var(--text-strong);
+      text-align:left;
+    }
+    .team-delete{
+      width:42px;
+      height:42px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.08);
+      background:var(--panel-2);
+      color:var(--text);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      transition:background .2s ease, transform .1s ease;
+    }
+    .team-delete:hover{ background:#1f2a41; }
+    .team-delete:active{ transform:scale(.95); }
+    .team-chip{ display:flex; align-items:center; gap:8px; }
+    .team-chip-icon{ font-size:20px; line-height:1; }
+    #turnTeamName{ display:inline-flex; align-items:center; gap:6px; }
+    .round-status{
+      text-align:center;
+      font-weight:600;
+      color:#cbd5e1;
+    }
+    .chip input[type="checkbox"]{ margin-right:6px; accent-color:var(--accent); }
     .footer{
       display:flex; gap:10px; flex-wrap:wrap; justify-content:center;
       margin-top:auto;
@@ -156,6 +257,7 @@
     @media (max-width:600px){
       .grid-3{ grid-template-columns:1fr }
       .header{ grid-template-columns:44px 1fr 44px }
+      .mode-row{ grid-template-columns:1fr }
     }
   </style>
 </head>
@@ -171,51 +273,63 @@
 
   <!-- MAIN VIEWS -->
   <div id="viewMenu" class="stack">
-    <div class="section">
-      <h2>Режимы игры</h2>
-      <div class="stack">
-        <button class="btn" id="goQuick">Быстрый</button>
-        <button class="btn ghost" id="goTeam">Командный</button>
+    <div class="section stack" style="gap:20px">
+      <div class="mode-row">
+        <button class="mode-btn active" id="modeQuick" type="button">
+          <span class="mode-icon">⚡</span>
+          Быстрый
+        </button>
+        <button class="mode-btn" id="goTeam" type="button">
+          <span class="mode-icon">👥</span>
+          Команда
+        </button>
       </div>
-    </div>
-  </div>
 
-  <!-- QUICK SETTINGS -->
-  <div id="viewQuickSetup" class="stack" style="display:none">
-    <div class="section">
-      <h2>Словарь</h2>
-      <select class="select" id="quickDict">
-        <option value="easy">Лёгкий</option>
-        <option value="medium">Средний</option>
-        <option value="hard">Сложный</option>
-        <option value="films_series">Фильмы и сериалы</option>
-        <option value="geography">География</option>
-        <option value="kids">Детский</option>
-        <option value="custom">Свой словарь</option>
-      </select>
-      <div id="quickCustomBox" class="stack" style="display:none; margin-top:10px">
-        <label class="muted">Вставьте слова через запятую или перенос строки</label>
-        <textarea class="input" id="quickCustomWords" rows="4" placeholder="яблоко, корабль, радуга..."></textarea>
-      </div>
-    </div>
+      <div class="stack" style="gap:16px">
+        <div class="menu-block">
+          <div class="menu-block-title">Словарь</div>
+          <select class="select" id="quickDict">
+            <option value="easy">Лёгкий</option>
+            <option value="medium">Средний</option>
+            <option value="hard">Сложный</option>
+            <option value="films_series">Фильмы и сериалы</option>
+            <option value="geography">География</option>
+            <option value="kids">Детский</option>
+            <option value="custom">Свой словарь</option>
+          </select>
+          <div id="quickCustomBox" class="stack" style="display:none; margin-top:10px">
+            <label class="muted">Вставьте слова через запятую или перенос строки</label>
+            <textarea class="input" id="quickCustomWords" rows="4" placeholder="яблоко, корабль, радуга..."></textarea>
+          </div>
+        </div>
 
-    <div class="section">
-      <h2>Таймер</h2>
-      <div class="row">
-        <label class="chip"><input type="checkbox" id="quickTimerToggle"> С таймером</label>
-        <div class="row">
-          <button class="btn ghost" id="quickTimeMinus">− 30с</button>
-          <div class="chip" id="quickTimeLabel">60 c</div>
-          <button class="btn ghost" id="quickTimePlus">+ 30с</button>
+        <div class="menu-block">
+          <div class="menu-block-title">Таймер</div>
+          <div class="row" style="gap:12px; flex-wrap:wrap; align-items:center">
+            <label class="chip"><input type="checkbox" id="quickTimerToggle"> С таймером</label>
+            <button class="btn ghost" id="quickTimeMinus">− 30с</button>
+            <div class="chip" id="quickTimeLabel">60 c</div>
+            <button class="btn ghost" id="quickTimePlus">+ 30с</button>
+          </div>
+          <div class="muted" style="margin-top:8px">Шаг изменения времени: <span class="kbd">30с</span></div>
+        </div>
+
+        <div class="menu-block">
+          <div class="menu-block-title">Очки</div>
+          <div class="row" style="gap:12px; flex-wrap:wrap; align-items:center">
+            <label class="chip"><input type="checkbox" id="quickPtsToggle"> Очки до победы</label>
+            <div class="row" id="quickPtsControls" style="gap:12px; display:none">
+              <button class="btn ghost" id="quickPtsMinus">−</button>
+              <div class="chip" id="quickPtsLabel">10</div>
+              <button class="btn ghost" id="quickPtsPlus">+</button>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="muted" style="margin-top:8px">Шаг изменения времени: <span class="kbd">30с</span></div>
-    </div>
 
-    <!-- Важно: в Быстром режиме настройка очков до победы УДАЛЕНА -->
-
-    <div class="footer">
-      <button class="btn" id="startQuick">Начать игру</button>
+      <div class="footer">
+        <button class="btn" id="startQuick">Начать игру</button>
+      </div>
     </div>
   </div>
 
@@ -249,9 +363,10 @@
   <div id="viewTeamSetup" class="stack" style="display:none">
     <div class="section">
       <h2>Команды</h2>
-      <div id="teamList" class="row"></div>
+      <div id="teamList" class="team-grid"></div>
       <div class="row">
         <button class="btn ghost" id="teamAdd">+ Добавить команду</button>
+        <button class="btn ghost" id="teamRename">✏️ Редактировать названия</button>
       </div>
     </div>
 
@@ -274,17 +389,20 @@
 
     <div class="section">
       <h2>Таймер и очки до победы</h2>
-      <div class="row">
-        <label class="chip"><input type="checkbox" id="teamTimerToggle"> С таймером</label>
-        <button class="btn ghost" id="teamTimeMinus">− 30с</button>
-        <div class="chip" id="teamTimeLabel">60 c</div>
-        <button class="btn ghost" id="teamTimePlus">+ 30с</button>
-        <div class="grow"></div>
+      <div class="stack">
         <div class="row">
-          <span class="chip">Очки до победы</span>
-          <button class="btn ghost" id="ptsMinus">−</button>
-          <div class="chip" id="ptsLabel">10</div>
-          <button class="btn ghost" id="ptsPlus">+</button>
+          <label class="chip"><input type="checkbox" id="teamTimerToggle"> С таймером</label>
+          <button class="btn ghost" id="teamTimeMinus">− 30с</button>
+          <div class="chip" id="teamTimeLabel">60 c</div>
+          <button class="btn ghost" id="teamTimePlus">+ 30с</button>
+        </div>
+        <div class="row" style="flex-wrap:wrap; align-items:center; gap:12px">
+          <label class="chip"><input type="checkbox" id="teamPtsToggle" checked> Очки до победы</label>
+          <div class="row" id="ptsControls">
+            <button class="btn ghost" id="ptsMinus">−</button>
+            <div class="chip" id="ptsLabel">10</div>
+            <button class="btn ghost" id="ptsPlus">+</button>
+          </div>
         </div>
       </div>
     </div>
@@ -308,6 +426,14 @@
       <div id="tWord" class="word">—</div>
     </div>
 
+    <div class="section stack" style="gap:12px; align-items:center">
+      <div class="round-status" id="tRoundStatus">—</div>
+      <div class="row" style="gap:12px; justify-content:center">
+        <button class="btn" id="tStartRound">Начать раунд</button>
+        <button class="btn warn" id="tEndRound" style="display:none">Закончить</button>
+      </div>
+    </div>
+
     <div class="section">
       <div class="grid-3">
         <button class="btn ghost" id="tNext">Следующее слово</button>
@@ -329,6 +455,11 @@
   // --- Utilities & state ---
   const $ = sel => document.querySelector(sel);
   let screen = 'menu';
+  let qTimerId = null;
+  let tTimerId = null;
+  const backBtn = $('#btnBack');
+  const helpBtn = $('#btnHelp');
+  const modeQuickBtn = $('#modeQuick');
 
   const DICTS = {
     easy:["дом","кот","собака","мяч","стол","стул","окно","дверь","машина","ручка","карандаш","тетрадь","лампа","книга","телефон","чашка","тарелка","ложка","вилка","нож","яблоко","банан","хлеб","сыр","молоко","чай","кофе","сок","вода","рыба","соль","сахар","масло","яйцо","ботинки","шапка","куртка","зонт","очки","часы","футбол","велосипед","рюкзак","карта","ключ","замок","мост","улица","парк","пальто","свитер","носки","перчатки","шарф","поезд","автобус","самолёт","корабль","дерево","цветок","трава","река","море","гора","облако","солнце","луна","звезда","дождь","снег","ветер","гром","молния","песок","пляж","печенье","торт","конфета","шоколад","мороз","тепло","холод","лето","осень","зима","весна","сумка","кресло","диван","кровать","подушка","одеяло","ковёр","полка","доска","дверца"],
@@ -339,26 +470,76 @@
     kids:["мяч","кукла","мишка","зайчик","солнышко","облако","радуга","снежинка","санки","варежки","шапка","шарф","машинка","паровоз","поезд","самолёт","ракета","лодка","парус","велосипед","самокат","качели","горка","карусель","зоопарк","цирк","парк","игрушка","конструктор","кубики","пазл","раскраска","фломастер","карандаш","кисточка","краски","пластилин","ножницы","клей","книжка","сказка","песня","танец","музыка","праздник","подарок","шарик","торт","свечи","печенье","конфета","шоколад","мороженое","яблоко","банан","груша","апельсин","клубника","вишня","арбуз","дыня","морковь","огурец","помидор","суп","каша","котёнок","щенок","хомяк","рыбка","черепаха","лягушка","утёнок","слон","жираф","лев","тигр","зебра","панда","домик","кроватка","подушка","одеяло","ванна","мыло","щётка","паста","полотенце","коляска","мама","папа","бабушка","дедушка","брат","сестра","друг","подруга","прятки","салочки"]
   };
 
+  const TEAM_ICONS = [
+    {id:'sun', emoji:'🌞', bg:'linear-gradient(135deg,#fde047,#f97316)', color:'#1f2937'},
+    {id:'rocket', emoji:'🚀', bg:'linear-gradient(135deg,#60a5fa,#2563eb)', color:'#0f172a'},
+    {id:'leaf', emoji:'🍀', bg:'linear-gradient(135deg,#86efac,#22c55e)', color:'#052e16'},
+    {id:'wave', emoji:'🐬', bg:'linear-gradient(135deg,#67e8f9,#0ea5e9)', color:'#0f172a'},
+    {id:'crown', emoji:'👑', bg:'linear-gradient(135deg,#fcd34d,#a855f7)', color:'#312e81'},
+    {id:'gamepad', emoji:'🎮', bg:'linear-gradient(135deg,#f472b6,#a855f7)', color:'#1e1b4b'},
+    {id:'bolt', emoji:'⚡', bg:'linear-gradient(135deg,#f97316,#ef4444)', color:'#111827'},
+    {id:'snow', emoji:'❄️', bg:'linear-gradient(135deg,#bfdbfe,#60a5fa)', color:'#1e3a8a'}
+  ];
+  const defaultTeamName = idx => `Команда ${idx+1}`;
+  const makeTeam = (name, icon) => ({name, icon, points:0, hit:0, miss:0});
+  const getTeamIcon = id => TEAM_ICONS.find(icon=>icon.id===id) || TEAM_ICONS[0];
+  let audioCtx = null;
+  function playBuzz(){
+    try{
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      if (!audioCtx) audioCtx = new AudioCtx();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const duration = 0.35;
+      const sampleRate = audioCtx.sampleRate;
+      const buffer = audioCtx.createBuffer(1, sampleRate * duration, sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i=0;i<data.length;i++){
+        const progress = i / data.length;
+        data[i] = (Math.random()*2 - 1) * (1 - progress) * 0.7;
+      }
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = buffer;
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+      noise.connect(gain).connect(audioCtx.destination);
+      noise.start();
+    }catch(err){ /* ignore playback errors */ }
+  }
+
   // Navigation
   const show = v => {
-    ['viewMenu','viewQuickSetup','viewQuickGame','viewTeamSetup','viewTeamGame'].forEach(id=>$('#'+id).style.display='none');
+    ['viewMenu','viewQuickGame','viewTeamSetup','viewTeamGame'].forEach(id=>{
+      const el = $('#'+id);
+      if (el) el.style.display='none';
+    });
     $('#'+v).style.display='flex';
     screen = v;
+    if (v==='viewMenu'){
+      backBtn.style.visibility = 'hidden';
+      backBtn.style.pointerEvents = 'none';
+      if (modeQuickBtn) modeQuickBtn.classList.add('active');
+    }else{
+      backBtn.style.visibility = 'visible';
+      backBtn.style.pointerEvents = 'auto';
+      if (modeQuickBtn) modeQuickBtn.classList.remove('active');
+    }
   };
 
   // Header buttons
-  $('#btnBack').onclick = () => {
+  backBtn.onclick = () => {
     if (screen==='viewQuickGame' || screen==='viewTeamGame'){
       if (!confirm('Выйти в меню? Текущая партия будет завершена.')) return;
     }
+    if (typeof qTimerId !== 'undefined'){ clearInterval(qTimerId); qTimerId=null; }
+    if (typeof tTimerId !== 'undefined'){ clearInterval(tTimerId); tTimerId=null; }
     show('viewMenu');
   };
-  $('#btnHelp').onclick = () => {
+  helpBtn.onclick = () => {
     alert('КрокоМим — объясните слово жестами/мимикой. Кнопки: Угадано, Пропустить, Следующее; можно скрыть/показать слово и открыть значение на Википедии. Удачи!');
   };
 
-  // Menu to setups
-  $('#goQuick').onclick = () => show('viewQuickSetup');
   $('#goTeam').onclick = () => {
     ensureTeamsSeed();
     renderTeams();
@@ -375,16 +556,39 @@
     timeMinus: $('#quickTimeMinus'),
     timePlus: $('#quickTimePlus'),
     timeLabel: $('#quickTimeLabel'),
+    ptsToggle: $('#quickPtsToggle'),
+    ptsControls: $('#quickPtsControls'),
+    pts: 10,
+    ptsMinus: $('#quickPtsMinus'),
+    ptsPlus: $('#quickPtsPlus'),
+    ptsLabel: $('#quickPtsLabel'),
     start: $('#startQuick')
   };
   const upQuickTime = () => qs.timeLabel.textContent = qs.time+' c';
+  const upQuickPts = () => qs.ptsLabel.textContent = qs.pts;
   upQuickTime();
+  upQuickPts();
+  qs.timerToggle.checked = true;
+  qs.ptsToggle.checked = false;
   qs.timeMinus.onclick = () => { qs.time = Math.max(30, qs.time-30); upQuickTime(); };
   qs.timePlus.onclick = () => { qs.time += 30; upQuickTime(); };
   qs.dict.onchange = () => qs.customBox.style.display = (qs.dict.value==='custom')?'block':'none';
+  qs.ptsMinus.onclick = () => { qs.pts = Math.max(1, qs.pts-1); upQuickPts(); };
+  qs.ptsPlus.onclick = () => { qs.pts += 1; upQuickPts(); };
+  const updateQuickPts = () => {
+    if (!qs.ptsControls) return;
+    const enabled = qs.ptsToggle.checked;
+    qs.ptsControls.style.display = enabled ? 'flex' : 'none';
+  };
+  qs.ptsToggle.onchange = updateQuickPts;
+  updateQuickPts();
+  if (qs.dict){
+    qs.dict.value = 'medium';
+    qs.dict.dispatchEvent(new Event('change'));
+  }
 
   // Quick game state
-  let qWords=[], qIndex=0, qHide=false, qTimerId=null, qRemain=0, qHit=0, qMiss=0;
+  let qWords=[], qIndex=0, qHide=false, qRemain=0, qHit=0, qMiss=0, qTarget=null;
 
   const qUI = {
     word: $('#qWord'),
@@ -398,15 +602,23 @@
 
   function startQuickGame(){
     // build words
-    if (qs.dict.value==='custom'){
+    let dictKey = qs.dict.value;
+    if (!dictKey || (!DICTS[dictKey] && dictKey!=='custom')){
+      dictKey = 'medium';
+      if (qs.dict){
+        qs.dict.value = 'medium';
+        qs.dict.dispatchEvent(new Event('change'));
+      }
+    }
+    if (dictKey==='custom'){
       const raw = qs.customText.value || '';
       qWords = raw.split(/[,\\n]/).map(s=>s.trim()).filter(Boolean);
     }else{
-      qWords = [...DICTS[qs.dict.value]];
+      qWords = [...DICTS[dictKey]];
     }
     if (qWords.length===0){ alert('Добавьте хотя бы одно слово'); return; }
     shuffle(qWords);
-    qIndex=0; qHide=false; qHit=0; qMiss=0;
+    qIndex=0; qHide=false; qHit=0; qMiss=0; qTarget = qs.ptsToggle.checked ? qs.pts : null;
     qUI.hit.textContent = '0'; qUI.miss.textContent = '0';
     qUI.word.textContent = qWords[qIndex];
     qUI.hideBtn.textContent = 'Скрыть слово';
@@ -420,7 +632,11 @@
       qTimerId = setInterval(()=>{
         qRemain--;
         qUI.tLabel.textContent = `${pad(Math.floor(qRemain/60))}:${pad(qRemain%60)}`;
-        if (qRemain<=0){ clearInterval(qTimerId); qTimerId=null; nextWord(); }
+        if (qRemain<=0){
+          clearInterval(qTimerId); qTimerId=null;
+          playBuzz();
+          nextWord();
+        }
       },1000);
     }else{
       qUI.tBox.style.display='none';
@@ -437,7 +653,18 @@
   }
 
   qUI.next.onclick = nextWord;
-  qUI.hitBtn.onclick = ()=>{ qHit++; qUI.hit.textContent=qHit; nextWord(); };
+  qUI.hitBtn.onclick = ()=>{
+    qHit++;
+    qUI.hit.textContent=qHit;
+    if (qTarget!==null && qHit>=qTarget){
+      if (qTimerId){ clearInterval(qTimerId); qTimerId=null; }
+      playBuzz();
+      alert('Вы достигли цели!');
+      show('viewMenu');
+      return;
+    }
+    nextWord();
+  };
   qUI.skipBtn.onclick = ()=>{ qMiss++; qUI.miss.textContent=qMiss; nextWord(); };
   qUI.hideBtn.onclick = ()=>{
     qHide = !qHide;
@@ -451,42 +678,74 @@
   function ensureTeamsSeed(){
     if (teams.length===0){
       teams = [
-        {name:'Команда 1', points:0, hit:0, miss:0},
-        {name:'Команда 2', points:0, hit:0, miss:0},
+        makeTeam(defaultTeamName(0), TEAM_ICONS[0].id),
+        makeTeam(defaultTeamName(1), TEAM_ICONS[1].id)
       ];
+    } else {
+      teams = teams.map((team, idx)=>({
+        ...team,
+        name: team.name || defaultTeamName(idx),
+        icon: team.icon || TEAM_ICONS[idx % TEAM_ICONS.length].id,
+        points: team.points ?? 0,
+        hit: team.hit ?? 0,
+        miss: team.miss ?? 0
+      }));
     }
   }
   const teamList = $('#teamList');
+  const teamRenameBtn = $('#teamRename');
   function renderTeams(){
     teamList.innerHTML='';
-    teams.forEach((t, i)=>{
+    teams.forEach((team, index)=>{
+      if (!team.name) team.name = defaultTeamName(index);
+      if (!team.icon) team.icon = TEAM_ICONS[index % TEAM_ICONS.length].id;
+      const iconDef = getTeamIcon(team.icon);
       const card=document.createElement('div');
-      card.className='section';
-      card.style.minWidth='220px';
+      card.className='section team-card';
       card.innerHTML = `
-        <div class="stack">
-          <div class="row" style="justify-content:space-between;align-items:center">
-            <strong>${t.name}</strong>
-            <button class="btn ghost" data-i="${i}" data-action="del">Удалить</button>
+        <div class="team-card-top">
+          <div class="team-avatar" style="background:${iconDef.bg};color:${iconDef.color}">
+            <span>${iconDef.emoji}</span>
           </div>
-          <input class="input" value="${t.name}" data-i="${i}" data-action="name" />
-          <div class="muted">Картинка: пресет (позже)</div>
+          <div class="team-label">Имя команды</div>
+        </div>
+        <div class="team-body">
+          <div class="team-name">${escapeHtml(team.name)}</div>
+          <button class="team-delete" type="button" title="Удалить команду" data-index="${index}">🗑️</button>
         </div>`;
+      const deleteBtn = card.querySelector('.team-delete');
+      if (deleteBtn){
+        deleteBtn.setAttribute('aria-label', `Удалить команду «${team.name || defaultTeamName(index)}»`);
+        deleteBtn.onclick = () => {
+          if (!confirm(`Удалить команду «${team.name || defaultTeamName(index)}»?`)) return;
+          teams.splice(index, 1);
+          renderTeams();
+        };
+      }
       teamList.appendChild(card);
     });
-    const actions = teamList.querySelectorAll('[data-action]');
-    actions.forEach(el=>{
-      el.onclick = (e)=>{
-        const i = +el.getAttribute('data-i');
-        const act = el.getAttribute('data-action');
-        if (act==='del'){ if (teams.length>2){ teams.splice(i,1); renderTeams(); } else alert('Нужно минимум 2 команды'); }
-      };
-      if (el.tagName==='INPUT' && el.getAttribute('data-action')==='name'){
-        el.oninput = ()=>{ teams[+el.getAttribute('data-i')].name = el.value.trim() || ('Команда '+(+el.getAttribute('data-i')+1)); };
-      }
-    });
   }
-  $('#teamAdd').onclick = ()=>{ teams.push({name:'Команда '+(teams.length+1), points:0, hit:0, miss:0}); renderTeams(); };
+  $('#teamAdd').onclick = ()=>{
+    const icon = TEAM_ICONS[teams.length % TEAM_ICONS.length].id;
+    teams.push(makeTeam(defaultTeamName(teams.length), icon));
+    renderTeams();
+  };
+  if (teamRenameBtn){
+    teamRenameBtn.onclick = ()=>{
+      if (teams.length===0){ alert('Нет команд для редактирования'); return; }
+      const list = teams.map((team, idx)=>`${idx+1}. ${team.name || defaultTeamName(idx)}`).join('\n');
+      const idxInput = prompt('Введите номер команды для редактирования:\n'+list);
+      if (idxInput===null) return;
+      const idx = parseInt(idxInput, 10) - 1;
+      if (Number.isNaN(idx) || idx<0 || idx>=teams.length){ alert('Некорректный номер команды'); return; }
+      const current = teams[idx].name;
+      const next = prompt('Новое название команды', current);
+      if (next===null) return;
+      const trimmed = next.trim();
+      teams[idx].name = trimmed || defaultTeamName(idx);
+      renderTeams();
+    };
+  }
 
   const ts = {
     dict: $('#teamDict'),
@@ -497,6 +756,8 @@
     timeMinus: $('#teamTimeMinus'),
     timePlus: $('#teamTimePlus'),
     timeLabel: $('#teamTimeLabel'),
+    ptsToggle: $('#teamPtsToggle'),
+    ptsControls: $('#ptsControls'),
     pts: 10, ptsMinus: $('#ptsMinus'), ptsPlus: $('#ptsPlus'), ptsLabel: $('#ptsLabel')
   };
   const upTeamTime = () => ts.timeLabel.textContent = ts.time+' c';
@@ -507,9 +768,15 @@
   ts.ptsMinus.onclick = ()=>{ ts.pts = Math.max(1, ts.pts-1); upPts(); };
   ts.ptsPlus.onclick = ()=>{ ts.pts += 1; upPts(); };
   ts.dict.onchange = ()=> ts.customBox.style.display = (ts.dict.value==='custom')?'block':'none';
+  const updatePtsUI = ()=>{
+    const enabled = ts.ptsToggle.checked;
+    ts.ptsControls.style.display = enabled ? 'flex' : 'none';
+  };
+  ts.ptsToggle.onchange = updatePtsUI;
+  updatePtsUI();
 
   // Team game state
-  let tWords=[], tIndex=0, tHide=false, tTimerId=null, tRemain=0, turn=0;
+  let tWords=[], tIndex=-1, tHide=false, tRemain=0, turn=0, roundActive=false, timerExpired=false;
 
   const tUI = {
     word: $('#tWord'),
@@ -517,41 +784,136 @@
     tBox: $('#tTimerBox'), tLabel: $('#tTimer'),
     table: $('#scoreTable'),
     next: $('#tNext'), hit: $('#tHitBtn'), skip: $('#tSkipBtn'),
-    hideBtn: $('#tHideBtn'), meaning: $('#tMeaningBtn')
+    hideBtn: $('#tHideBtn'), meaning: $('#tMeaningBtn'),
+    startRound: $('#tStartRound'), endRound: $('#tEndRound'),
+    status: $('#tRoundStatus')
   };
+
+  function updateTurnHeader(){
+    if (!teams[turn]) return;
+    const current = teams[turn];
+    const iconDef = getTeamIcon(current.icon);
+    tUI.turnName.innerHTML = `<span class="team-chip-icon">${iconDef.emoji}</span>${escapeHtml(current.name || defaultTeamName(turn))}`;
+  }
 
   function renderScore(){
     tUI.table.innerHTML='';
-    teams.forEach(t=>{
+    teams.forEach((team, idx)=>{
+      const iconDef = getTeamIcon(team.icon);
       const row=document.createElement('div');
       row.className='row';
       row.innerHTML = `
-        <div class="chip" style="min-width:140px">${t.name}</div>
-        <div class="chip">Угадано: ${t.hit}</div>
-        <div class="chip">Пропущено: ${t.miss}</div>
-        <div class="chip">Очки: ${t.points}</div>`;
+        <div class="chip team-chip" style="min-width:160px">
+          <span class="team-chip-icon">${iconDef.emoji}</span>
+          ${escapeHtml(team.name || defaultTeamName(idx))}
+        </div>
+        <div class="chip">Угадано: ${team.hit}</div>
+        <div class="chip">Пропущено: ${team.miss}</div>
+        <div class="chip">Очки: ${team.points}</div>`;
       tUI.table.appendChild(row);
     });
   }
 
+  function setRoundControlsEnabled(enabled){
+    [tUI.next, tUI.hit, tUI.skip, tUI.hideBtn, tUI.meaning].forEach(btn=>{
+      if (btn){
+        btn.disabled = !enabled;
+      }
+    });
+  }
+
+  function resetWordView(){
+    tHide = false;
+    if (tUI.word) tUI.word.textContent = '—';
+    if (tUI.hideBtn) tUI.hideBtn.textContent = 'Скрыть слово';
+  }
+
+  function advanceWord(){
+    if (!tWords.length) return;
+    tIndex = (tIndex + 1) % tWords.length;
+    tHide = false;
+    if (tUI.word) tUI.word.textContent = tWords[tIndex];
+    if (tUI.hideBtn) tUI.hideBtn.textContent = 'Скрыть слово';
+  }
+
+  function setStatus(text){
+    if (tUI.status) tUI.status.textContent = text;
+  }
+
+  function preRoundMessage(name, initial){
+    if (!name) return;
+    if (initial){
+      setStatus(`Команда «${name}», приготовьтесь и нажмите «Начать раунд».`);
+    }else{
+      setStatus(`Ход завершён. Передайте устройство команде «${name}» и нажмите «Начать раунд».`);
+    }
+  }
+
   function startTeamGame(){
     if (teams.length<2){ alert('Нужно минимум 2 команды'); return; }
-    // build words
-    if (ts.dict.value==='custom'){
+    let dictKey = ts.dict.value;
+    if (!dictKey || (!DICTS[dictKey] && dictKey !== 'custom')){
+      dictKey = 'medium';
+      if (ts.dict){
+        ts.dict.value = 'medium';
+        ts.dict.dispatchEvent(new Event('change'));
+      }
+    }
+    if (dictKey==='custom'){
       const raw = ts.customText.value || '';
-      tWords = raw.split(/[,\\n]/).map(s=>s.trim()).filter(Boolean);
+      tWords = raw.split(/[,\n]/).map(s=>s.trim()).filter(Boolean);
     }else{
-      tWords = [...DICTS[ts.dict.value]];
+      tWords = [...DICTS[dictKey]];
     }
     if (tWords.length===0){ alert('Добавьте хотя бы одно слово'); return; }
     shuffle(tWords);
-    teams = teams.map(t=>({name:t.name, points:0, hit:0, miss:0}));
-    tIndex=0; tHide=false; turn=0;
-    tUI.word.textContent = tWords[tIndex];
-    tUI.hideBtn.textContent = 'Скрыть слово';
-    tUI.turnName.textContent = teams[turn].name;
+    teams = teams.map((t, idx)=>(
+      {
+        name: t.name || defaultTeamName(idx),
+        icon: t.icon || TEAM_ICONS[idx % TEAM_ICONS.length].id,
+        points:0, hit:0, miss:0
+      }
+    ));
+    tIndex=-1; tHide=false; turn=0; roundActive=false; timerExpired=false;
     renderScore();
+    updateTurnHeader();
+    resetWordView();
+    setRoundControlsEnabled(false);
+    clearInterval(tTimerId); tTimerId=null;
+    if (ts.timerToggle.checked){
+      tUI.tBox.style.display='inline-flex';
+      tRemain = ts.time;
+      tUI.tLabel.textContent = `${pad(Math.floor(tRemain/60))}:${pad(tRemain%60)}`;
+    }else{
+      tUI.tBox.style.display='none';
+    }
+    if (tUI.startRound){
+      tUI.startRound.style.display='inline-flex';
+      tUI.startRound.disabled=false;
+    }
+    if (tUI.endRound){
+      tUI.endRound.style.display='none';
+    }
+    const currentName = teams[turn]?.name || defaultTeamName(turn);
+    preRoundMessage(currentName, true);
+    show('viewTeamGame');
+  }
+  $('#startTeam').onclick = startTeamGame;
 
+  function beginRound(){
+    if (roundActive) return;
+    roundActive=true;
+    timerExpired=false;
+    setRoundControlsEnabled(true);
+    if (tUI.startRound){
+      tUI.startRound.style.display='none';
+    }
+    if (tUI.endRound){
+      tUI.endRound.style.display='inline-flex';
+      tUI.endRound.disabled=false;
+    }
+    const currentName = teams[turn]?.name || defaultTeamName(turn);
+    setStatus(`Ход команды «${currentName}»`);
     clearInterval(tTimerId); tTimerId=null;
     if (ts.timerToggle.checked){
       tUI.tBox.style.display='inline-flex';
@@ -559,62 +921,124 @@
       tUI.tLabel.textContent = `${pad(Math.floor(tRemain/60))}:${pad(tRemain%60)}`;
       tTimerId = setInterval(()=>{
         tRemain--;
-        tUI.tLabel.textContent = `${pad(Math.floor(tRemain/60))}:${pad(tRemain%60)}`;
-        if (tRemain<=0){ clearInterval(tTimerId); tTimerId=null; nextTurn(); }
+        if (tRemain <= 0){
+          clearInterval(tTimerId); tTimerId=null;
+          tUI.tLabel.textContent = '00:00';
+          handleTimerEnd();
+        }else{
+          tUI.tLabel.textContent = `${pad(Math.floor(tRemain/60))}:${pad(tRemain%60)}`;
+        }
       },1000);
     }else{
       tUI.tBox.style.display='none';
     }
-    show('viewTeamGame');
+    advanceWord();
   }
-  $('#startTeam').onclick = startTeamGame;
 
-  function nextTurn(){
-    turn = (turn+1) % teams.length;
-    tUI.turnName.textContent = teams[turn].name;
-    nextTeamWord();
+  function handleTimerEnd(){
+    if (!roundActive || timerExpired) return;
+    timerExpired=true;
+    playBuzz();
+    setStatus('Время вышло! Завершите объяснение и нажмите «Закончить».');
+    if (tUI.next) tUI.next.disabled = true;
+  }
+
+  function lockFinalActions(){
+    if (tUI.hit) tUI.hit.disabled = true;
+    if (tUI.skip) tUI.skip.disabled = true;
+  }
+
+  function finishRound(){
+    if (!roundActive) return;
+    clearInterval(tTimerId); tTimerId=null;
+    roundActive=false;
+    timerExpired=false;
+    setRoundControlsEnabled(false);
+    if (tUI.endRound){
+      tUI.endRound.style.display='none';
+    }
+    if (tUI.startRound){
+      tUI.startRound.style.display='inline-flex';
+      tUI.startRound.disabled=false;
+    }
+    const nextIndex = (turn + 1) % teams.length;
+    const nextName = teams[nextIndex]?.name || defaultTeamName(nextIndex);
+    turn = nextIndex;
+    updateTurnHeader();
+    preRoundMessage(nextName, false);
+    resetWordView();
     if (ts.timerToggle.checked){
-      clearInterval(tTimerId); tRemain = ts.time;
+      tUI.tBox.style.display='inline-flex';
+      tRemain = ts.time;
       tUI.tLabel.textContent = `${pad(Math.floor(tRemain/60))}:${pad(tRemain%60)}`;
-      tTimerId = setInterval(()=>{
-        tRemain--;
-        tUI.tLabel.textContent = `${pad(Math.floor(tRemain/60))}:${pad(tRemain%60)}`;
-        if (tRemain<=0){ clearInterval(tTimerId); tTimerId=null; nextTurn(); }
-      },1000);
+    }else{
+      tUI.tBox.style.display='none';
     }
   }
-  function nextTeamWord(){
-    tIndex = (tIndex+1) % tWords.length;
-    tHide=false;
-    tUI.word.textContent = tWords[tIndex];
-    tUI.hideBtn.textContent = 'Скрыть слово';
+
+  function declareWinner(team){
+    clearInterval(tTimerId); tTimerId=null;
+    roundActive=false;
+    timerExpired=false;
+    alert('Победа: ' + team.name);
+    show('viewMenu');
   }
 
-  tUI.next.onclick = nextTeamWord;
+  if (tUI.startRound){
+    tUI.startRound.onclick = beginRound;
+  }
+  if (tUI.endRound){
+    tUI.endRound.onclick = finishRound;
+  }
+
+  tUI.next.onclick = ()=>{
+    if (!roundActive || timerExpired) return;
+    advanceWord();
+  };
   tUI.hideBtn.onclick = ()=>{
+    if (!roundActive || tIndex<0) return;
     tHide = !tHide;
     tUI.word.textContent = tHide ? '•••' : tWords[tIndex];
     tUI.hideBtn.textContent = tHide ? 'Показать слово' : 'Скрыть слово';
   };
-  tUI.meaning.onclick = ()=> window.open('https://ru.wikipedia.org/wiki/'+encodeURIComponent(tWords[tIndex]), '_blank');
+  tUI.meaning.onclick = ()=>{
+    if (!roundActive || tIndex<0) return;
+    window.open('https://ru.wikipedia.org/wiki/'+encodeURIComponent(tWords[tIndex]), '_blank');
+  };
 
   tUI.hit.onclick = ()=>{
+    if (!roundActive) return;
     teams[turn].hit++; teams[turn].points++;
     renderScore();
-    if (teams[turn].points >= ts.pts){
-      alert('Победа: ' + teams[turn].name);
-      show('viewMenu');
+    if (ts.ptsToggle.checked && teams[turn].points >= ts.pts){
+      declareWinner(teams[turn]);
       return;
     }
-    nextTurn();
+    if (timerExpired){
+      lockFinalActions();
+      return;
+    }
+    advanceWord();
   };
   tUI.skip.onclick = ()=>{
+    if (!roundActive) return;
     teams[turn].miss++; teams[turn].points--;
     renderScore();
-    nextTurn();
+    if (timerExpired){
+      lockFinalActions();
+      return;
+    }
+    advanceWord();
   };
 
+
   // Helpers
+  const escapeHtml = str => str
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
   function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } return a }
 
   // initial
