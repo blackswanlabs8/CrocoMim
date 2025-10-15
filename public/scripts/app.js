@@ -1,6 +1,7 @@
 // --- Utilities & state ---
 const $ = sel => document.querySelector(sel);
-let screen = 'menu';
+const VIEWS = ['viewMenu','viewQuickGame','viewTeamSetup','viewTeamGame'];
+let screen = 'viewMenu';
 let qTimerId = null;
 let tTimerId = null;
 const backBtn = $('#btnBack');
@@ -10,6 +11,7 @@ const themeSlider = $('#themeSlider');
 const themeSection = $('#themeSection');
 const bodyEl = document.body;
 const THEME_KEY = 'croc-theme';
+const SCREEN_KEY = 'croc-screen';
 
 const applyTheme = mode => {
   const themeClass = mode === 'dark' ? 'theme-dark' : 'theme-light';
@@ -23,6 +25,14 @@ const readThemePref = () => {
 };
 const writeThemePref = mode => {
   try{ localStorage.setItem(THEME_KEY, mode); }
+  catch{}
+};
+const readScreenPref = () => {
+  try{ return localStorage.getItem(SCREEN_KEY); }
+  catch{ return null; }
+};
+const writeScreenPref = value => {
+  try{ localStorage.setItem(SCREEN_KEY, value); }
   catch{}
 };
 const initialTheme = readThemePref();
@@ -84,12 +94,13 @@ function playBuzz(){
 
 // Navigation
 const show = v => {
-  ['viewMenu','viewQuickGame','viewTeamSetup','viewTeamGame'].forEach(id=>{
+  VIEWS.forEach(id=>{
     const el = $('#'+id);
     if (el) el.style.display='none';
   });
   $('#'+v).style.display='flex';
   screen = v;
+  writeScreenPref(v);
   if (themeSection) themeSection.style.display = v==='viewMenu' ? 'flex' : 'none';
   if (v==='viewMenu'){
     backBtn.style.visibility = 'hidden';
@@ -722,7 +733,36 @@ const escapeHtml = str => str
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } return a }
 
 // initial
-show('viewMenu');
+function restoreInitialView(){
+  const stored = readScreenPref();
+  if (stored && VIEWS.includes(stored)){
+    if (stored === 'viewTeamSetup'){
+      ensureTeamsSeed();
+      renderTeams();
+      syncTeamSettingsFromMenu();
+    }
+    if (stored === 'viewTeamGame'){
+      ensureTeamsSeed();
+      renderTeams();
+      syncTeamSettingsFromMenu();
+      renderScore();
+      updateTurnHeader();
+      resetWordView();
+      setRoundControlsEnabled(false);
+      if (tUI.endRound) tUI.endRound.style.display='none';
+      if (tUI.startRound){
+        tUI.startRound.style.display='inline-flex';
+        tUI.startRound.disabled=false;
+      }
+      if (tUI.tBox) tUI.tBox.style.display = teamTimerEnabled ? 'inline-flex' : 'none';
+      setStatus('Нажмите «Начать раунд», чтобы начать игру.');
+    }
+    show(stored);
+    return;
+  }
+  show('viewMenu');
+}
+restoreInitialView();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
