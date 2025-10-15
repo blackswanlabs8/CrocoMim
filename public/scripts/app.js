@@ -7,6 +7,7 @@ let tTimerId = null;
 const backBtn = $('#btnBack');
 const helpBtn = $('#btnHelp');
 const modeQuickBtn = $('#modeQuick');
+const installBtn = $('#installAppBtn');
 const themeSlider = $('#themeSlider');
 const themeSection = $('#themeSection');
 const bodyEl = document.body;
@@ -49,6 +50,31 @@ const writeJson = (key, value) => {
   try{ localStorage.setItem(key, JSON.stringify(value)); }
   catch{}
 };
+let deferredInstallPrompt = null;
+const showInstallHelp = () => {
+  alert('Android: откройте меню браузера (⋮) и выберите «Добавить на главный экран».\n\niOS: нажмите «Поделиться» и выберите «На экран Домой».');
+};
+if (installBtn){
+  installBtn.addEventListener('click', async () => {
+    if (deferredInstallPrompt){
+      deferredInstallPrompt.prompt();
+      try{
+        const choice = await deferredInstallPrompt.userChoice;
+        if (!choice || choice.outcome !== 'accepted'){
+          showInstallHelp();
+        }
+      }catch{}
+      deferredInstallPrompt = null;
+      return;
+    }
+    showInstallHelp();
+  });
+  installBtn.addEventListener('auxclick', showInstallHelp);
+}
+window.addEventListener('beforeinstallprompt', event => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+});
 const initialTheme = readThemePref();
 applyTheme(initialTheme === 'dark' ? 'dark' : 'light');
 if (themeSlider){
