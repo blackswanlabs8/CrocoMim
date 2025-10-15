@@ -818,9 +818,19 @@ function restoreInitialView(){
 restoreInitialView();
 
 if ('serviceWorker' in navigator) {
+  let hadController = !!navigator.serviceWorker.controller;
+
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./service-worker.js').catch(err => {
       console.warn('Service worker registration failed', err);
     });
+  });
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController) {
+      hadController = true;
+      return;
+    }
+    window.location.reload();
   });
 }
