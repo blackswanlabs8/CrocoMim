@@ -378,6 +378,14 @@ body{
   margin-top:auto;
 }
 .footer .btn-full{ flex:1 1 100%; }
+.install-banner{
+  margin-top:auto;
+  display:flex;
+  justify-content:center;
+}
+.install-btn{
+  max-width:360px;
+}
 @media (max-width:600px){
 .grid-3{ grid-template-columns:1fr }
 .header{ grid-template-columns:44px 1fr 44px }
