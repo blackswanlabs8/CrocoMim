@@ -87,6 +87,23 @@
     .row{ display:flex; gap:12px; flex-wrap:wrap; align-items:center }
     .stack{ display:flex; flex-direction:column; gap:12px }
     .grow{ flex:1 1 0 }
+    .mode-row{ display:grid; gap:12px; grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .mode-btn{
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:6px; padding:18px 12px; border-radius:18px;
+      background:var(--panel-2);
+      border:1px solid rgba(255,255,255,.06);
+      color:var(--text);
+      font-weight:700;
+      cursor:pointer;
+      transition:transform .1s ease, background .2s ease, border .2s ease;
+    }
+    .mode-btn .mode-icon{ font-size:28px; }
+    .mode-btn:hover{ background:#1f2a41; }
+    .mode-btn:active{ transform:scale(.97); }
+    .mode-btn.active{ background:rgba(34,197,94,.16); border-color:var(--accent); color:var(--text-strong); }
+    .menu-block{ background:rgba(15,23,42,.35); border:1px solid rgba(255,255,255,.04); border-radius:16px; padding:14px; display:flex; flex-direction:column; gap:12px; }
+    .menu-block-title{ font-weight:700; color:#cbd5e1; font-size:16px; }
 
     /* Buttons */
     .btn{
@@ -352,9 +369,8 @@
           <button class="btn ghost" id="teamTimePlus">+ 30с</button>
         </div>
         <div class="row" style="flex-wrap:wrap; align-items:center; gap:12px">
-          <label class="chip"><input type="checkbox" id="teamPtsToggle" checked> Победа по очкам</label>
+          <label class="chip"><input type="checkbox" id="teamPtsToggle" checked> Очки до победы</label>
           <div class="row" id="ptsControls">
-            <span class="chip">Очки до победы</span>
             <button class="btn ghost" id="ptsMinus">−</button>
             <div class="chip" id="ptsLabel">10</div>
             <button class="btn ghost" id="ptsPlus">+</button>
@@ -534,15 +550,23 @@
 
   function startQuickGame(){
     // build words
-    if (qs.dict.value==='custom'){
+    let dictKey = qs.dict.value;
+    if (!dictKey || (!DICTS[dictKey] && dictKey!=='custom')){
+      dictKey = 'medium';
+      if (qs.dict){
+        qs.dict.value = 'medium';
+        qs.dict.dispatchEvent(new Event('change'));
+      }
+    }
+    if (dictKey==='custom'){
       const raw = qs.customText.value || '';
       qWords = raw.split(/[,\\n]/).map(s=>s.trim()).filter(Boolean);
     }else{
-      qWords = [...DICTS[qs.dict.value]];
+      qWords = [...DICTS[dictKey]];
     }
     if (qWords.length===0){ alert('Добавьте хотя бы одно слово'); return; }
     shuffle(qWords);
-    qIndex=0; qHide=false; qHit=0; qMiss=0;
+    qIndex=0; qHide=false; qHit=0; qMiss=0; qTarget = qs.ptsToggle.checked ? qs.pts : null;
     qUI.hit.textContent = '0'; qUI.miss.textContent = '0';
     qUI.word.textContent = qWords[qIndex];
     qUI.hideBtn.textContent = 'Скрыть слово';
@@ -577,7 +601,18 @@
   }
 
   qUI.next.onclick = nextWord;
-  qUI.hitBtn.onclick = ()=>{ qHit++; qUI.hit.textContent=qHit; nextWord(); };
+  qUI.hitBtn.onclick = ()=>{
+    qHit++;
+    qUI.hit.textContent=qHit;
+    if (qTarget!==null && qHit>=qTarget){
+      if (qTimerId){ clearInterval(qTimerId); qTimerId=null; }
+      playBuzz();
+      alert('Вы достигли цели!');
+      show('viewMenu');
+      return;
+    }
+    nextWord();
+  };
   qUI.skipBtn.onclick = ()=>{ qMiss++; qUI.miss.textContent=qMiss; nextWord(); };
   qUI.hideBtn.onclick = ()=>{
     qHide = !qHide;
@@ -606,6 +641,7 @@
     }
   }
   const teamList = $('#teamList');
+  const teamRenameBtn = $('#teamRename');
   function renderTeams(){
     teamList.innerHTML='';
     teams.forEach((team, index)=>{
