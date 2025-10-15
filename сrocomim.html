@@ -400,7 +400,7 @@
     // build words
     if (qs.dict.value==='custom'){
       const raw = qs.customText.value || '';
-      qWords = raw.split(/[,\n]/).map(s=>s.trim()).filter(Boolean);
+      qWords = raw.split(/(?:,|\n)+/).map(s=>s.trim()).filter(Boolean);
     }else{
       qWords = [...DICTS[qs.dict.value]];
     }
@@ -539,7 +539,7 @@
     // build words
     if (ts.dict.value==='custom'){
       const raw = ts.customText.value || '';
-      tWords = raw.split(/[,\n]/).map(s=>s.trim()).filter(Boolean);
+      tWords = raw.split(/(?:,|\n)+/).map(s=>s.trim()).filter(Boolean);
     }else{
       tWords = [...DICTS[ts.dict.value]];
     }
