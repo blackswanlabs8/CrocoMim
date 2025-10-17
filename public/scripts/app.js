@@ -277,6 +277,10 @@ updateQuickCounters();
 
 const pad = n => String(n).padStart(2,'0');
 const formatWordList = list => list.length ? list.join(', ') : '—';
+const parseCustomWords = raw => (raw || '')
+  .split(/[,\n\r]+/)
+  .map(s=>s.trim())
+  .filter(Boolean);
 
 function showWordStats(title, hitList, missList){
   alert(`${title}\n\nУгаданные (${hitList.length}):\n${formatWordList(hitList)}\n\nПропущенные (${missList.length}):\n${formatWordList(missList)}`);
@@ -293,8 +297,7 @@ function startQuickGame(){
     }
   }
   if (dictKey==='custom'){
-    const raw = qs.customText.value || '';
-    qWords = raw.split(/[,\\n]/).map(s=>s.trim()).filter(Boolean);
+    qWords = parseCustomWords(qs.customText?.value);
   }else{
     qWords = [...DICTS[dictKey]];
   }
@@ -650,8 +653,7 @@ function startTeamGame(){
     }
   }
   if (dictKey==='custom'){
-    const raw = ts.customText.value || '';
-    tWords = raw.split(/[,\n]/).map(s=>s.trim()).filter(Boolean);
+    tWords = parseCustomWords(ts.customText?.value);
   }else{
     tWords = [...DICTS[dictKey]];
   }
