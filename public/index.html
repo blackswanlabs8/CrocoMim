@@ -21,18 +21,6 @@
           <path d="M15 6L9 12L15 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
-      <div class="theme-switch" id="themeContainer">
-        <div class="theme-switch-label">Тема</div>
-        <div class="theme-slider" id="themeSliderWrap">
-          <span aria-hidden="true">🌞</span>
-          <input type="range" id="themeSlider" min="0" max="1" step="1" value="0" aria-label="Переключатель темы">
-          <span aria-hidden="true">🌙</span>
-        </div>
-        <div class="theme-toggle-icons" id="themeToggleIcons" role="group" aria-label="Выбор темы">
-          <button class="theme-icon-btn" id="themeSun" type="button" data-theme="light" aria-label="Светлая тема">🌞</button>
-          <button class="theme-icon-btn" id="themeMoon" type="button" data-theme="dark" aria-label="Тёмная тема">🌙</button>
-        </div>
-      </div>
     </div>
     <div class="title"><span class="title-icon" aria-hidden="true">🐊</span><span class="title-text">CrocoMim</span></div>
     <div class="header-right">
@@ -109,6 +97,20 @@
 
       <div class="footer menu-footer">
         <button class="btn btn-full" id="startQuick">Начать игру</button>
+      </div>
+      <div class="menu-theme">
+        <div class="theme-switch" id="themeContainer">
+          <div class="theme-switch-label">Тема</div>
+          <div class="theme-slider" id="themeSliderWrap">
+            <span aria-hidden="true">🌞</span>
+            <input type="range" id="themeSlider" min="0" max="1" step="1" value="0" aria-label="Переключатель темы">
+            <span aria-hidden="true">🌙</span>
+          </div>
+          <div class="theme-toggle-icons" id="themeToggleIcons" role="group" aria-label="Выбор темы">
+            <button class="theme-icon-btn" id="themeSun" type="button" data-theme="light" aria-label="Светлая тема">🌞</button>
+            <button class="theme-icon-btn" id="themeMoon" type="button" data-theme="dark" aria-label="Тёмная тема">🌙</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
