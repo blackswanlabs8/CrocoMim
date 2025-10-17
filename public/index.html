@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>КрокоМим</title>
-  <meta name="description" content="Праздничная игра "КрокоМим" с быстрым и командным режимами." />
+  <title>CrocoMim</title>
+  <meta name="description" content="Праздничная игра «CrocoMim» с быстрым и командным режимами." />
   <link rel="manifest" href="./manifest.json" />
   <link rel="icon" type="image/svg+xml" href="./icons/icon.svg" />
   <meta name="theme-color" content="#22c55e" />
@@ -15,27 +15,26 @@
 
   <!-- HEADER -->
   <div class="header">
-    <div class="icon-btn" id="btnBack" title="Назад в меню" aria-label="Назад">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M15 6L9 12L15 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
+    <div class="header-left">
+      <div class="icon-btn" id="btnBack" title="Назад в меню" aria-label="Назад">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M15 6L9 12L15 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="theme-switch" id="themeContainer">
+        <div class="theme-switch-label">Тема</div>
+        <div class="theme-slider">
+          <span aria-hidden="true">🌞</span>
+          <input type="range" id="themeSlider" min="0" max="1" step="1" value="0" aria-label="Переключатель темы">
+          <span aria-hidden="true">🌙</span>
+        </div>
+      </div>
     </div>
-    <div class="title">КрокоМим</div>
+    <div class="title"><span class="title-icon" aria-hidden="true">🐊</span><span class="title-text">CrocoMim</span></div>
     <div class="icon-btn" id="btnHelp" title="Справка" aria-label="Справка">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10s10-4.477 10-10S17.523 2 12 2Zm0 14.25a1.25 1.25 0 1 1 0 2.5a1.25 1.25 0 0 1 0-2.5Zm0-10a3.25 3.25 0 0 1 3.25 3.25c0 1.35-.79 2.3-1.74 3.02c-.81.6-1.26 1.03-1.26 1.98v.25a1 1 0 1 1-2 0v-.25c0-1.62.85-2.47 1.69-3.1c.85-.64 1.31-1.06 1.31-1.9A1.25 1.25 0 0 0 12 7.25a1.25 1.25 0 0 0-1.25 1.25a1 1 0 1 1-2 0A3.25 3.25 0 0 1 12 6.25Z" fill="currentColor"/>
       </svg>
-    </div>
-  </div>
-
-  <div class="section theme-section" id="themeSection">
-    <div class="theme-switch">
-      <div class="theme-switch-label">Тема</div>
-      <div class="theme-slider">
-        <span aria-hidden="true">🌞</span>
-        <input type="range" id="themeSlider" min="0" max="1" step="1" value="0" aria-label="Переключатель темы">
-        <span aria-hidden="true">🌙</span>
-      </div>
     </div>
   </div>
 
@@ -82,7 +81,7 @@
             <div class="chip" id="quickTimeLabel">60 с</div>
             <button class="btn ghost" id="quickTimePlus" title="+30 секунд">+</button>
           </div>
-          <div class="muted" style="margin-top:8px">Шаг изменения времени: <span class="kbd">30с</span></div>
+          
         </div>
 
         <div class="menu-block">
@@ -91,7 +90,7 @@
             <label class="chip check-only" title="Очки до победы">
               <input type="checkbox" id="quickPtsToggle" aria-label="Включить очки до победы">
             </label>
-            <div class="pts-controls" id="quickPtsControls" style="display:none">
+            <div class="pts-controls" id="quickPtsControls">
               <button class="btn ghost" id="quickPtsMinus" title="Минус одно очко">−</button>
               <div class="chip" id="quickPtsLabel">10</div>
               <button class="btn ghost" id="quickPtsPlus" title="Плюс одно очко">+</button>
@@ -142,7 +141,6 @@
       <div id="teamList" class="team-grid"></div>
       <div class="row team-actions">
         <button class="btn ghost" id="teamAdd">+ Добавить команду</button>
-        <button class="btn ghost" id="teamRename">✏️ Редактировать названия</button>
       </div>
     </div>
 

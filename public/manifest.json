@@ -1,7 +1,7 @@
 {
-  "name": "КрокоМим",
-  "short_name": "КрокоМим",
-  "description": "Праздничная командная игра «КрокоМим» с быстрым и командным режимами.",
+  "name": "CrocoMim",
+  "short_name": "CrocoMim",
+  "description": "Праздничная командная игра «CrocoMim» с быстрым и командным режимами.",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#0f172a",

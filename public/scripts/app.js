@@ -8,7 +8,7 @@ const backBtn = $('#btnBack');
 const helpBtn = $('#btnHelp');
 const modeQuickBtn = $('#modeQuick');
 const themeSlider = $('#themeSlider');
-const themeSection = $('#themeSection');
+const themeContainer = $('#themeContainer');
 const bodyEl = document.body;
 const THEME_KEY = 'croc-theme';
 const SCREEN_KEY = 'croc-screen';
@@ -106,28 +106,52 @@ const persistTeams = () => {
   writeJson(TEAM_STATS_KEY, teams);
 };
 let audioCtx = null;
-function playBuzz(){
+function ensureAudioCtx(){
   try{
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
+    if (!AudioCtx) return null;
     if (!audioCtx) audioCtx = new AudioCtx();
     if (audioCtx.state === 'suspended') audioCtx.resume();
-    const duration = 0.35;
-    const sampleRate = audioCtx.sampleRate;
-    const buffer = audioCtx.createBuffer(1, sampleRate * duration, sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i=0;i<data.length;i++){
-      const progress = i / data.length;
-      data[i] = (Math.random()*2 - 1) * (1 - progress) * 0.7;
-    }
-    const noise = audioCtx.createBufferSource();
-    noise.buffer = buffer;
-    const gain = audioCtx.createGain();
-    gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-    noise.connect(gain).connect(audioCtx.destination);
-    noise.start();
-  }catch(err){ /* ignore playback errors */ }
+    return audioCtx;
+  }catch{
+    return null;
+  }
+}
+function playAlarm(){
+  const ctx = ensureAudioCtx();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  [0, 0.35, 0.7].forEach((offset, idx)=>{
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    const startFreq = idx === 0 ? 880 : 660;
+    const endFreq = idx === 0 ? 660 : 520;
+    osc.frequency.setValueAtTime(startFreq, now + offset);
+    osc.frequency.exponentialRampToValueAtTime(endFreq, now + offset + 0.28);
+    gain.gain.setValueAtTime(0.0001, now + offset);
+    gain.gain.exponentialRampToValueAtTime(0.22, now + offset + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.32);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now + offset);
+    osc.stop(now + offset + 0.36);
+  });
+}
+function playTick(){
+  const ctx = ensureAudioCtx();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(1200, now);
+  osc.frequency.exponentialRampToValueAtTime(700, now + 0.12);
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + 0.2);
 }
 
 // Navigation
@@ -139,7 +163,7 @@ const show = v => {
   $('#'+v).style.display='flex';
   screen = v;
   writeScreenPref(v);
-  if (themeSection) themeSection.style.display = v==='viewMenu' ? 'flex' : 'none';
+  if (themeContainer) themeContainer.style.display = v==='viewMenu' ? 'flex' : 'none';
   if (v==='viewMenu'){
     backBtn.style.visibility = 'hidden';
     backBtn.style.pointerEvents = 'none';
@@ -161,7 +185,7 @@ backBtn.onclick = () => {
   show('viewMenu');
 };
 helpBtn.onclick = () => {
-  alert('КрокоМим — объясните слово жестами/мимикой. Кнопки: Угадано, Пропустить, Следующее; можно скрыть/показать слово и открыть значение на Википедии. Удачи!');
+  alert('CrocoMim — объясните слово жестами/мимикой. Кнопки: Угадано, Пропустить, Следующее; можно скрыть/показать слово и открыть значение на Википедии. Удачи!');
 };
 
 $('#goTeam').onclick = () => {
@@ -209,7 +233,8 @@ qs.ptsPlus.onclick = () => { qs.pts += 1; upQuickPts(); };
 const updateQuickPts = () => {
   if (!qs.ptsControls) return;
   const enabled = qs.ptsToggle.checked;
-  qs.ptsControls.style.display = enabled ? 'flex' : 'none';
+  qs.ptsControls.classList.toggle('is-disabled', !enabled);
+  qs.ptsControls.setAttribute('aria-disabled', String(!enabled));
   [qs.ptsMinus, qs.ptsPlus].forEach(btn=>{ if (btn) btn.disabled = !enabled; });
   if (qs.ptsLabel) qs.ptsLabel.classList.toggle('disabled', !enabled);
 };
@@ -290,11 +315,16 @@ function startQuickGame(){
     qUI.tLabel.textContent = `${pad(Math.floor(qRemain/60))}:${pad(qRemain%60)}`;
     qTimerId = setInterval(()=>{
       qRemain--;
-      qUI.tLabel.textContent = `${pad(Math.floor(qRemain/60))}:${pad(qRemain%60)}`;
       if (qRemain<=0){
+        qUI.tLabel.textContent = '00:00';
         clearInterval(qTimerId); qTimerId=null;
-        playBuzz();
+        playAlarm();
         nextWord();
+      }else{
+        qUI.tLabel.textContent = `${pad(Math.floor(qRemain/60))}:${pad(qRemain%60)}`;
+        if (qRemain <= 10){
+          playTick();
+        }
       }
     },1000);
   }else{
@@ -321,7 +351,7 @@ qUI.hitBtn.onclick = ()=>{
   updateQuickCounters();
   if (qTarget!==null && qHit>=qTarget){
     if (qTimerId){ clearInterval(qTimerId); qTimerId=null; }
-    playBuzz();
+    playAlarm();
     alert('Вы достигли цели!');
     show('viewMenu');
     return;
@@ -361,7 +391,6 @@ function ensureTeamsSeed(){
   persistTeams();
 }
 const teamList = $('#teamList');
-const teamRenameBtn = $('#teamRename');
 function renderTeams(){
   teamList.innerHTML='';
   teams.forEach((team, index)=>{
@@ -372,14 +401,76 @@ function renderTeams(){
     card.className='section team-card';
     card.innerHTML = `
       <div class="team-card-top">
-        <div class="team-avatar" style="background:${iconDef.bg};color:${iconDef.color}">
+        <button class="team-avatar-btn" type="button" style="background:${iconDef.bg};color:${iconDef.color}" data-index="${index}">
           <span>${iconDef.emoji}</span>
-        </div>
+        </button>
       </div>
       <div class="team-body">
-        <div class="team-name">${escapeHtml(team.name)}</div>
+        <div class="team-name"></div>
+        <form class="team-edit" data-team-form>
+          <label class="visually-hidden" for="teamName-${index}">Название команды</label>
+          <input class="input team-edit-input" id="teamName-${index}" name="teamName" type="text" maxlength="40" autocomplete="off">
+          <div class="team-edit-actions">
+            <button class="btn btn-small" type="submit">Сохранить</button>
+            <button class="btn ghost btn-small" type="button" data-cancel>Отмена</button>
+          </div>
+        </form>
         <button class="team-delete" type="button" title="Удалить команду" data-index="${index}">🗑️</button>
       </div>`;
+    const nameLabel = card.querySelector('.team-name');
+    if (nameLabel) nameLabel.textContent = team.name;
+    const editForm = card.querySelector('[data-team-form]');
+    const input = card.querySelector('.team-edit-input');
+    if (input) input.value = team.name;
+    const avatarBtn = card.querySelector('.team-avatar-btn');
+    if (avatarBtn){
+      avatarBtn.setAttribute('aria-label', `Редактировать название команды «${team.name || defaultTeamName(index)}»`);
+      avatarBtn.onclick = () => {
+        if (card.classList.contains('is-editing')){
+          card.classList.remove('is-editing');
+          const currentName = teams[index]?.name || defaultTeamName(index);
+          if (input) input.value = currentName;
+          if (nameLabel) nameLabel.textContent = currentName;
+          return;
+        }
+        const current = teams[index]?.name || defaultTeamName(index);
+        if (input) input.value = current;
+        card.classList.add('is-editing');
+        requestAnimationFrame(()=>{
+          if (input){
+            input.focus();
+            input.select();
+          }
+        });
+      };
+    }
+    if (editForm && input){
+      editForm.onsubmit = evt => {
+        evt.preventDefault();
+        const next = input.value.trim();
+        teams[index].name = next || defaultTeamName(index);
+        renderTeams();
+        persistTeams();
+      };
+      input.addEventListener('keydown', evt => {
+        if (evt.key === 'Escape'){
+          evt.preventDefault();
+          card.classList.remove('is-editing');
+          const currentName = teams[index]?.name || defaultTeamName(index);
+          input.value = currentName;
+          if (nameLabel) nameLabel.textContent = currentName;
+        }
+      });
+      const cancelBtn = editForm.querySelector('[data-cancel]');
+      if (cancelBtn){
+        cancelBtn.onclick = () => {
+          card.classList.remove('is-editing');
+          const currentName = teams[index]?.name || defaultTeamName(index);
+          input.value = currentName;
+          if (nameLabel) nameLabel.textContent = currentName;
+        };
+      }
+    }
     const deleteBtn = card.querySelector('.team-delete');
     if (deleteBtn){
       deleteBtn.setAttribute('aria-label', `Удалить команду «${team.name || defaultTeamName(index)}»`);
@@ -399,23 +490,6 @@ $('#teamAdd').onclick = ()=>{
   renderTeams();
   persistTeams();
 };
-if (teamRenameBtn){
-  teamRenameBtn.onclick = ()=>{
-    if (teams.length===0){ alert('Нет команд для редактирования'); return; }
-    const list = teams.map((team, idx)=>`${idx+1}. ${team.name || defaultTeamName(idx)}`).join('\n');
-    const idxInput = prompt('Введите номер команды для редактирования:\n'+list);
-    if (idxInput===null) return;
-    const idx = parseInt(idxInput, 10) - 1;
-    if (Number.isNaN(idx) || idx<0 || idx>=teams.length){ alert('Некорректный номер команды'); return; }
-    const current = teams[idx].name;
-    const next = prompt('Новое название команды', current);
-    if (next===null) return;
-    const trimmed = next.trim();
-    teams[idx].name = trimmed || defaultTeamName(idx);
-    renderTeams();
-    persistTeams();
-  };
-}
 
 const ts = {
   dict: $('#teamDict'),
@@ -446,7 +520,10 @@ const updateTeamTimerUI = ()=>{
 };
 const updatePtsUI = ()=>{
   const enabled = ts.ptsToggle.checked;
-  ts.ptsControls.style.display = enabled ? 'flex' : 'none';
+  if (ts.ptsControls){
+    ts.ptsControls.classList.toggle('is-disabled', !enabled);
+    ts.ptsControls.setAttribute('aria-disabled', String(!enabled));
+  }
   [ts.ptsMinus, ts.ptsPlus].forEach(btn=>{ if (btn) btn.disabled = !enabled; });
   if (ts.ptsLabel) ts.ptsLabel.classList.toggle('disabled', !enabled);
 };
@@ -647,6 +724,9 @@ function beginRound(){
         handleTimerEnd();
       }else{
         tUI.tLabel.textContent = `${pad(Math.floor(tRemain/60))}:${pad(tRemain%60)}`;
+        if (tRemain <= 10){
+          playTick();
+        }
       }
     },1000);
   }else{
@@ -658,7 +738,7 @@ function beginRound(){
 function handleTimerEnd(){
   if (!roundActive || timerExpired) return;
   timerExpired=true;
-  playBuzz();
+  playAlarm();
   setStatus('Время вышло! Завершите объяснение и нажмите «Закончить».');
   if (tUI.next) tUI.next.disabled = true;
 }
