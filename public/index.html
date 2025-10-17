@@ -31,10 +31,12 @@
       </div>
     </div>
     <div class="title"><span class="title-icon" aria-hidden="true">🐊</span><span class="title-text">CrocoMim</span></div>
-    <div class="icon-btn" id="btnHelp" title="Справка" aria-label="Справка">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10s10-4.477 10-10S17.523 2 12 2Zm0 14.25a1.25 1.25 0 1 1 0 2.5a1.25 1.25 0 0 1 0-2.5Zm0-10a3.25 3.25 0 0 1 3.25 3.25c0 1.35-.79 2.3-1.74 3.02c-.81.6-1.26 1.03-1.26 1.98v.25a1 1 0 1 1-2 0v-.25c0-1.62.85-2.47 1.69-3.1c.85-.64 1.31-1.06 1.31-1.9A1.25 1.25 0 0 0 12 7.25a1.25 1.25 0 0 0-1.25 1.25a1 1 0 1 1-2 0A3.25 3.25 0 0 1 12 6.25Z" fill="currentColor"/>
-      </svg>
+    <div class="header-right">
+      <div class="icon-btn" id="btnHelp" title="Справка" aria-label="Справка">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10s10-4.477 10-10S17.523 2 12 2Zm0 14.25a1.25 1.25 0 1 1 0 2.5a1.25 1.25 0 0 1 0-2.5Zm0-10a3.25 3.25 0 0 1 3.25 3.25c0 1.35-.79 2.3-1.74 3.02c-.81.6-1.26 1.03-1.26 1.98v.25a1 1 0 1 1-2 0v-.25c0-1.62.85-2.47 1.69-3.1c.85-.64 1.31-1.06 1.31-1.9A1.25 1.25 0 0 0 12 7.25a1.25 1.25 0 0 0-1.25 1.25a1 1 0 1 1-2 0A3.25 3.25 0 0 1 12 6.25Z" fill="currentColor"/>
+        </svg>
+      </div>
     </div>
   </div>
 
@@ -122,13 +124,15 @@
 
     <!-- Кнопки под словом в 2 строки по требованию -->
     <div class="section">
-      <div class="grid-3">
-        <button class="btn ghost" id="qNext">Следующее слово</button>
-        <button class="btn" id="qHitBtn">Угадано</button>
-        <button class="btn warn" id="qSkipBtn">Пропустить</button>
+      <div class="action-row action-row-inline">
+        <button class="btn ghost action-wide" id="qNext">Следующее слово</button>
+        <button class="btn ghost action-wide" id="qHideBtn">Скрыть слово</button>
       </div>
-      <div class="stack" style="margin-top:10px">
-        <button class="btn ghost" id="qHideBtn">Скрыть слово</button>
+      <div class="action-row action-row-primary">
+        <button class="btn btn-hero" id="qHitBtn">Угадано</button>
+        <button class="btn warn btn-hero" id="qSkipBtn">Пропустить</button>
+      </div>
+      <div class="stack action-extra">
         <button class="btn ghost" id="qMeaningBtn">Значение слова (Википедия)</button>
       </div>
     </div>
@@ -214,13 +218,15 @@
     </div>
 
     <div class="section">
-      <div class="grid-3">
-        <button class="btn ghost" id="tNext">Следующее слово</button>
-        <button class="btn" id="tHitBtn">Угадано</button>
-        <button class="btn warn" id="tSkipBtn">Пропустить</button>
+      <div class="action-row action-row-inline">
+        <button class="btn ghost action-wide" id="tNext">Следующее слово</button>
+        <button class="btn ghost action-wide" id="tHideBtn">Скрыть слово</button>
       </div>
-      <div class="stack" style="margin-top:10px">
-        <button class="btn ghost" id="tHideBtn">Скрыть слово</button>
+      <div class="action-row action-row-primary">
+        <button class="btn btn-hero" id="tHitBtn">Угадано</button>
+        <button class="btn warn btn-hero" id="tSkipBtn">Пропустить</button>
+      </div>
+      <div class="stack action-extra">
         <button class="btn ghost" id="tMeaningBtn">Значение слова (Википедия)</button>
       </div>
     </div>

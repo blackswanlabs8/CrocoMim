@@ -163,7 +163,8 @@ const show = v => {
   $('#'+v).style.display='flex';
   screen = v;
   writeScreenPref(v);
-  if (themeContainer) themeContainer.style.display = v==='viewMenu' ? 'flex' : 'none';
+  window.scrollTo(0, 0);
+  if (themeContainer) themeContainer.style.display = 'flex';
   if (v==='viewMenu'){
     backBtn.style.visibility = 'hidden';
     backBtn.style.pointerEvents = 'none';
