@@ -162,6 +162,25 @@ body{
 .mode-btn:hover{ background:var(--panel-hover); }
 .mode-btn:active{ transform:scale(.97); }
 .mode-btn.active{ background:var(--accent-soft); border-color:var(--accent); color:var(--text-strong); }
+.menu-section{ gap:16px; }
+.menu-hero{ gap:10px; }
+.menu-hero h2{ margin:0; }
+.menu-settings{ gap:12px; }
+.menu-footer{ margin-top:4px; }
+.menu-theme{
+  display:flex;
+  justify-content:center;
+  margin-top:4px;
+}
+.menu-theme .theme-switch{
+  flex-wrap:wrap;
+  justify-content:center;
+  text-align:center;
+}
+.menu-theme .theme-switch-label{
+  flex-basis:100%;
+  text-align:center;
+}
 .menu-block{ background:var(--panel-soft); border:1px solid var(--panel-border); border-radius:16px; padding:14px; display:flex; flex-direction:column; gap:12px; }
 .menu-block-title{ font-weight:700; color:var(--text-strong); font-size:16px; }
 
@@ -206,6 +225,31 @@ body{
   border:2px solid var(--thumb-border);
   box-shadow:0 4px 12px var(--thumb-shadow);
   cursor:pointer;
+}
+.theme-toggle-icons{
+  display:none;
+  align-items:center;
+  gap:8px;
+}
+.theme-icon-btn{
+  width:38px;
+  height:38px;
+  border-radius:12px;
+  border:1px solid var(--panel-border);
+  background:var(--panel-2);
+  color:var(--text);
+  font-size:20px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  transition:background .2s ease, border .2s ease, transform .1s ease;
+}
+.theme-icon-btn:active{ transform:scale(.95); }
+.theme-icon-btn.is-active{
+  border-color:var(--accent);
+  background:var(--accent-soft);
+  color:var(--text-strong);
 }
 
 /* Buttons */
@@ -495,7 +539,8 @@ body{
   .header{ gap:12px; }
   .header-left,
   .header-right{ gap:10px; }
-  .theme-slider input[type="range"]{ width:64px; }
+  .theme-slider{ display:none; }
+  .theme-toggle-icons{ display:flex; }
   .action-row-primary{ gap:12px; }
 }
 
@@ -513,7 +558,6 @@ body{
   .header{ gap:10px; }
   .theme-switch{ gap:8px; }
   .theme-switch-label{ font-size:14px; }
-  .theme-slider input[type="range"]{ width:56px; }
   .action-row{ gap:10px; }
   .action-row + .action-row{ margin-top:10px; }
   .action-row-inline,
@@ -529,4 +573,8 @@ body{
     min-height:150px;
   }
   .word{ font-size:clamp(26px, 10vw, 48px); }
+  .menu-section{ gap:14px; }
+  .menu-hero{ gap:10px; }
+  .menu-settings{ gap:10px; }
+  .menu-block{ padding:12px; gap:10px; }
 }
