@@ -8,6 +8,8 @@ const backBtn = $('#btnBack');
 const helpBtn = $('#btnHelp');
 const modeQuickBtn = $('#modeQuick');
 const themeSlider = $('#themeSlider');
+const themeSunBtn = $('#themeSun');
+const themeMoonBtn = $('#themeMoon');
 const themeContainer = $('#themeContainer');
 const headerTitle = $('.title');
 const bodyEl = document.body;
@@ -33,11 +35,23 @@ const SCREEN_KEY = 'croc-screen';
 const QUICK_STATS_KEY = 'croc-quick-stats';
 const TEAM_STATS_KEY = 'croc-team-stats';
 
+const syncThemeControls = mode => {
+  if (themeSlider) themeSlider.value = mode === 'dark' ? '1' : '0';
+  const isDark = mode === 'dark';
+  if (themeSunBtn){
+    themeSunBtn.classList.toggle('is-active', !isDark);
+    themeSunBtn.setAttribute('aria-pressed', (!isDark).toString());
+  }
+  if (themeMoonBtn){
+    themeMoonBtn.classList.toggle('is-active', isDark);
+    themeMoonBtn.setAttribute('aria-pressed', isDark.toString());
+  }
+};
 const applyTheme = mode => {
   const themeClass = mode === 'dark' ? 'theme-dark' : 'theme-light';
   bodyEl.classList.remove('theme-light','theme-dark');
   bodyEl.classList.add(themeClass);
-  if (themeSlider) themeSlider.value = mode === 'dark' ? '1' : '0';
+  syncThemeControls(mode);
 };
 const readThemePref = () => {
   try{ return localStorage.getItem(THEME_KEY); }
@@ -74,6 +88,18 @@ if (themeSlider){
     const mode = e.target.value === '1' ? 'dark' : 'light';
     applyTheme(mode);
     writeThemePref(mode);
+  });
+}
+if (themeSunBtn){
+  themeSunBtn.addEventListener('click', ()=>{
+    applyTheme('light');
+    writeThemePref('light');
+  });
+}
+if (themeMoonBtn){
+  themeMoonBtn.addEventListener('click', ()=>{
+    applyTheme('dark');
+    writeThemePref('dark');
   });
 }
 

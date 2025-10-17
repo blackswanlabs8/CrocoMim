@@ -23,10 +23,14 @@
       </div>
       <div class="theme-switch" id="themeContainer">
         <div class="theme-switch-label">Тема</div>
-        <div class="theme-slider">
+        <div class="theme-slider" id="themeSliderWrap">
           <span aria-hidden="true">🌞</span>
           <input type="range" id="themeSlider" min="0" max="1" step="1" value="0" aria-label="Переключатель темы">
           <span aria-hidden="true">🌙</span>
+        </div>
+        <div class="theme-toggle-icons" id="themeToggleIcons" role="group" aria-label="Выбор темы">
+          <button class="theme-icon-btn" id="themeSun" type="button" data-theme="light" aria-label="Светлая тема">🌞</button>
+          <button class="theme-icon-btn" id="themeMoon" type="button" data-theme="dark" aria-label="Тёмная тема">🌙</button>
         </div>
       </div>
     </div>
@@ -42,20 +46,22 @@
 
   <!-- MAIN VIEWS -->
   <div id="viewMenu" class="stack">
-    <div class="section stack" style="gap:20px">
-      <h2>Выбери режим игры</h2>
-      <div class="mode-row">
-        <button class="mode-btn active" id="modeQuick" type="button">
-          <span class="mode-icon">⚡</span>
-          Быстрый
-        </button>
-        <button class="mode-btn" id="goTeam" type="button">
-          <span class="mode-icon">👥</span>
-          Команда
-        </button>
+    <div class="section stack menu-section">
+      <div class="menu-hero stack">
+        <h2>Выбери режим игры</h2>
+        <div class="mode-row">
+          <button class="mode-btn active" id="modeQuick" type="button">
+            <span class="mode-icon">⚡</span>
+            Быстрый
+          </button>
+          <button class="mode-btn" id="goTeam" type="button">
+            <span class="mode-icon">👥</span>
+            Команда
+          </button>
+        </div>
       </div>
 
-      <div class="stack" style="gap:16px">
+      <div class="stack menu-settings">
         <div class="menu-block">
           <div class="menu-block-title">Словарь</div>
           <select class="select" id="quickDict">
@@ -83,7 +89,7 @@
             <div class="chip" id="quickTimeLabel">60 с</div>
             <button class="btn ghost" id="quickTimePlus" title="+30 секунд">+</button>
           </div>
-          
+
         </div>
 
         <div class="menu-block">
@@ -101,7 +107,7 @@
         </div>
       </div>
 
-      <div class="footer">
+      <div class="footer menu-footer">
         <button class="btn btn-full" id="startQuick">Начать игру</button>
       </div>
     </div>
