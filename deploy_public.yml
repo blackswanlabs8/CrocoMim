@@ -1,0 +1,21 @@
+name: Deploy /public via rsync (Sprinthost)
+on:
+  push:
+    branches: [ main ]
+    paths: ['public/**']   # запускаем только если менялось в public
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy with rsync over SSH
+        uses: burnett01/rsync-deployments@6.0
+        with:
+          switches: -az --delete
+          path: ./public/  # отправляем ТОЛЬКО содержимое public/
+          remote_path: /home/${{ secrets.SSH_USER }}/domains/${{ secrets.DOMAIN }}/public_html
+          remote_host: ${{ secrets.SSH_HOST }}
+          remote_user: ${{ secrets.SSH_USER }}
+          remote_key:  ${{ secrets.SSH_KEY }}
