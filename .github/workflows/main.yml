@@ -11,7 +11,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Deploy with rsync over SSH
-        uses: burnett01/rsync-deployments@6.0
+        uses: burnett01/rsync-deployments@v6.0
         with:
           switches: -az --delete
           path: ./public/  # отправляем ТОЛЬКО содержимое public/
