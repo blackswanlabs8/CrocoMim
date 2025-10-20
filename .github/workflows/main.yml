@@ -18,12 +18,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Защита от случайного запуска, если в репо нет public/
       - name: Verify /public exists
         run: |
           test -d public || { echo "public/ not found in repo root"; exit 1; }
 
-      # Убеждаемся, что целевая директория есть на сервере
       - name: Ensure remote directory
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -34,9 +32,8 @@ jobs:
             mkdir -p /home/${{ secrets.SSH_USER }}/domains/${{ secrets.DOMAIN }}/public_html
             chmod 755 /home/${{ secrets.SSH_USER }}/domains/${{ secrets.DOMAIN }}/public_html
 
-      # Основной деплой: зеркалим только содержимое /public → public_html
       - name: Deploy with rsync over SSH
-        uses: burnett01/rsync-deployments@v6.0
+        uses: burnett01/rsync-deployments@7.1.0   # ← правильная версия
         with:
           switches: -az --delete
           path: ./public/  # отправляем ТОЛЬКО содержимое public/
