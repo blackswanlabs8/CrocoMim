@@ -3,6 +3,7 @@ const $ = sel => document.querySelector(sel);
 const VIEWS = ['viewMenu','viewQuickGame','viewTeamSetup','viewTeamGame'];
 let screen = 'viewMenu';
 let qTimerId = null;
+let qTimerRunning = false;
 let tTimerId = null;
 const backBtn = $('#btnBack');
 const helpBtn = $('#btnHelp');
@@ -226,7 +227,7 @@ backBtn.onclick = () => {
   if (screen==='viewQuickGame' || screen==='viewTeamGame'){
     if (!confirm('Выйти в меню? Текущая партия будет завершена.')) return;
   }
-  if (typeof qTimerId !== 'undefined'){ clearInterval(qTimerId); qTimerId=null; }
+  stopQuickTimer();
   if (typeof tTimerId !== 'undefined'){ clearInterval(tTimerId); tTimerId=null; }
   show('viewMenu');
 };
@@ -270,6 +271,7 @@ const updateQuickTimerUI = () => {
   const enabled = qs.timerToggle.checked;
   [qs.timeMinus, qs.timePlus].forEach(btn=>{ if (btn) btn.disabled = !enabled; });
   if (qs.timeLabel) qs.timeLabel.classList.toggle('disabled', !enabled);
+  updateQuickTimerButton();
 };
 qs.timeMinus.onclick = () => { qs.time = Math.max(30, qs.time-30); upQuickTime(); };
 qs.timePlus.onclick = () => { qs.time += 30; upQuickTime(); };
@@ -305,6 +307,7 @@ const qUI = {
   next: $('#qNext'), hitBtn: $('#qHitBtn'), skipBtn: $('#qSkipBtn'),
   hideBtn: $('#qHideBtn'), meaningBtn: $('#qMeaningBtn'),
   tBox: $('#qTimerBox'), tLabel: $('#qTimer'),
+  restartTimerBtn: $('#qRestartTimer'),
   statsBtn: $('#qStatsBtn')
 };
 
@@ -326,6 +329,58 @@ const parseCustomWords = raw => (raw || '')
   .split(/[,\n\r]+/)
   .map(s=>s.trim())
   .filter(Boolean);
+
+function updateQuickTimerButton(){
+  const restartBtn = document.getElementById('qRestartTimer');
+  if (!restartBtn) return;
+  if (!qs.timerToggle.checked){
+    restartBtn.style.display = 'none';
+    return;
+  }
+  restartBtn.style.display = '';
+  restartBtn.textContent = qTimerRunning ? 'Перезапустить таймер' : 'Запустить таймер';
+}
+
+function stopQuickTimer(){
+  if (qTimerId){
+    clearInterval(qTimerId);
+  }
+  qTimerId = null;
+  qTimerRunning = false;
+  updateQuickTimerButton();
+}
+
+function restartQuickTimer(){
+  if (!qs.timerToggle.checked){
+    if (qUI.tBox) qUI.tBox.style.display = 'none';
+    stopQuickTimer();
+    return;
+  }
+  if (!qUI.tLabel) return;
+  if (qUI.tBox) qUI.tBox.style.display = 'inline-flex';
+  if (qUI.restartTimerBtn) qUI.restartTimerBtn.style.display = '';
+  if (qTimerId){
+    clearInterval(qTimerId);
+  }
+  qRemain = qs.time;
+  qUI.tLabel.textContent = `${pad(Math.floor(qRemain/60))}:${pad(qRemain%60)}`;
+  qTimerRunning = true;
+  updateQuickTimerButton();
+  qTimerId = setInterval(()=>{
+    qRemain--;
+    if (qRemain <= 0){
+      qUI.tLabel.textContent = '00:00';
+      stopQuickTimer();
+      playAlarm();
+      nextWord();
+    }else{
+      qUI.tLabel.textContent = `${pad(Math.floor(qRemain/60))}:${pad(qRemain%60)}`;
+      if (qRemain <= 10){
+        playTick();
+      }
+    }
+  },1000);
+}
 
 function showWordStats(title, hitList, missList){
   alert(`${title}\n\nУгаданные (${hitList.length}):\n${formatWordList(hitList)}\n\nПропущенные (${missList.length}):\n${formatWordList(missList)}`);
@@ -357,28 +412,14 @@ function startQuickGame(){
   qUI.hideBtn.textContent = 'Скрыть слово';
 
   // timer
-  clearInterval(qTimerId); qTimerId=null;
+  stopQuickTimer();
   if (qs.timerToggle.checked){
-    qUI.tBox.style.display='inline-flex';
-    qRemain = qs.time;
-    qUI.tLabel.textContent = `${pad(Math.floor(qRemain/60))}:${pad(qRemain%60)}`;
-    qTimerId = setInterval(()=>{
-      qRemain--;
-      if (qRemain<=0){
-        qUI.tLabel.textContent = '00:00';
-        clearInterval(qTimerId); qTimerId=null;
-        playAlarm();
-        nextWord();
-      }else{
-        qUI.tLabel.textContent = `${pad(Math.floor(qRemain/60))}:${pad(qRemain%60)}`;
-        if (qRemain <= 10){
-          playTick();
-        }
-      }
-    },1000);
-  }else{
+    restartQuickTimer();
+  }else if (qUI.tBox){
     qUI.tBox.style.display='none';
+    qRemain = 0;
   }
+  updateQuickTimerButton();
   show('viewQuickGame');
 }
 $('#startQuick').onclick = startQuickGame;
@@ -399,7 +440,7 @@ qUI.hitBtn.onclick = ()=>{
   persistQuickStats();
   updateQuickCounters();
   if (qTarget!==null && qHit>=qTarget){
-    if (qTimerId){ clearInterval(qTimerId); qTimerId=null; }
+    stopQuickTimer();
     playAlarm();
     alert('Вы достигли цели!');
     show('viewMenu');
@@ -420,6 +461,9 @@ qUI.hideBtn.onclick = ()=>{
   qUI.word.textContent = qHide ? '•••' : qWords[qIndex];
   qUI.hideBtn.textContent = qHide ? 'Показать слово' : 'Скрыть слово';
 };
+if (qUI.restartTimerBtn){
+  qUI.restartTimerBtn.onclick = restartQuickTimer;
+}
 qUI.meaningBtn.onclick = ()=> window.open('https://ru.wikipedia.org/wiki/'+encodeURIComponent(qWords[qIndex]), '_blank');
 if (qUI.statsBtn){
   qUI.statsBtn.onclick = ()=>{
