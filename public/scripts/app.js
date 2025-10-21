@@ -1,8 +1,16 @@
-const DICTS = (typeof globalThis !== 'undefined' && globalThis.DICTS) ? globalThis.DICTS : {};
+const dictionarySource = (typeof globalThis !== 'undefined' && typeof globalThis.DICTS === 'object')
+  ? globalThis.DICTS
+  : null;
 
-if (!Object.keys(DICTS).length){
+if (!dictionarySource || !Object.keys(dictionarySource).length){
   console.error('Не удалось загрузить словари. Проверьте подключение public/scripts/dicts.js.');
 }
+
+const getDictionaryWords = key => {
+  if (!dictionarySource || typeof key !== 'string') return null;
+  const words = dictionarySource[key];
+  return Array.isArray(words) ? words : null;
+};
 
 // --- Utilities & state ---
 const $ = sel => document.querySelector(sel);
@@ -385,18 +393,23 @@ function showWordStats(title, hitList, missList){
 
 function startQuickGame(){
   // build words
-  let dictKey = qs.dict.value;
-  if (!dictKey || (!DICTS[dictKey] && dictKey!=='custom')){
+  let dictKey = qs.dict?.value;
+  let selectedDict = getDictionaryWords(dictKey);
+  if (!dictKey || (!selectedDict && dictKey!=='custom')){
     dictKey = 'medium';
     if (qs.dict){
       qs.dict.value = 'medium';
       qs.dict.dispatchEvent(new Event('change'));
     }
+    selectedDict = getDictionaryWords(dictKey);
   }
   if (dictKey==='custom'){
     qWords = parseCustomWords(qs.customText?.value);
+  }else if (selectedDict){
+    qWords = [...selectedDict];
   }else{
-    qWords = [...DICTS[dictKey]];
+    alert('Не удалось загрузить словарь. Попробуйте обновить страницу.');
+    return;
   }
   if (qWords.length===0){ alert('Добавьте хотя бы одно слово'); return; }
   shuffle(qWords);
@@ -730,18 +743,25 @@ function preRoundMessage(name, initial){
 
 function startTeamGame(){
   if (teams.length<2){ alert('Нужно минимум 2 команды'); return; }
-  let dictKey = ts.dict.value;
-  if (!dictKey || (!DICTS[dictKey] && dictKey !== 'custom')){
+  let dictKey = ts.dict?.value;
+  let selectedDict = getDictionaryWords(dictKey);
+  if (!dictKey || (!selectedDict && dictKey !== 'custom')){
     dictKey = 'medium';
     if (ts.dict){
       ts.dict.value = 'medium';
       ts.dict.dispatchEvent(new Event('change'));
     }
+    selectedDict = getDictionaryWords(dictKey);
   }
   if (dictKey==='custom'){
     tWords = parseCustomWords(ts.customText?.value);
   }else{
-    tWords = [...DICTS[dictKey]];
+    if (selectedDict){
+      tWords = [...selectedDict];
+    }else{
+      alert('Не удалось загрузить словарь. Попробуйте обновить страницу.');
+      return;
+    }
   }
   if (tWords.length===0){ alert('Добавьте хотя бы одно слово'); return; }
   shuffle(tWords);
