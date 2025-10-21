@@ -521,31 +521,61 @@ function renderTeams(){
         <button class="team-delete" type="button" title="Удалить команду" data-index="${index}">🗑️</button>
       </div>`;
     const nameLabel = card.querySelector('.team-name');
-    if (nameLabel) nameLabel.textContent = team.name;
     const editForm = card.querySelector('[data-team-form]');
     const input = card.querySelector('.team-edit-input');
-    if (input) input.value = team.name;
     const avatarBtn = card.querySelector('.team-avatar-btn');
-    if (avatarBtn){
-      avatarBtn.setAttribute('aria-label', `Редактировать название команды «${team.name || defaultTeamName(index)}»`);
-      avatarBtn.onclick = () => {
-        if (card.classList.contains('is-editing')){
-          card.classList.remove('is-editing');
-          const currentName = teams[index]?.name || defaultTeamName(index);
-          if (input) input.value = currentName;
-          if (nameLabel) nameLabel.textContent = currentName;
-          return;
+    const getCurrentName = () => teams[index]?.name || defaultTeamName(index);
+    const syncDisplayName = () => {
+      const currentName = getCurrentName();
+      if (nameLabel){
+        nameLabel.textContent = currentName;
+        nameLabel.dataset.editable = 'true';
+        nameLabel.setAttribute('role', 'button');
+        nameLabel.setAttribute('tabindex', '0');
+        nameLabel.setAttribute('title', `Редактировать название команды «${currentName}»`);
+      }
+      if (avatarBtn){
+        avatarBtn.setAttribute('aria-label', `Редактировать название команды «${currentName}»`);
+      }
+    };
+    const exitEditMode = focusTarget => {
+      card.classList.remove('is-editing');
+      if (input) input.value = getCurrentName();
+      syncDisplayName();
+      if (focusTarget === 'name' && nameLabel){
+        requestAnimationFrame(()=> nameLabel.focus());
+      }
+    };
+    const enterEditMode = () => {
+      if (input) input.value = getCurrentName();
+      card.classList.add('is-editing');
+      requestAnimationFrame(()=>{
+        if (input){
+          input.focus();
+          input.select();
         }
-        const current = teams[index]?.name || defaultTeamName(index);
-        if (input) input.value = current;
-        card.classList.add('is-editing');
-        requestAnimationFrame(()=>{
-          if (input){
-            input.focus();
-            input.select();
-          }
-        });
-      };
+      });
+    };
+    const toggleEditMode = source => {
+      if (card.classList.contains('is-editing')){
+        exitEditMode(source === 'name' ? 'name' : undefined);
+      } else {
+        enterEditMode();
+      }
+    };
+    syncDisplayName();
+    if (input) input.value = getCurrentName();
+    if (avatarBtn){
+      avatarBtn.onclick = () => toggleEditMode('avatar');
+    }
+    if (nameLabel){
+      nameLabel.addEventListener('click', () => toggleEditMode('name'));
+      nameLabel.addEventListener('keydown', evt => {
+        if (evt.key === 'Enter' || evt.key === ' ' || evt.key === 'Spacebar'){
+          evt.preventDefault();
+          toggleEditMode('name');
+        }
+      });
     }
     if (editForm && input){
       editForm.onsubmit = evt => {
@@ -558,19 +588,13 @@ function renderTeams(){
       input.addEventListener('keydown', evt => {
         if (evt.key === 'Escape'){
           evt.preventDefault();
-          card.classList.remove('is-editing');
-          const currentName = teams[index]?.name || defaultTeamName(index);
-          input.value = currentName;
-          if (nameLabel) nameLabel.textContent = currentName;
+          exitEditMode('name');
         }
       });
       const cancelBtn = editForm.querySelector('[data-cancel]');
       if (cancelBtn){
         cancelBtn.onclick = () => {
-          card.classList.remove('is-editing');
-          const currentName = teams[index]?.name || defaultTeamName(index);
-          input.value = currentName;
-          if (nameLabel) nameLabel.textContent = currentName;
+          exitEditMode('name');
         };
       }
     }
