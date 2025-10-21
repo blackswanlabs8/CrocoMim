@@ -1,4 +1,8 @@
-import { DICTS } from './dicts.js';
+const DICTS = (typeof globalThis !== 'undefined' && globalThis.DICTS) ? globalThis.DICTS : {};
+
+if (!Object.keys(DICTS).length){
+  console.error('Не удалось загрузить словари. Проверьте подключение public/scripts/dicts.js.');
+}
 
 // --- Utilities & state ---
 const $ = sel => document.querySelector(sel);
