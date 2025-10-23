@@ -56,14 +56,17 @@
         <div class="menu-block">
           <div class="menu-block-title">Словарь</div>
           <select class="select" id="quickDict">
-            <option value="easy">Лёгкий</option>
-            <option value="medium">Средний</option>
-            <option value="hard">Сложный</option>
-            <option value="films_series">Фильмы и сериалы</option>
-            <option value="geography">География</option>
-            <option value="kids">Детский</option>
-            <option value="custom">Свой словарь</option>
+            <option value="" disabled selected>Загрузка словарей…</option>
           </select>
+          <div class="difficulty-block" id="quickDifficultyBlock" data-difficulty-target="quick">
+            <div class="difficulty-title">Уровень сложности словаря</div>
+            <div class="difficulty-row">
+              <button class="difficulty-btn" type="button" data-level="easy" aria-pressed="false">Лёгкий</button>
+              <button class="difficulty-btn" type="button" data-level="medium" aria-pressed="false">Средний</button>
+              <button class="difficulty-btn" type="button" data-level="hard" aria-pressed="false">Сложный</button>
+              <button class="difficulty-btn" type="button" data-level="mix" aria-pressed="false" title="Все уровни сложности выбранного словаря">Микс</button>
+            </div>
+          </div>
           <div id="quickCustomBox" class="stack" style="display:none; margin-top:10px">
             <label class="muted">Вставьте слова через запятую или перенос строки</label>
             <textarea class="input" id="quickCustomWords" rows="4" placeholder="яблоко, корабль, радуга..."></textarea>
@@ -129,8 +132,18 @@
       <button class="btn ghost" id="qStatsBtn" type="button">Статистика</button>
     </div>
 
-    <div class="word-card">
-      <div id="qWord" class="word">—</div>
+    <div class="word-card word-card-expanded">
+      <div class="word-card-main">
+        <div id="qWord" class="word">—</div>
+        <div class="word-meta">
+          <div id="qDescription" class="word-description muted">Описание появится после начала игры.</div>
+          <button class="word-help-btn" id="qHelpBtn" type="button" aria-expanded="false" aria-controls="qHelpBox" title="Помочь">
+            <span aria-hidden="true">🙏</span>
+            <span class="visually-hidden">Показать подсказку</span>
+          </button>
+        </div>
+        <div id="qHelpBox" class="word-help" hidden></div>
+      </div>
     </div>
 
     <!-- Кнопки под словом в 2 строки по требованию -->
@@ -163,14 +176,17 @@
     <div class="section">
       <h2>Словарь</h2>
       <select class="select" id="teamDict">
-        <option value="easy">Лёгкий</option>
-        <option value="medium">Средний</option>
-        <option value="hard">Сложный</option>
-        <option value="films_series">Фильмы и сериалы</option>
-        <option value="geography">География</option>
-        <option value="kids">Детский</option>
-        <option value="custom">Свой словарь</option>
+        <option value="" disabled selected>Загрузка словарей…</option>
       </select>
+      <div class="difficulty-block" id="teamDifficultyBlock" data-difficulty-target="team">
+        <div class="difficulty-title">Уровень сложности словаря</div>
+        <div class="difficulty-row">
+          <button class="difficulty-btn" type="button" data-level="easy" aria-pressed="false">Лёгкий</button>
+          <button class="difficulty-btn" type="button" data-level="medium" aria-pressed="false">Средний</button>
+          <button class="difficulty-btn" type="button" data-level="hard" aria-pressed="false">Сложный</button>
+          <button class="difficulty-btn" type="button" data-level="mix" aria-pressed="false" title="Все уровни сложности выбранного словаря">Микс</button>
+        </div>
+      </div>
       <div id="teamCustomBox" class="stack" style="display:none; margin-top:10px">
         <label class="muted">Вставьте слова через запятую или перенос строки</label>
         <textarea class="input" id="teamCustomWords" rows="4" placeholder="яблоко, корабль, радуга..."></textarea>
@@ -217,8 +233,18 @@
       </div>
     </div>
 
-    <div class="word-card">
-      <div id="tWord" class="word">—</div>
+    <div class="word-card word-card-expanded">
+      <div class="word-card-main">
+        <div id="tWord" class="word">—</div>
+        <div class="word-meta">
+          <div id="tDescription" class="word-description muted">Описание появится после начала игры.</div>
+          <button class="word-help-btn" id="tHelpBtn" type="button" aria-expanded="false" aria-controls="tHelpBox" title="Помочь">
+            <span aria-hidden="true">🙏</span>
+            <span class="visually-hidden">Показать подсказку</span>
+          </button>
+        </div>
+        <div id="tHelpBox" class="word-help" hidden></div>
+      </div>
     </div>
 
     <div class="section stack" style="gap:12px; align-items:stretch">
