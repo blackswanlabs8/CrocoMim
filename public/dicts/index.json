@@ -3,6 +3,7 @@
     {
       "id": "anime",
       "title": "Аниме",
+      "icon": "./icons/dict-anime.svg",
       "difficulties": {
         "easy": { "path": "anime_easy.md", "label": "Лёгкий" },
         "medium": { "path": "anime_medium.md", "label": "Средний" },
@@ -13,6 +14,7 @@
       "id": "agronomy_v3",
       "title": "Агрономия",
       "description": "Слова из агрономии с подробными подсказками.",
+      "icon": "./icons/dict-agronomy.svg",
       "difficulties": {
         "easy": { "path": "agronomy_easy_v3.md", "label": "Лёгкий" },
         "medium": { "path": "agronomy_medium_v3.md", "label": "Средний" },
@@ -23,6 +25,7 @@
       "id": "cars_v3",
       "title": "Автомобили",
       "description": "Обновлённые подборки терминов про автомобили.",
+      "icon": "./icons/dict-cars.svg",
       "difficulties": {
         "easy": { "path": "cars_easy_v3.md", "label": "Лёгкий" },
         "medium": { "path": "cars_medium_v3.md", "label": "Средний" },
@@ -32,6 +35,7 @@
     {
       "id": "harry_potter",
       "title": "Вселенная Harry Potter",
+      "icon": "./icons/dict-harry.svg",
       "difficulties": {
         "easy": { "path": "harry_potter_easy.md", "label": "Лёгкий" },
         "medium": { "path": "harry_potter_medium.md", "label": "Средний" },
@@ -41,6 +45,7 @@
     {
       "id": "marvel",
       "title": "Вселенная Marvel",
+      "icon": "./icons/dict-marvel.svg",
       "difficulties": {
         "easy": { "path": "marvel_easy.md", "label": "Лёгкий" },
         "medium": { "path": "marvel_medium.md", "label": "Средний" },

@@ -11,6 +11,12 @@
     if (!id) return null;
     const title = typeof raw.title === 'string' && raw.title.trim() ? raw.title.trim() : id;
     const description = typeof raw.description === 'string' ? raw.description.trim() : '';
+    const iconRaw = typeof raw.icon === 'string' ? raw.icon.trim() : '';
+    const icon = iconRaw
+      ? (/^(?:https?:)?\/\//.test(iconRaw) || iconRaw.startsWith('./') || iconRaw.startsWith('../') || iconRaw.startsWith('/')
+        ? iconRaw
+        : `./${iconRaw.replace(/^\/*/, '')}`)
+      : '';
     const rawDiffs = raw.difficulties && typeof raw.difficulties === 'object' ? raw.difficulties : {};
     const difficulties = {};
     Object.keys(rawDiffs).forEach(key => {
@@ -22,7 +28,7 @@
       difficulties[key] = { path, label };
     });
     if (!Object.keys(difficulties).length) return null;
-    return { id, title, description, difficulties };
+    return { id, title, description, icon, difficulties };
   }
 
   function loadIndex(){

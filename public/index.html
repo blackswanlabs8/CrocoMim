@@ -55,9 +55,15 @@
       <div class="stack menu-settings">
         <div class="menu-block">
           <div class="menu-block-title">Словарь</div>
-          <select class="select" id="quickDict">
-            <option value="" disabled selected>Загрузка словарей…</option>
-          </select>
+          <div class="dict-selector" id="quickDictSelector">
+            <div class="dict-selected" id="quickDictSummary" aria-live="polite">
+              <div class="dict-selected-label">Выбрано:</div>
+              <div class="dict-selected-empty">Словари не выбраны</div>
+            </div>
+            <div class="dict-grid" id="quickDictGrid">
+              <div class="dict-empty muted">Загрузка словарей…</div>
+            </div>
+          </div>
           <div class="difficulty-block" id="quickDifficultyBlock" data-difficulty-target="quick">
             <div class="difficulty-title">Уровень сложности словаря</div>
             <div class="difficulty-row">
@@ -175,9 +181,15 @@
 
     <div class="section">
       <h2>Словарь</h2>
-      <select class="select" id="teamDict">
-        <option value="" disabled selected>Загрузка словарей…</option>
-      </select>
+      <div class="dict-selector" id="teamDictSelector">
+        <div class="dict-selected" id="teamDictSummary" aria-live="polite">
+          <div class="dict-selected-label">Выбрано:</div>
+          <div class="dict-selected-empty">Словари не выбраны</div>
+        </div>
+        <div class="dict-grid" id="teamDictGrid">
+          <div class="dict-empty muted">Загрузка словарей…</div>
+        </div>
+      </div>
       <div class="difficulty-block" id="teamDifficultyBlock" data-difficulty-target="team">
         <div class="difficulty-title">Уровень сложности словаря</div>
         <div class="difficulty-row">

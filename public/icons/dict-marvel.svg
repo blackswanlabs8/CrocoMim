@@ -1,0 +1,12 @@
+<svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="marvel_bg" x1="20" y1="20" x2="78" y2="76" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f87171"/>
+      <stop offset="1" stop-color="#b91c1c"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="80" height="80" rx="24" fill="url(#marvel_bg)"/>
+  <circle cx="48" cy="48" r="24" fill="#fee2e2" opacity="0.9"/>
+  <circle cx="48" cy="48" r="18" fill="#dc2626" opacity="0.92"/>
+  <path d="M48 30l4.8 9.6 10.6 1.5-7.7 7.5 1.8 10.4L48 54l-9.5 4.9 1.8-10.4-7.7-7.5 10.6-1.5L48 30z" fill="#fef2f2"/>
+</svg>
