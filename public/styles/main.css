@@ -247,7 +247,9 @@ body{
 }
 .dict-summary-body[hidden]{ display:none; }
 .dict-chips{ display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-start; }
-.dict-chip{ display:inline-flex; align-items:center; padding:4px 10px; border-radius:999px; background:var(--panel); border:1px solid var(--panel-border); font-size:13px; color:var(--text-strong); font-weight:500; }
+.dict-chip{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:var(--panel); border:1px solid var(--panel-border); font-size:13px; color:var(--text-strong); font-weight:500; }
+.dict-chip-icon{ width:24px; height:24px; border-radius:8px; border:1px solid var(--panel-border); background:var(--panel-2); display:inline-flex; align-items:center; justify-content:center; font-weight:600; font-size:12px; color:var(--accent-2); text-transform:uppercase; letter-spacing:.3px; }
+.dict-chip-label{ white-space:nowrap; }
 .dict-dropdown-panel{
   position:absolute;
   top:calc(100% + 8px);
@@ -283,6 +285,8 @@ body{
 .dict-card-check svg{ width:14px; height:14px; opacity:0; }
 .dict-card.is-selected .dict-card-check{ background:var(--accent); border-color:var(--accent); }
 .dict-card.is-selected .dict-card-check svg{ opacity:1; }
+.dict-card-icon{ width:36px; height:36px; border-radius:12px; border:1px solid var(--panel-border); background:var(--panel-2); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; color:var(--accent-2); text-transform:uppercase; letter-spacing:.4px; flex-shrink:0; transition:background .2s ease, border .2s ease, color .2s ease; }
+.dict-card.is-selected .dict-card-icon{ background:var(--accent); border-color:var(--accent); color:#fff; }
 .dict-card-title{ font-weight:400; font-size:14px; color:var(--text-strong); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .dict-card-custom .dict-card-title{ color:var(--text-strong); }
 .dict-actions{ display:flex; justify-content:flex-end; gap:8px; }
