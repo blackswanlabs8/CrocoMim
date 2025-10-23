@@ -199,14 +199,95 @@ function getDictionaryIconUrl(meta){
   return `./${icon.replace(/^\/*/, '')}`;
 }
 
+function ensureDictionarySummaryStructure(state){
+  if (!state?.dictSummary) return null;
+  const summary = state.dictSummary;
+  if (!summary.dataset.summaryReady){
+    summary.dataset.summaryReady = '1';
+  }
+  if (!state.dictToggleButton){
+    let toggle = summary.querySelector('.dict-summary-toggle');
+    if (!toggle){
+      toggle = document.createElement('button');
+      summary.insertBefore(toggle, summary.firstChild || null);
+    }
+    toggle.type = 'button';
+    toggle.classList.add('dict-summary-toggle');
+    toggle.textContent = 'Выбрано';
+    toggle.setAttribute('aria-haspopup', 'true');
+    if (!toggle.dataset.boundToggle){
+      toggle.addEventListener('click', () => {
+        setDictionarySelectorOpen(state, true);
+      });
+      toggle.dataset.boundToggle = '1';
+    }
+    state.dictToggleButton = toggle;
+  }
+  if (state.dictToggleButton && state.dictGrid?.id){
+    state.dictToggleButton.setAttribute('aria-controls', state.dictGrid.id);
+    state.dictToggleButton.setAttribute('aria-expanded', state.isSelectorOpen ? 'true' : 'false');
+  }
+  if (!state.dictSummaryBody){
+    let body = summary.querySelector('.dict-summary-body');
+    if (!body){
+      body = document.createElement('div');
+      body.className = 'dict-summary-body';
+      summary.appendChild(body);
+    }
+    state.dictSummaryBody = body;
+  }
+  return state.dictSummaryBody;
+}
+
+function ensureDictionaryActions(state){
+  if (!state?.dictContainer) return null;
+  if (!state.dictActions){
+    const actions = document.createElement('div');
+    actions.className = 'dict-actions';
+    const okButton = document.createElement('button');
+    okButton.type = 'button';
+    okButton.className = 'btn ghost dict-ok-btn';
+    okButton.textContent = 'Ок';
+    okButton.addEventListener('click', () => {
+      setDictionarySelectorOpen(state, false);
+      if (state.dictToggleButton){
+        state.dictToggleButton.focus();
+      }
+    });
+    actions.appendChild(okButton);
+    actions.hidden = true;
+    actions.setAttribute('aria-hidden', 'true');
+    state.dictContainer.appendChild(actions);
+    state.dictActions = actions;
+    state.dictOkButton = okButton;
+  }
+  return state.dictActions;
+}
+
+function setDictionarySelectorOpen(state, open){
+  if (!state?.dictContainer) return;
+  const isOpen = !!open;
+  state.isSelectorOpen = isOpen;
+  state.dictContainer.classList.toggle('is-open', isOpen);
+  if (state.dictGrid){
+    state.dictGrid.hidden = !isOpen;
+    state.dictGrid.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+  }
+  if (state.dictActions){
+    state.dictActions.hidden = !isOpen;
+    state.dictActions.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+  }
+  if (state.dictToggleButton){
+    state.dictToggleButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    state.dictToggleButton.classList.toggle('is-active', isOpen);
+  }
+}
+
 function renderDictionarySummary(state){
   if (!state?.dictSummary) return;
-  const summary = state.dictSummary;
-  summary.innerHTML = '';
-  const label = document.createElement('div');
-  label.className = 'dict-selected-label';
-  label.textContent = 'Выбрано:';
-  summary.appendChild(label);
+  const body = ensureDictionarySummaryStructure(state);
+  if (!body) return;
+  body.innerHTML = '';
   const selectedMeta = [];
   if (state?.selectedDictionaries){
     state.selectedDictionaries.forEach(id => {
@@ -221,7 +302,7 @@ function renderDictionarySummary(state){
     const empty = document.createElement('div');
     empty.className = 'dict-selected-empty';
     empty.textContent = 'Словари не выбраны';
-    summary.appendChild(empty);
+    body.appendChild(empty);
     return;
   }
   const chips = document.createElement('div');
@@ -250,7 +331,7 @@ function renderDictionarySummary(state){
     chip.appendChild(title);
     chips.appendChild(chip);
   });
-  summary.appendChild(chips);
+  body.appendChild(chips);
 }
 
 function updateCustomBoxVisibility(state){
@@ -353,6 +434,9 @@ function createDictionaryCard(meta, state){
   const label = document.createElement('label');
   label.className = 'dict-card';
   label.setAttribute('data-dict-id', meta.id);
+  if (meta.description){
+    label.title = meta.description;
+  }
   const checkbox = document.createElement('input');
   checkbox.type = 'checkbox';
   checkbox.value = meta.id;
@@ -381,19 +465,10 @@ function createDictionaryCard(meta, state){
   }
   label.appendChild(iconWrap);
 
-  const body = document.createElement('span');
-  body.className = 'dict-card-body';
   const titleEl = document.createElement('span');
   titleEl.className = 'dict-card-title';
   titleEl.textContent = meta.title || meta.id;
-  body.appendChild(titleEl);
-  if (meta.description){
-    const descEl = document.createElement('span');
-    descEl.className = 'dict-card-desc';
-    descEl.textContent = meta.description;
-    body.appendChild(descEl);
-  }
-  label.appendChild(body);
+  label.appendChild(titleEl);
 
   checkbox.addEventListener('change', () => {
     if (checkbox.checked){
@@ -414,6 +489,9 @@ function createCustomDictionaryCard(state){
   const label = document.createElement('label');
   label.className = 'dict-card dict-card-custom';
   label.setAttribute('data-dict-id', meta.id);
+  if (meta.description){
+    label.title = meta.description;
+  }
 
   const checkbox = document.createElement('input');
   checkbox.type = 'checkbox';
@@ -443,19 +521,10 @@ function createCustomDictionaryCard(state){
   }
   label.appendChild(iconWrap);
 
-  const body = document.createElement('span');
-  body.className = 'dict-card-body';
   const titleEl = document.createElement('span');
   titleEl.className = 'dict-card-title';
   titleEl.textContent = meta.title;
-  body.appendChild(titleEl);
-  if (meta.description){
-    const desc = document.createElement('span');
-    desc.className = 'dict-card-desc';
-    desc.textContent = meta.description;
-    body.appendChild(desc);
-  }
-  label.appendChild(body);
+  label.appendChild(titleEl);
 
   checkbox.addEventListener('change', () => {
     state.customSelected = checkbox.checked;
@@ -484,7 +553,10 @@ function setupDictionarySelector(state){
     grid.appendChild(empty);
   }
   grid.appendChild(createCustomDictionaryCard(state));
+  ensureDictionaryActions(state);
+  ensureDictionarySummaryStructure(state);
   applyDictionarySelectionChange(state, { emit:false });
+  setDictionarySelectorOpen(state, false);
 }
 const backBtn = $('#btnBack');
 const helpBtn = $('#btnHelp');
