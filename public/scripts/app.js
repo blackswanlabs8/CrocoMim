@@ -18,8 +18,57 @@ const ALL_DIFFICULTIES = [...DIFFICULTY_ORDER, 'mix'];
 const CUSTOM_DICTIONARY_META = {
   id: 'custom',
   title: 'Свой словарь',
-  description: 'Вставьте слова ниже'
+  description: 'Вставьте слова ниже',
+  icon: 'edit'
 };
+
+const ICON_SANITIZE_RE = /[^A-Za-zА-Яа-яЁё0-9]/g;
+
+function getDictionaryIconText(meta){
+  if (!meta) return '';
+  const explicit = typeof meta.iconText === 'string' ? meta.iconText.trim() : '';
+  if (explicit) return explicit;
+  const source = typeof meta.title === 'string' && meta.title.trim() ? meta.title.trim() : (meta.id || '');
+  if (!source) return '';
+  const words = source
+    .split(/\s+/)
+    .map(word => word.replace(ICON_SANITIZE_RE, ''))
+    .filter(Boolean);
+  let label = '';
+  if (words.length === 1){
+    label = words[0].slice(0, 2);
+  }else if (words.length > 1){
+    label = words.slice(0, 2).map(word => word[0]).join('');
+    if (label.length < 2){
+      label = words.join('').slice(0, 2);
+    }
+  }
+  if (!label){
+    const fallback = (meta.id || '').replace(ICON_SANITIZE_RE, '');
+    label = fallback.slice(0, 2);
+  }
+  return label ? label.toLocaleUpperCase('ru-RU') : '';
+}
+
+function createDictionaryIconElement(meta, className){
+  if (!meta) return null;
+  const iconName = typeof meta.icon === 'string' ? meta.icon.trim() : '';
+  const baseClasses = typeof className === 'string' ? className.split(/\s+/).filter(Boolean) : [];
+  if (iconName){
+    const span = document.createElement('span');
+    span.classList.add(...baseClasses, 'material-symbols-rounded');
+    span.textContent = iconName;
+    span.setAttribute('aria-hidden', 'true');
+    return span;
+  }
+  const text = getDictionaryIconText(meta);
+  if (!text) return null;
+  const span = document.createElement('span');
+  span.classList.add(...baseClasses, 'dict-icon--text');
+  span.textContent = text;
+  span.setAttribute('aria-hidden', 'true');
+  return span;
+}
 
 function ensureDictionaryIndex(){
   if (!dictionaryService){
@@ -319,7 +368,12 @@ function renderDictionarySummary(state){
   selectedMeta.forEach(meta => {
     const chip = document.createElement('div');
     chip.className = 'dict-chip';
-    chip.textContent = meta.title || meta.id;
+    const iconEl = createDictionaryIconElement(meta, 'dict-chip-icon');
+    if (iconEl) chip.appendChild(iconEl);
+    const label = document.createElement('span');
+    label.className = 'dict-chip-label';
+    label.textContent = meta.title || meta.id;
+    chip.appendChild(label);
     chips.appendChild(chip);
   });
   body.appendChild(chips);
@@ -440,6 +494,9 @@ function createDictionaryCard(meta, state){
   check.innerHTML = '<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 10.5l3.5 3.5L15 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   label.appendChild(check);
 
+  const iconEl = createDictionaryIconElement(meta, 'dict-card-icon');
+  if (iconEl) label.appendChild(iconEl);
+
   const titleEl = document.createElement('span');
   titleEl.className = 'dict-card-title';
   titleEl.textContent = meta.title || meta.id;
@@ -479,6 +536,9 @@ function createCustomDictionaryCard(state){
   check.className = 'dict-card-check';
   check.innerHTML = '<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 10.5l3.5 3.5L15 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   label.appendChild(check);
+
+  const iconEl = createDictionaryIconElement(meta, 'dict-card-icon');
+  if (iconEl) label.appendChild(iconEl);
 
   const titleEl = document.createElement('span');
   titleEl.className = 'dict-card-title';

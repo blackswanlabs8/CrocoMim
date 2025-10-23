@@ -247,7 +247,29 @@ body{
 }
 .dict-summary-body[hidden]{ display:none; }
 .dict-chips{ display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-start; }
-.dict-chip{ display:inline-flex; align-items:center; padding:4px 10px; border-radius:999px; background:var(--panel); border:1px solid var(--panel-border); font-size:13px; color:var(--text-strong); font-weight:500; }
+.dict-chip{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:var(--panel); border:1px solid var(--panel-border); font-size:13px; color:var(--text-strong); font-weight:500; }
+.dict-chip-icon,
+.dict-card-icon{
+  border:1px solid var(--panel-border);
+  background:var(--panel-2);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--accent-2);
+  flex-shrink:0;
+  transition:background .2s ease, border .2s ease, color .2s ease;
+  font-size:18px;
+  font-weight:500;
+  line-height:1;
+  letter-spacing:normal;
+  text-transform:none;
+}
+.dict-chip-icon{ width:24px; height:24px; border-radius:8px; }
+.dict-card-icon{ width:36px; height:36px; border-radius:12px; font-size:22px; }
+.dict-icon--text{ font-weight:700; text-transform:uppercase; letter-spacing:.35px; }
+.dict-chip-icon.dict-icon--text{ font-size:12px; letter-spacing:.3px; }
+.dict-card-icon.dict-icon--text{ font-size:14px; letter-spacing:.4px; }
+.dict-chip-label{ white-space:nowrap; }
 .dict-dropdown-panel{
   position:absolute;
   top:calc(100% + 8px);
@@ -283,6 +305,19 @@ body{
 .dict-card-check svg{ width:14px; height:14px; opacity:0; }
 .dict-card.is-selected .dict-card-check{ background:var(--accent); border-color:var(--accent); }
 .dict-card.is-selected .dict-card-check svg{ opacity:1; }
+.dict-card.is-selected .dict-card-icon{ background:var(--accent); border-color:var(--accent); color:#fff; }
+.material-symbols-rounded{
+  font-family:'Material Symbols Rounded';
+  font-weight:normal;
+  font-style:normal;
+  font-size:inherit;
+  line-height:1;
+  letter-spacing:normal;
+  text-transform:none;
+}
+.dict-card-icon.material-symbols-rounded{ font-variation-settings:'FILL' 0,'wght' 500,'GRAD' 0,'opsz' 32; }
+.dict-card.is-selected .dict-card-icon.material-symbols-rounded{ font-variation-settings:'FILL' 1,'wght' 500,'GRAD' 0,'opsz' 32; }
+.dict-chip-icon.material-symbols-rounded{ font-variation-settings:'FILL' 0,'wght' 500,'GRAD' 0,'opsz' 24; }
 .dict-card-title{ font-weight:400; font-size:14px; color:var(--text-strong); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .dict-card-custom .dict-card-title{ color:var(--text-strong); }
 .dict-actions{ display:flex; justify-content:flex-end; gap:8px; }
