@@ -17,10 +17,8 @@ const ALL_DIFFICULTIES = [...DIFFICULTY_ORDER, 'mix'];
 const CUSTOM_DICTIONARY_META = {
   id: 'custom',
   title: 'Свой словарь',
-  description: 'Вставьте слова ниже',
-  icon: '📝'
+  description: 'Вставьте слова ниже'
 };
-const DICTIONARY_ICON_FALLBACK = '📚';
 
 function ensureDictionaryIndex(){
   if (!dictionaryService){
@@ -190,39 +188,6 @@ function sanitizeWordNames(list){
     .filter(Boolean);
 }
 
-function isDictionaryIconPath(icon){
-  if (typeof icon !== 'string') return false;
-  const trimmed = icon.trim();
-  if (!trimmed) return false;
-  if (/^(?:https?:)?\/\//.test(trimmed)) return true;
-  if (trimmed.startsWith('./') || trimmed.startsWith('../') || trimmed.startsWith('/')) return true;
-  if (trimmed.includes('/')) return true;
-  return /\.[a-z0-9]{2,4}(?:[\?#].*)?$/i.test(trimmed);
-}
-
-function normalizeDictionaryIconPath(icon){
-  if (/^(?:https?:)?\/\//.test(icon) || icon.startsWith('./') || icon.startsWith('../') || icon.startsWith('/')){
-    return icon;
-  }
-  return `./${icon.replace(/^\/*/, '')}`;
-}
-
-function getDictionaryIconUrl(meta){
-  const icon = typeof meta === 'string' ? meta : meta?.icon;
-  if (!icon || typeof icon !== 'string') return '';
-  const trimmed = icon.trim();
-  if (!trimmed || !isDictionaryIconPath(trimmed)) return '';
-  return normalizeDictionaryIconPath(trimmed);
-}
-
-function getDictionaryIconGlyph(meta){
-  const icon = typeof meta === 'string' ? meta : meta?.icon;
-  if (!icon || typeof icon !== 'string') return '';
-  const trimmed = icon.trim();
-  if (!trimmed || isDictionaryIconPath(trimmed)) return '';
-  return trimmed;
-}
-
 function ensureDictionarySummaryStructure(state){
   if (!state?.dictSummary) return null;
   const summary = state.dictSummary;
@@ -312,6 +277,7 @@ function renderDictionarySummary(state){
   const body = ensureDictionarySummaryStructure(state);
   if (!body) return;
   body.innerHTML = '';
+  const summary = state.dictSummary;
   const selectedMeta = [];
   if (state?.selectedDictionaries){
     state.selectedDictionaries.forEach(id => {
@@ -322,11 +288,11 @@ function renderDictionarySummary(state){
   if (state?.customSelected){
     selectedMeta.push(CUSTOM_DICTIONARY_META);
   }
-  if (!selectedMeta.length){
-    const empty = document.createElement('div');
-    empty.className = 'dict-selected-empty';
-    empty.textContent = 'Словари не выбраны';
-    body.appendChild(empty);
+  const hasSelection = selectedMeta.length > 0;
+  summary.classList.toggle('has-selection', hasSelection);
+  body.hidden = !hasSelection;
+  body.setAttribute('aria-hidden', hasSelection ? 'false' : 'true');
+  if (!hasSelection){
     return;
   }
   const chips = document.createElement('div');
@@ -334,30 +300,7 @@ function renderDictionarySummary(state){
   selectedMeta.forEach(meta => {
     const chip = document.createElement('div');
     chip.className = 'dict-chip';
-    const iconWrap = document.createElement('span');
-    iconWrap.className = 'dict-chip-icon';
-    const iconUrl = getDictionaryIconUrl(meta);
-    const iconGlyph = getDictionaryIconGlyph(meta);
-    if (iconUrl){
-      const img = document.createElement('img');
-      img.src = iconUrl;
-      img.alt = '';
-      img.loading = 'lazy';
-      iconWrap.appendChild(img);
-    } else if (iconGlyph){
-      const glyph = document.createElement('span');
-      glyph.textContent = iconGlyph;
-      iconWrap.appendChild(glyph);
-    } else {
-      const fallback = document.createElement('span');
-      fallback.textContent = DICTIONARY_ICON_FALLBACK;
-      iconWrap.appendChild(fallback);
-    }
-    chip.appendChild(iconWrap);
-    const title = document.createElement('span');
-    title.className = 'dict-chip-title';
-    title.textContent = meta.title || meta.id;
-    chip.appendChild(title);
+    chip.textContent = meta.title || meta.id;
     chips.appendChild(chip);
   });
   body.appendChild(chips);
@@ -478,27 +421,6 @@ function createDictionaryCard(meta, state){
   check.innerHTML = '<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 10.5l3.5 3.5L15 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   label.appendChild(check);
 
-  const iconWrap = document.createElement('span');
-  iconWrap.className = 'dict-card-icon';
-  const iconUrl = getDictionaryIconUrl(meta);
-  const iconGlyph = getDictionaryIconGlyph(meta);
-  if (iconUrl){
-    const img = document.createElement('img');
-    img.src = iconUrl;
-    img.alt = '';
-    img.loading = 'lazy';
-    iconWrap.appendChild(img);
-  }else if (iconGlyph){
-    const glyph = document.createElement('span');
-    glyph.textContent = iconGlyph;
-    iconWrap.appendChild(glyph);
-  }else{
-    const placeholder = document.createElement('span');
-    placeholder.textContent = DICTIONARY_ICON_FALLBACK;
-    iconWrap.appendChild(placeholder);
-  }
-  label.appendChild(iconWrap);
-
   const titleEl = document.createElement('span');
   titleEl.className = 'dict-card-title';
   titleEl.textContent = meta.title || meta.id;
@@ -538,27 +460,6 @@ function createCustomDictionaryCard(state){
   check.className = 'dict-card-check';
   check.innerHTML = '<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 10.5l3.5 3.5L15 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   label.appendChild(check);
-
-  const iconWrap = document.createElement('span');
-  iconWrap.className = 'dict-card-icon';
-  const iconUrl = getDictionaryIconUrl(meta);
-  const iconGlyph = getDictionaryIconGlyph(meta);
-  if (iconUrl){
-    const img = document.createElement('img');
-    img.src = iconUrl;
-    img.alt = '';
-    img.loading = 'lazy';
-    iconWrap.appendChild(img);
-  }else if (iconGlyph){
-    const glyph = document.createElement('span');
-    glyph.textContent = iconGlyph;
-    iconWrap.appendChild(glyph);
-  }else{
-    const placeholder = document.createElement('span');
-    placeholder.textContent = DICTIONARY_ICON_FALLBACK;
-    iconWrap.appendChild(placeholder);
-  }
-  label.appendChild(iconWrap);
 
   const titleEl = document.createElement('span');
   titleEl.className = 'dict-card-title';
