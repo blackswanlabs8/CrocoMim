@@ -47,32 +47,63 @@
     return `${dictId}::${diff}`;
   }
 
+  const TABLE_COLUMN_ALIASES = {
+    id: ['id', 'identifier', 'код', 'ид'],
+    term: ['term', 'word', 'слово'],
+    description: ['description', 'meaning', 'definition', 'описание', 'значение'],
+    about: ['about', 'hint', 'notes', 'подсказка', 'жест', 'действие']
+  };
+
+  function findColumnIndex(cells, aliases){
+    if (!Array.isArray(cells) || !Array.isArray(aliases)) return -1;
+    for (let i = 0; i < aliases.length; i++){
+      const idx = cells.indexOf(aliases[i]);
+      if (idx !== -1) return idx;
+    }
+    return -1;
+  }
+
+  function isSeparatorRow(cells){
+    if (!Array.isArray(cells) || !cells.length) return false;
+    return cells.every(cell => /^:?[-]{2,}:?$/.test(cell.replace(/\s+/g, '')));
+  }
+
   function parseMarkdownTable(text){
     const rows = [];
     const lines = String(text || '').split(/\r?\n/);
-    let headerProcessed = false;
+    let header = null;
+    let headerRaw = null;
     lines.forEach(line => {
       const trimmed = line.trim();
       if (!trimmed.startsWith('|')) return;
-      if (/^\|\s*-/.test(trimmed)) return; // separator like |---|
       const cells = trimmed.split('|').slice(1, -1).map(cell => cell.trim());
       if (!cells.length) return;
-      const lowerFirst = (cells[0] || '').toLowerCase();
-      const lowerSecond = (cells[1] || '').toLowerCase();
-      if (!headerProcessed && lowerFirst === 'id' && lowerSecond === 'term'){
-        headerProcessed = true;
+      if (isSeparatorRow(cells)) return;
+      const lowerCells = cells.map(cell => cell.toLowerCase());
+      if (!header){
+        const termIndex = findColumnIndex(lowerCells, TABLE_COLUMN_ALIASES.term);
+        if (termIndex === -1) return;
+        header = {
+          id: findColumnIndex(lowerCells, TABLE_COLUMN_ALIASES.id),
+          term: termIndex,
+          description: findColumnIndex(lowerCells, TABLE_COLUMN_ALIASES.description),
+          about: findColumnIndex(lowerCells, TABLE_COLUMN_ALIASES.about)
+        };
+        headerRaw = lowerCells;
         return;
       }
-      if (lowerFirst === 'id' && lowerSecond === 'term') return; // additional header rows
-      if (!headerProcessed) return; // skip lines before header
-      const [id, term, description, about] = cells;
-      if (!term) return;
-      rows.push({
-        id: id ? id.trim() : '',
-        term: term.trim(),
-        description: description ? description.trim() : '',
-        about: about ? about.trim() : ''
-      });
+      if (headerRaw && lowerCells.length === headerRaw.length && lowerCells.every((cell, idx) => cell === headerRaw[idx])){
+        return;
+      }
+      const termCell = header.term >= 0 ? cells[header.term] : (cells[0] || '');
+      if (!termCell || !termCell.trim()) return;
+      const row = {
+        id: header.id >= 0 ? (cells[header.id] || '').trim() : '',
+        term: termCell.trim(),
+        description: header.description >= 0 ? (cells[header.description] || '').trim() : '',
+        about: header.about >= 0 ? (cells[header.about] || '').trim() : ''
+      };
+      rows.push(row);
     });
     return rows;
   }
