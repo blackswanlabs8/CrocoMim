@@ -8,6 +8,16 @@
         "medium": { "path": "anime_medium.md", "label": "Средний" },
         "hard": { "path": "anime_hard.md", "label": "Сложный" }
       }
+    },
+    {
+      "id": "agronomy_v3",
+      "title": "Агрономия",
+      "description": "Слова из агрономии с подробными подсказками.",
+      "difficulties": {
+        "easy": { "path": "agronomy_easy_v3.md", "label": "Лёгкий" },
+        "medium": { "path": "agronomy_medium_v3.md", "label": "Средний" },
+        "hard": { "path": "agronomy_hard_v3.md", "label": "Сложный" }
+      }
     }
   ]
 }
