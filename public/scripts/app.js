@@ -18,7 +18,7 @@ const CUSTOM_DICTIONARY_META = {
   id: 'custom',
   title: 'Свой словарь',
   description: 'Вставьте слова ниже',
-  icon: './icons/dict-custom.svg'
+  icon: '📝'
 };
 const DICTIONARY_ICON_FALLBACK = '📚';
 
@@ -190,13 +190,37 @@ function sanitizeWordNames(list){
     .filter(Boolean);
 }
 
-function getDictionaryIconUrl(meta){
-  const icon = typeof meta === 'string' ? meta : meta?.icon;
-  if (!icon) return '';
+function isDictionaryIconPath(icon){
+  if (typeof icon !== 'string') return false;
+  const trimmed = icon.trim();
+  if (!trimmed) return false;
+  if (/^(?:https?:)?\/\//.test(trimmed)) return true;
+  if (trimmed.startsWith('./') || trimmed.startsWith('../') || trimmed.startsWith('/')) return true;
+  if (trimmed.includes('/')) return true;
+  return /\.[a-z0-9]{2,4}(?:[\?#].*)?$/i.test(trimmed);
+}
+
+function normalizeDictionaryIconPath(icon){
   if (/^(?:https?:)?\/\//.test(icon) || icon.startsWith('./') || icon.startsWith('../') || icon.startsWith('/')){
     return icon;
   }
   return `./${icon.replace(/^\/*/, '')}`;
+}
+
+function getDictionaryIconUrl(meta){
+  const icon = typeof meta === 'string' ? meta : meta?.icon;
+  if (!icon || typeof icon !== 'string') return '';
+  const trimmed = icon.trim();
+  if (!trimmed || !isDictionaryIconPath(trimmed)) return '';
+  return normalizeDictionaryIconPath(trimmed);
+}
+
+function getDictionaryIconGlyph(meta){
+  const icon = typeof meta === 'string' ? meta : meta?.icon;
+  if (!icon || typeof icon !== 'string') return '';
+  const trimmed = icon.trim();
+  if (!trimmed || isDictionaryIconPath(trimmed)) return '';
+  return trimmed;
 }
 
 function ensureDictionarySummaryStructure(state){
@@ -313,12 +337,17 @@ function renderDictionarySummary(state){
     const iconWrap = document.createElement('span');
     iconWrap.className = 'dict-chip-icon';
     const iconUrl = getDictionaryIconUrl(meta);
+    const iconGlyph = getDictionaryIconGlyph(meta);
     if (iconUrl){
       const img = document.createElement('img');
       img.src = iconUrl;
       img.alt = '';
       img.loading = 'lazy';
       iconWrap.appendChild(img);
+    } else if (iconGlyph){
+      const glyph = document.createElement('span');
+      glyph.textContent = iconGlyph;
+      iconWrap.appendChild(glyph);
     } else {
       const fallback = document.createElement('span');
       fallback.textContent = DICTIONARY_ICON_FALLBACK;
@@ -452,12 +481,17 @@ function createDictionaryCard(meta, state){
   const iconWrap = document.createElement('span');
   iconWrap.className = 'dict-card-icon';
   const iconUrl = getDictionaryIconUrl(meta);
+  const iconGlyph = getDictionaryIconGlyph(meta);
   if (iconUrl){
     const img = document.createElement('img');
     img.src = iconUrl;
     img.alt = '';
     img.loading = 'lazy';
     iconWrap.appendChild(img);
+  }else if (iconGlyph){
+    const glyph = document.createElement('span');
+    glyph.textContent = iconGlyph;
+    iconWrap.appendChild(glyph);
   }else{
     const placeholder = document.createElement('span');
     placeholder.textContent = DICTIONARY_ICON_FALLBACK;
@@ -508,12 +542,17 @@ function createCustomDictionaryCard(state){
   const iconWrap = document.createElement('span');
   iconWrap.className = 'dict-card-icon';
   const iconUrl = getDictionaryIconUrl(meta);
+  const iconGlyph = getDictionaryIconGlyph(meta);
   if (iconUrl){
     const img = document.createElement('img');
     img.src = iconUrl;
     img.alt = '';
     img.loading = 'lazy';
     iconWrap.appendChild(img);
+  }else if (iconGlyph){
+    const glyph = document.createElement('span');
+    glyph.textContent = iconGlyph;
+    iconWrap.appendChild(glyph);
   }else{
     const placeholder = document.createElement('span');
     placeholder.textContent = DICTIONARY_ICON_FALLBACK;

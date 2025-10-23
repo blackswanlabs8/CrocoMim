@@ -5,18 +5,34 @@
   let indexPromise = null;
   const dictionaryCache = new Map();
 
+  function isDictionaryIconPath(icon){
+    if (typeof icon !== 'string') return false;
+    const trimmed = icon.trim();
+    if (!trimmed) return false;
+    if (/^(?:https?:)?\/\//.test(trimmed)) return true;
+    if (trimmed.startsWith('./') || trimmed.startsWith('../') || trimmed.startsWith('/')) return true;
+    if (trimmed.includes('/')) return true;
+    return /\.[a-z0-9]{2,4}(?:[\?#].*)?$/i.test(trimmed);
+  }
+
+  function normalizeDictionaryIcon(iconRaw){
+    if (typeof iconRaw !== 'string') return '';
+    const trimmed = iconRaw.trim();
+    if (!trimmed) return '';
+    if (!isDictionaryIconPath(trimmed)) return trimmed;
+    if (/^(?:https?:)?\/\//.test(trimmed) || trimmed.startsWith('./') || trimmed.startsWith('../') || trimmed.startsWith('/')){
+      return trimmed;
+    }
+    return `./${trimmed.replace(/^\/*/, '')}`;
+  }
+
   function normalizeDictionary(raw){
     if (!raw || typeof raw !== 'object') return null;
     const id = typeof raw.id === 'string' ? raw.id.trim() : '';
     if (!id) return null;
     const title = typeof raw.title === 'string' && raw.title.trim() ? raw.title.trim() : id;
     const description = typeof raw.description === 'string' ? raw.description.trim() : '';
-    const iconRaw = typeof raw.icon === 'string' ? raw.icon.trim() : '';
-    const icon = iconRaw
-      ? (/^(?:https?:)?\/\//.test(iconRaw) || iconRaw.startsWith('./') || iconRaw.startsWith('../') || iconRaw.startsWith('/')
-        ? iconRaw
-        : `./${iconRaw.replace(/^\/*/, '')}`)
-      : '';
+    const icon = normalizeDictionaryIcon(raw.icon);
     const rawDiffs = raw.difficulties && typeof raw.difficulties === 'object' ? raw.difficulties : {};
     const difficulties = {};
     Object.keys(rawDiffs).forEach(key => {
