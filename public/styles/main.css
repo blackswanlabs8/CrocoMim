@@ -322,6 +322,42 @@ body{
 .dict-card-custom .dict-card-title{ color:var(--text-strong); }
 .dict-actions{ display:flex; justify-content:flex-end; gap:8px; }
 .btn.dict-ok-btn{ min-width:60px; padding:8px 14px; font-size:14px; border-radius:12px; }
+
+@media (max-width: 480px){
+  .dict-dropdown-panel{
+    padding:10px;
+    border-radius:14px;
+  }
+  .dict-grid{
+    gap:6px;
+  }
+  .dict-card{
+    padding:6px 10px;
+    gap:8px;
+    border-radius:14px;
+  }
+  .dict-card-icon{
+    width:32px;
+    height:32px;
+    border-radius:10px;
+    font-size:18px;
+  }
+  .dict-card-icon.dict-icon--text{
+    font-size:12px;
+  }
+  .dict-card-check{
+    width:20px;
+    height:20px;
+    border-radius:6px;
+  }
+  .dict-card-check svg{
+    width:12px;
+    height:12px;
+  }
+  .dict-card-title{
+    font-size:13px;
+  }
+}
 .difficulty-btn:hover{ background:var(--panel-hover); }
 .difficulty-btn:active{ transform:scale(.97); }
 .difficulty-btn.is-active{
