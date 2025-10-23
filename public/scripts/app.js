@@ -14,6 +14,11 @@ const dictionaryState = {
 };
 const DIFFICULTY_ORDER = ['easy','medium','hard'];
 const ALL_DIFFICULTIES = [...DIFFICULTY_ORDER, 'mix'];
+const CUSTOM_DICTIONARY_META = {
+  id: 'custom',
+  title: 'Свой словарь',
+  description: 'Вставьте слова ниже'
+};
 
 function ensureDictionaryIndex(){
   if (!dictionaryService){
@@ -176,21 +181,167 @@ function getOrderedDifficulties(meta){
   return [...ordered, ...extras];
 }
 
-function updateDifficultyAvailability(state, dictId){
-  if (!state || !state.difficultyContainer) return;
-  if (!dictId || dictId === 'custom'){
+function sanitizeWordNames(list){
+  if (!Array.isArray(list)) return [];
+  return list
+    .map(item => typeof item === 'string' ? item : (item && typeof item.term === 'string' ? item.term : ''))
+    .filter(Boolean);
+}
+
+function ensureDictionarySummaryStructure(state){
+  if (!state?.dictSummary) return null;
+  const summary = state.dictSummary;
+  if (!summary.dataset.summaryReady){
+    summary.dataset.summaryReady = '1';
+  }
+  if (!state.dictToggleButton){
+    let toggle = summary.querySelector('.dict-summary-toggle');
+    if (!toggle){
+      toggle = document.createElement('button');
+      summary.insertBefore(toggle, summary.firstChild || null);
+    }
+    toggle.type = 'button';
+    toggle.classList.add('dict-summary-toggle');
+    toggle.textContent = 'Выбрано';
+    toggle.setAttribute('aria-haspopup', 'true');
+    if (!toggle.dataset.boundToggle){
+      toggle.addEventListener('click', () => {
+        setDictionarySelectorOpen(state, true);
+      });
+      toggle.dataset.boundToggle = '1';
+    }
+    state.dictToggleButton = toggle;
+  }
+  if (state.dictToggleButton && state.dictGrid?.id){
+    state.dictToggleButton.setAttribute('aria-controls', state.dictGrid.id);
+    state.dictToggleButton.setAttribute('aria-expanded', state.isSelectorOpen ? 'true' : 'false');
+  }
+  if (!state.dictSummaryBody){
+    let body = summary.querySelector('.dict-summary-body');
+    if (!body){
+      body = document.createElement('div');
+      body.className = 'dict-summary-body';
+      summary.appendChild(body);
+    }
+    state.dictSummaryBody = body;
+  }
+  return state.dictSummaryBody;
+}
+
+function ensureDictionaryActions(state){
+  if (!state?.dictContainer) return null;
+  if (!state.dictActions){
+    const actions = document.createElement('div');
+    actions.className = 'dict-actions';
+    const okButton = document.createElement('button');
+    okButton.type = 'button';
+    okButton.className = 'btn ghost dict-ok-btn';
+    okButton.textContent = 'Ок';
+    okButton.addEventListener('click', () => {
+      setDictionarySelectorOpen(state, false);
+      if (state.dictToggleButton){
+        state.dictToggleButton.focus();
+      }
+    });
+    actions.appendChild(okButton);
+    actions.hidden = true;
+    actions.setAttribute('aria-hidden', 'true');
+    state.dictContainer.appendChild(actions);
+    state.dictActions = actions;
+    state.dictOkButton = okButton;
+  }
+  return state.dictActions;
+}
+
+function setDictionarySelectorOpen(state, open){
+  if (!state?.dictContainer) return;
+  const isOpen = !!open;
+  state.isSelectorOpen = isOpen;
+  state.dictContainer.classList.toggle('is-open', isOpen);
+  if (state.dictGrid){
+    state.dictGrid.hidden = !isOpen;
+    state.dictGrid.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+  }
+  if (state.dictActions){
+    state.dictActions.hidden = !isOpen;
+    state.dictActions.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+  }
+  if (state.dictToggleButton){
+    state.dictToggleButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    state.dictToggleButton.classList.toggle('is-active', isOpen);
+  }
+}
+
+function renderDictionarySummary(state){
+  if (!state?.dictSummary) return;
+  const body = ensureDictionarySummaryStructure(state);
+  if (!body) return;
+  body.innerHTML = '';
+  const summary = state.dictSummary;
+  const selectedMeta = [];
+  if (state?.selectedDictionaries){
+    state.selectedDictionaries.forEach(id => {
+      const meta = getDictionaryMeta(id);
+      if (meta) selectedMeta.push(meta);
+    });
+  }
+  if (state?.customSelected){
+    selectedMeta.push(CUSTOM_DICTIONARY_META);
+  }
+  const hasSelection = selectedMeta.length > 0;
+  summary.classList.toggle('has-selection', hasSelection);
+  body.hidden = !hasSelection;
+  body.setAttribute('aria-hidden', hasSelection ? 'false' : 'true');
+  if (!hasSelection){
+    return;
+  }
+  const chips = document.createElement('div');
+  chips.className = 'dict-chips';
+  selectedMeta.forEach(meta => {
+    const chip = document.createElement('div');
+    chip.className = 'dict-chip';
+    chip.textContent = meta.title || meta.id;
+    chips.appendChild(chip);
+  });
+  body.appendChild(chips);
+}
+
+function updateCustomBoxVisibility(state){
+  if (!state?.customBox) return;
+  state.customBox.style.display = state.customSelected ? 'block' : 'none';
+}
+
+function computeDictionaryAvailability(dictIds){
+  const ids = Array.isArray(dictIds) ? dictIds : [];
+  const availableSet = new Set();
+  let mixAvailable = false;
+  ids.forEach(id => {
+    const meta = getDictionaryMeta(id);
+    if (!meta) return;
+    const diffs = getOrderedDifficulties(meta);
+    diffs.forEach(level => availableSet.add(level));
+    if (Object.keys(meta.difficulties || {}).length > 0){
+      mixAvailable = true;
+    }
+  });
+  const ordered = DIFFICULTY_ORDER.filter(level => availableSet.has(level));
+  const extras = [...availableSet].filter(level => !DIFFICULTY_ORDER.includes(level));
+  return { available: [...ordered, ...extras], mix: mixAvailable && ids.length > 0 };
+}
+
+function updateDifficultyAvailabilityForSelection(state){
+  if (!state?.difficultyContainer) return;
+  const selectedIds = Array.from(state.selectedDictionaries || []);
+  if (!selectedIds.length){
     state.difficultyContainer.style.display = 'none';
     return;
   }
   state.difficultyContainer.style.display = '';
-  const meta = getDictionaryMeta(dictId);
-  const availableList = getOrderedDifficulties(meta);
-  const hasAny = availableList.length > 0;
-  const mixAvailable = hasAny;
+  const { available, mix } = computeDictionaryAvailability(selectedIds);
   if (!state.difficultyButtons) state.difficultyButtons = {};
   Object.entries(state.difficultyButtons).forEach(([level, btn]) => {
     if (!btn) return;
-    const allowed = level === 'mix' ? mixAvailable : availableList.includes(level);
+    const allowed = level === 'mix' ? mix : available.includes(level);
     btn.disabled = !allowed;
     btn.classList.toggle('is-disabled', !allowed);
     if (!allowed){
@@ -199,69 +350,153 @@ function updateDifficultyAvailability(state, dictId){
     }
   });
   let target = state.difficulty || 'easy';
-  if (target === 'mix' && !mixAvailable){
-    target = availableList[0] || 'mix';
-  }else if (target !== 'mix' && !availableList.includes(target)){
-    target = availableList[0] || (mixAvailable ? 'mix' : target);
-  }
-  if (target === 'mix' && !mixAvailable){
-    target = availableList[0] || 'mix';
-  }
-  if (!state.difficultyButtons[target] || state.difficultyButtons[target].disabled){
-    target = availableList.find(level => state.difficultyButtons[level] && !state.difficultyButtons[level].disabled)
-      || (mixAvailable && state.difficultyButtons.mix && !state.difficultyButtons.mix.disabled ? 'mix' : null);
+  if (target === 'mix' && !mix){
+    target = available[0] || null;
+  }else if (target !== 'mix' && !available.includes(target)){
+    target = available[0] || (mix ? 'mix' : null);
   }
   if (!target){
     const fallback = ['easy','medium','hard','mix'];
-    target = fallback.find(level => state.difficultyButtons[level] && !state.difficultyButtons[level].disabled) || state.difficulty;
+    target = fallback.find(level => state.difficultyButtons?.[level] && !state.difficultyButtons[level].disabled) || state.difficulty;
   }
   if (target && state.setDifficulty){
     state.setDifficulty(target, { silent:true });
   }
 }
 
-function sanitizeWordNames(list){
-  if (!Array.isArray(list)) return [];
-  return list
-    .map(item => typeof item === 'string' ? item : (item && typeof item.term === 'string' ? item.term : ''))
-    .filter(Boolean);
+function applyDictionarySelectionChange(state, opts = {}){
+  if (!state) return;
+  if (!state.selectedDictionaries) state.selectedDictionaries = new Set();
+  if (!state.dictElements) state.dictElements = new Map();
+  state.dictElements.forEach(({ label, checkbox }) => {
+    if (!label || !checkbox) return;
+    const selected = state.selectedDictionaries.has(checkbox.value);
+    label.classList.toggle('is-selected', selected);
+    checkbox.checked = selected;
+  });
+  if (state.customLabel && state.customToggle){
+    state.customLabel.classList.toggle('is-selected', !!state.customSelected);
+    state.customToggle.checked = !!state.customSelected;
+  }
+  renderDictionarySummary(state);
+  updateDifficultyAvailabilityForSelection(state);
+  updateCustomBoxVisibility(state);
+  if (typeof state.onDictionaryChange === 'function' && opts.emit !== false){
+    const payload = [...state.selectedDictionaries];
+    if (state.customSelected) payload.push(CUSTOM_DICTIONARY_META.id);
+    state.onDictionaryChange(payload);
+  }
 }
 
-function populateDictionarySelect(select){
-  if (!select) return;
-  const previousValue = select.value;
-  select.innerHTML = '';
-  const hasDictionaries = dictionaryState.list.length > 0;
-  if (hasDictionaries){
-    dictionaryState.list.forEach(dict => {
-      const option = document.createElement('option');
-      option.value = dict.id;
-      option.textContent = dict.title || dict.id;
-      select.appendChild(option);
+function setDictionarySelection(state, ids, opts = {}){
+  if (!state) return;
+  const next = new Set(Array.isArray(ids) ? ids.filter(id => state.dictElements?.has(id)) : []);
+  state.selectedDictionaries = next;
+  applyDictionarySelectionChange(state, opts);
+}
+
+function setCustomSelection(state, selected, opts = {}){
+  if (!state) return;
+  state.customSelected = !!selected;
+  if (state.customToggle) state.customToggle.checked = state.customSelected;
+  applyDictionarySelectionChange(state, opts);
+}
+
+function createDictionaryCard(meta, state){
+  const label = document.createElement('label');
+  label.className = 'dict-card';
+  label.setAttribute('data-dict-id', meta.id);
+  if (meta.description){
+    label.title = meta.description;
+  }
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.value = meta.id;
+  checkbox.className = 'dict-card-input';
+  checkbox.setAttribute('aria-label', meta.title || meta.id);
+  label.appendChild(checkbox);
+
+  const check = document.createElement('span');
+  check.className = 'dict-card-check';
+  check.innerHTML = '<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 10.5l3.5 3.5L15 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  label.appendChild(check);
+
+  const titleEl = document.createElement('span');
+  titleEl.className = 'dict-card-title';
+  titleEl.textContent = meta.title || meta.id;
+  label.appendChild(titleEl);
+
+  checkbox.addEventListener('change', () => {
+    if (checkbox.checked){
+      state.selectedDictionaries.add(meta.id);
+    }else{
+      state.selectedDictionaries.delete(meta.id);
+    }
+    applyDictionarySelectionChange(state);
+  });
+
+  if (!state.dictElements) state.dictElements = new Map();
+  state.dictElements.set(meta.id, { meta, label, checkbox });
+  return label;
+}
+
+function createCustomDictionaryCard(state){
+  const meta = CUSTOM_DICTIONARY_META;
+  const label = document.createElement('label');
+  label.className = 'dict-card dict-card-custom';
+  label.setAttribute('data-dict-id', meta.id);
+  if (meta.description){
+    label.title = meta.description;
+  }
+
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.value = meta.id;
+  checkbox.className = 'dict-card-input';
+  checkbox.setAttribute('aria-label', meta.title);
+  label.appendChild(checkbox);
+
+  const check = document.createElement('span');
+  check.className = 'dict-card-check';
+  check.innerHTML = '<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 10.5l3.5 3.5L15 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  label.appendChild(check);
+
+  const titleEl = document.createElement('span');
+  titleEl.className = 'dict-card-title';
+  titleEl.textContent = meta.title;
+  label.appendChild(titleEl);
+
+  checkbox.addEventListener('change', () => {
+    state.customSelected = checkbox.checked;
+    applyDictionarySelectionChange(state);
+  });
+
+  state.customToggle = checkbox;
+  state.customLabel = label;
+  return label;
+}
+
+function setupDictionarySelector(state){
+  if (!state || !state.dictGrid) return;
+  state.dictElements = new Map();
+  state.selectedDictionaries = state.selectedDictionaries || new Set();
+  const grid = state.dictGrid;
+  grid.innerHTML = '';
+  if (dictionaryState.list.length){
+    dictionaryState.list.forEach(meta => {
+      grid.appendChild(createDictionaryCard(meta, state));
     });
-  } else {
-    const placeholder = document.createElement('option');
-    placeholder.value = '';
-    placeholder.textContent = 'Словари недоступны';
-    placeholder.disabled = true;
-    select.appendChild(placeholder);
-  }
-  const customOption = document.createElement('option');
-  customOption.value = 'custom';
-  customOption.textContent = 'Свой словарь';
-  select.appendChild(customOption);
-  if (hasDictionaries){
-    let nextValue = previousValue;
-    if (previousValue !== 'custom' && !dictionaryState.list.some(dict => dict.id === previousValue)){
-      nextValue = dictionaryState.list[0].id;
-    }
-    if (!nextValue){
-      nextValue = dictionaryState.list[0].id;
-    }
-    select.value = nextValue;
   }else{
-    select.value = 'custom';
+    const empty = document.createElement('div');
+    empty.className = 'dict-empty muted';
+    empty.textContent = 'Словари недоступны';
+    grid.appendChild(empty);
   }
+  grid.appendChild(createCustomDictionaryCard(state));
+  ensureDictionaryActions(state);
+  ensureDictionarySummaryStructure(state);
+  applyDictionarySelectionChange(state, { emit:false });
+  setDictionarySelectorOpen(state, false);
 }
 const backBtn = $('#btnBack');
 const helpBtn = $('#btnHelp');
@@ -493,11 +728,14 @@ $('#goTeam').onclick = () => {
 
 // Quick setup
 const qs = {
-  dict: $('#quickDict'),
+  dictContainer: $('#quickDictSelector'),
+  dictGrid: $('#quickDictGrid'),
+  dictSummary: $('#quickDictSummary'),
   difficultyContainer: $('#quickDifficultyBlock'),
   difficultyButtons: {},
-  difficultyMemory: new Map(),
-  currentDictionaryId: null,
+  selectedDictionaries: new Set(),
+  dictElements: new Map(),
+  customSelected: false,
   difficulty: 'easy',
   customBox: $('#quickCustomBox'),
   customText: $('#quickCustomWords'),
@@ -533,40 +771,6 @@ const updateQuickTimerUI = () => {
 };
 qs.timeMinus.onclick = () => { qs.time = Math.max(30, qs.time-30); upQuickTime(); };
 qs.timePlus.onclick = () => { qs.time += 30; upQuickTime(); };
-function handleQuickDictionaryChange(){
-  if (!qs.dict) return;
-  const value = qs.dict.value;
-  if (qs.customBox){
-    qs.customBox.style.display = value === 'custom' ? 'block' : 'none';
-  }
-  if (!value) return;
-  if (!dictionaryState.ready){
-    ensureDictionaryIndex().then(()=>{
-      if (qs.currentDictionaryId && qs.currentDictionaryId !== 'custom'){
-        qs.difficultyMemory.set(qs.currentDictionaryId, qs.difficulty);
-      }
-      qs.currentDictionaryId = value;
-      updateDifficultyAvailability(qs, value);
-      const remembered = qs.difficultyMemory.get(value);
-      if (remembered && qs.difficultyButtons?.[remembered] && !qs.difficultyButtons[remembered].disabled){
-        qs.setDifficulty(remembered, { silent:true });
-      }
-    });
-  }else{
-    if (qs.currentDictionaryId && qs.currentDictionaryId !== 'custom'){
-      qs.difficultyMemory.set(qs.currentDictionaryId, qs.difficulty);
-    }
-    qs.currentDictionaryId = value;
-    updateDifficultyAvailability(qs, value);
-    const remembered = qs.difficultyMemory.get(value);
-    if (remembered && qs.difficultyButtons?.[remembered] && !qs.difficultyButtons[remembered].disabled){
-      qs.setDifficulty(remembered, { silent:true });
-    }
-  }
-}
-if (qs.dict){
-  qs.dict.onchange = handleQuickDictionaryChange;
-}
 qs.ptsMinus.onclick = () => { qs.pts = Math.max(1, qs.pts-1); upQuickPts(); };
 qs.ptsPlus.onclick = () => { qs.pts += 1; upQuickPts(); };
 const updateQuickPts = () => {
@@ -581,9 +785,7 @@ if (qs.timerToggle) qs.timerToggle.onchange = updateQuickTimerUI;
 updateQuickTimerUI();
 qs.ptsToggle.onchange = updateQuickPts;
 updateQuickPts();
-if (qs.customBox){
-  qs.customBox.style.display = 'none';
-}
+updateCustomBoxVisibility(qs);
 
 // Quick game state
 const initialQuickStats = readJson(QUICK_STATS_KEY, {hitWords:[], missWords:[]}) || {hitWords:[], missWords:[]};
@@ -642,6 +844,7 @@ const parseCustomWords = raw => (raw || '')
   .filter(Boolean)
   .map((term, idx) => ({
     id: `custom_${idx+1}`,
+    dictionaryId: 'custom',
     term,
     description: '',
     about: ''
@@ -706,29 +909,54 @@ function showWordStats(title, hitList, missList){
 async function startQuickGame(){
   if (qs.start) qs.start.disabled = true;
   try{
-    const dictKey = qs.dict?.value;
-    if (!dictKey){
-      alert('Выберите словарь');
+    await ensureDictionaryIndex();
+    const selectedIds = Array.from(qs.selectedDictionaries || []);
+    const includeCustom = !!qs.customSelected;
+    if (!selectedIds.length && !includeCustom){
+      alert('Выберите хотя бы один словарь');
       return;
     }
+    const difficulty = qs.difficulty || 'easy';
     let entries = [];
-    if (dictKey === 'custom'){
-      entries = parseCustomWords(qs.customText?.value);
-    }else{
-      try{
-        entries = await loadDictionaryEntries(dictKey, qs.difficulty || 'easy');
-      }catch(err){
-        alert('Не удалось загрузить словарь. Попробуйте обновить страницу.');
-        return;
-      }
-      entries = entries.map((entry, idx) => ({
-        ...entry,
-        id: entry.id || `${dictKey}_${qs.difficulty || 'easy'}_${idx+1}`
+    let dictionaryEntriesCount = 0;
+    let customEntriesCount = 0;
+    if (includeCustom){
+      const customEntries = parseCustomWords(qs.customText?.value);
+      customEntriesCount = customEntries.length;
+      entries = entries.concat(customEntries);
+    }
+    if (selectedIds.length){
+      const batches = await Promise.all(selectedIds.map(async dictId => {
+        const meta = getDictionaryMeta(dictId);
+        const available = getOrderedDifficulties(meta);
+        if (difficulty !== 'mix' && !available.includes(difficulty)){
+          return [];
+        }
+        try{
+          const list = await loadDictionaryEntries(dictId, difficulty);
+          return list.map((entry, idx) => ({
+            ...entry,
+            id: entry.id || `${dictId}_${difficulty}_${idx+1}`
+          }));
+        }catch(err){
+          console.error(`Не удалось загрузить словарь ${dictId}/${difficulty}:`, err);
+          return [];
+        }
       }));
+      batches.forEach(list => {
+        dictionaryEntriesCount += list.length;
+        entries = entries.concat(list);
+      });
     }
     entries = entries.filter(entry => entry && typeof entry.term === 'string' && entry.term.trim().length);
     if (!entries.length){
-      alert('Добавьте хотя бы одно слово');
+      if (!includeCustom && selectedIds.length && dictionaryEntriesCount === 0){
+        alert('Для выбранных словарей на этом уровне сложности нет слов. Попробуйте изменить сложность или набор словарей.');
+      }else if (includeCustom && customEntriesCount === 0 && dictionaryEntriesCount === 0){
+        alert('Добавьте хотя бы одно слово');
+      }else{
+        alert('Добавьте хотя бы одно слово');
+      }
       return;
     }
     qWords = entries.map(entry => ({ ...entry }));
@@ -956,11 +1184,14 @@ $('#teamAdd').onclick = ()=>{
 };
 
 const ts = {
-  dict: $('#teamDict'),
+  dictContainer: $('#teamDictSelector'),
+  dictGrid: $('#teamDictGrid'),
+  dictSummary: $('#teamDictSummary'),
   difficultyContainer: $('#teamDifficultyBlock'),
   difficultyButtons: {},
-  difficultyMemory: new Map(),
-  currentDictionaryId: null,
+  selectedDictionaries: new Set(),
+  dictElements: new Map(),
+  customSelected: false,
   difficulty: 'easy',
   customBox: $('#teamCustomBox'),
   customText: $('#teamCustomWords'),
@@ -985,43 +1216,7 @@ ts.timeMinus.onclick = ()=>{ ts.time = Math.max(30, ts.time-30); upTeamTime(); }
 ts.timePlus.onclick = ()=>{ ts.time += 30; upTeamTime(); };
 ts.ptsMinus.onclick = ()=>{ ts.pts = Math.max(1, ts.pts-1); upPts(); };
 ts.ptsPlus.onclick = ()=>{ ts.pts += 1; upPts(); };
-function handleTeamDictionaryChange(){
-  if (!ts.dict) return;
-  const value = ts.dict.value;
-  if (ts.customBox){
-    ts.customBox.style.display = value === 'custom' ? 'block' : 'none';
-  }
-  if (!value) return;
-  if (!dictionaryState.ready){
-    ensureDictionaryIndex().then(()=>{
-      if (ts.currentDictionaryId && ts.currentDictionaryId !== 'custom'){
-        ts.difficultyMemory.set(ts.currentDictionaryId, ts.difficulty);
-      }
-      ts.currentDictionaryId = value;
-      updateDifficultyAvailability(ts, value);
-      const remembered = ts.difficultyMemory.get(value);
-      if (remembered && ts.difficultyButtons?.[remembered] && !ts.difficultyButtons[remembered].disabled){
-        ts.setDifficulty(remembered, { silent:true });
-      }
-    });
-  }else{
-    if (ts.currentDictionaryId && ts.currentDictionaryId !== 'custom'){
-      ts.difficultyMemory.set(ts.currentDictionaryId, ts.difficulty);
-    }
-    ts.currentDictionaryId = value;
-    updateDifficultyAvailability(ts, value);
-    const remembered = ts.difficultyMemory.get(value);
-    if (remembered && ts.difficultyButtons?.[remembered] && !ts.difficultyButtons[remembered].disabled){
-      ts.setDifficulty(remembered, { silent:true });
-    }
-  }
-}
-if (ts.dict){
-  ts.dict.onchange = handleTeamDictionaryChange;
-}
-if (ts.customBox){
-  ts.customBox.style.display = 'none';
-}
+updateCustomBoxVisibility(ts);
 const updateTeamTimerUI = ()=>{
   if (!ts.timerToggle) return;
   const enabled = ts.timerToggle.checked;
@@ -1043,44 +1238,67 @@ ts.ptsToggle.onchange = updatePtsUI;
 updatePtsUI();
 
 ensureDictionaryIndex().then(() => {
-  populateDictionarySelect(qs.dict);
-  populateDictionarySelect(ts.dict);
-  handleQuickDictionaryChange();
-  handleTeamDictionaryChange();
+  setupDictionarySelector(qs);
+  setupDictionarySelector(ts);
+  if (dictionaryState.list.length && !qs.selectedDictionaries.size){
+    const firstId = dictionaryState.list[0].id;
+    setDictionarySelection(qs, [firstId], { emit:false });
+    updateDifficultyAvailabilityForSelection(qs);
+  }
+  if (ts.dictElements){
+    setDictionarySelection(ts, Array.from(qs.selectedDictionaries || []), { emit:false });
+    setCustomSelection(ts, qs.customSelected, { emit:false });
+    updateDifficultyAvailabilityForSelection(ts);
+  }
+  applyDictionarySelectionChange(qs, { emit:false });
+  applyDictionarySelectionChange(ts, { emit:false });
 });
 
 function syncTeamSettingsFromMenu(){
   if (!qs || !ts) return;
-  if (qs.dict && ts.dict){
-    const dictValue = qs.dict.value || 'medium';
-    if (dictValue !== 'custom'){
-      ts.difficultyMemory.set(dictValue, qs.difficulty);
+  const applySelection = () => {
+    if (ts.dictGrid){
+      if (!ts.dictElements || !ts.dictElements.size){
+        setupDictionarySelector(ts);
+      }
+      setDictionarySelection(ts, Array.from(qs.selectedDictionaries || []), { emit:false });
+      setCustomSelection(ts, qs.customSelected, { emit:false });
+      updateDifficultyAvailabilityForSelection(ts);
+      if (qs.selectedDictionaries?.size){
+        const targetDifficulty = qs.difficulty;
+        if (ts.difficultyButtons?.[targetDifficulty] && !ts.difficultyButtons[targetDifficulty].disabled){
+          ts.setDifficulty(targetDifficulty, { silent:true });
+        }
+      }
+      applyDictionarySelectionChange(ts, { emit:false });
     }
-    ts.dict.value = dictValue;
-    ts.dict.dispatchEvent(new Event('change'));
-    if (dictValue !== 'custom' && ts.difficultyButtons?.[qs.difficulty] && !ts.difficultyButtons[qs.difficulty].disabled){
-      ts.setDifficulty(qs.difficulty, { silent:true });
-    }
-    if (dictValue === 'custom' && ts.customText && qs.customText){
+    if (ts.customText && qs.customText){
       ts.customText.value = qs.customText.value;
     }
+    if (typeof qs.time === 'number'){
+      ts.time = qs.time;
+      upTeamTime();
+    }
+    if (ts.timerToggle && qs.timerToggle){
+      ts.timerToggle.checked = qs.timerToggle.checked;
+      updateTeamTimerUI();
+    }
+    if (typeof qs.pts === 'number'){
+      ts.pts = qs.pts;
+      upPts();
+    }
+    if (ts.ptsToggle && qs.ptsToggle){
+      ts.ptsToggle.checked = qs.ptsToggle.checked;
+    }
+    updatePtsUI();
+  };
+  if (!dictionaryState.ready){
+    ensureDictionaryIndex().then(() => {
+      applySelection();
+    });
+    return;
   }
-  if (typeof qs.time === 'number'){
-    ts.time = qs.time;
-    upTeamTime();
-  }
-  if (ts.timerToggle && qs.timerToggle){
-    ts.timerToggle.checked = qs.timerToggle.checked;
-    updateTeamTimerUI();
-  }
-  if (typeof qs.pts === 'number'){
-    ts.pts = qs.pts;
-    upPts();
-  }
-  if (ts.ptsToggle && qs.ptsToggle){
-    ts.ptsToggle.checked = qs.ptsToggle.checked;
-  }
-  updatePtsUI();
+  applySelection();
 }
 
 // Team game state
@@ -1184,28 +1402,56 @@ async function startTeamGame(){
   if (teams.length<2){ alert('Нужно минимум 2 команды'); return; }
   if (ts.start) ts.start.disabled = true;
   try{
-    const dictKey = ts.dict?.value;
-    if (!dictKey){
-      alert('Выберите словарь');
+    await ensureDictionaryIndex();
+    const selectedIds = Array.from(ts.selectedDictionaries || []);
+    const includeCustom = !!ts.customSelected;
+    if (!selectedIds.length && !includeCustom){
+      alert('Выберите хотя бы один словарь');
       return;
     }
+    const difficulty = ts.difficulty || 'easy';
     let entries = [];
-    if (dictKey === 'custom'){
-      entries = parseCustomWords(ts.customText?.value);
-    }else{
-      try{
-        entries = await loadDictionaryEntries(dictKey, ts.difficulty || 'easy');
-      }catch(err){
-        alert('Не удалось загрузить словарь. Попробуйте обновить страницу.');
-        return;
-      }
-      entries = entries.map((entry, idx) => ({
-        ...entry,
-        id: entry.id || `${dictKey}_${ts.difficulty || 'easy'}_${idx+1}`
+    let dictionaryEntriesCount = 0;
+    let customEntriesCount = 0;
+    if (includeCustom){
+      const customEntries = parseCustomWords(ts.customText?.value);
+      customEntriesCount = customEntries.length;
+      entries = entries.concat(customEntries);
+    }
+    if (selectedIds.length){
+      const batches = await Promise.all(selectedIds.map(async dictId => {
+        const meta = getDictionaryMeta(dictId);
+        const available = getOrderedDifficulties(meta);
+        if (difficulty !== 'mix' && !available.includes(difficulty)){
+          return [];
+        }
+        try{
+          const list = await loadDictionaryEntries(dictId, difficulty);
+          return list.map((entry, idx) => ({
+            ...entry,
+            id: entry.id || `${dictId}_${difficulty}_${idx+1}`
+          }));
+        }catch(err){
+          console.error(`Не удалось загрузить словарь ${dictId}/${difficulty}:`, err);
+          return [];
+        }
       }));
+      batches.forEach(list => {
+        dictionaryEntriesCount += list.length;
+        entries = entries.concat(list);
+      });
     }
     entries = entries.filter(entry => entry && typeof entry.term === 'string' && entry.term.trim().length);
-    if (!entries.length){ alert('Добавьте хотя бы одно слово'); return; }
+    if (!entries.length){
+      if (!includeCustom && selectedIds.length && dictionaryEntriesCount === 0){
+        alert('Для выбранных словарей на этом уровне сложности нет слов. Попробуйте изменить сложность или набор словарей.');
+      }else if (includeCustom && customEntriesCount === 0 && dictionaryEntriesCount === 0){
+        alert('Добавьте хотя бы одно слово');
+      }else{
+        alert('Добавьте хотя бы одно слово');
+      }
+      return;
+    }
     tWords = entries.map(entry => ({ ...entry }));
     shuffle(tWords);
     teams = teams.map((t, idx)=>(

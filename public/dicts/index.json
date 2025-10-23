@@ -31,7 +31,7 @@
     },
     {
       "id": "harry_potter",
-      "title": "Вселенная Harry Potter",
+      "title": "Гарри Поттер",
       "difficulties": {
         "easy": { "path": "harry_potter_easy.md", "label": "Лёгкий" },
         "medium": { "path": "harry_potter_medium.md", "label": "Средний" },
@@ -40,7 +40,7 @@
     },
     {
       "id": "marvel",
-      "title": "Вселенная Marvel",
+      "title": "Марвел",
       "difficulties": {
         "easy": { "path": "marvel_easy.md", "label": "Лёгкий" },
         "medium": { "path": "marvel_medium.md", "label": "Средний" },
