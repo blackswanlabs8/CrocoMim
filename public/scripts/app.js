@@ -202,11 +202,12 @@ function ensureDictionarySummaryStructure(state){
     }
     toggle.type = 'button';
     toggle.classList.add('dict-summary-toggle');
-    toggle.textContent = 'Выбрано';
+    toggle.textContent = 'Выбрать словарь';
     toggle.setAttribute('aria-haspopup', 'true');
     if (!toggle.dataset.boundToggle){
       toggle.addEventListener('click', () => {
-        setDictionarySelectorOpen(state, true);
+        const nextState = !state.isSelectorOpen;
+        setDictionarySelectorOpen(state, nextState);
       });
       toggle.dataset.boundToggle = '1';
     }
@@ -223,6 +224,8 @@ function ensureDictionarySummaryStructure(state){
       body.className = 'dict-summary-body';
       summary.appendChild(body);
     }
+    body.hidden = true;
+    body.setAttribute('aria-hidden', 'true');
     state.dictSummaryBody = body;
   }
   return state.dictSummaryBody;
@@ -276,7 +279,6 @@ function renderDictionarySummary(state){
   if (!state?.dictSummary) return;
   const body = ensureDictionarySummaryStructure(state);
   if (!body) return;
-  body.innerHTML = '';
   const summary = state.dictSummary;
   const selectedMeta = [];
   if (state?.selectedDictionaries){
@@ -290,20 +292,27 @@ function renderDictionarySummary(state){
   }
   const hasSelection = selectedMeta.length > 0;
   summary.classList.toggle('has-selection', hasSelection);
-  body.hidden = !hasSelection;
-  body.setAttribute('aria-hidden', hasSelection ? 'false' : 'true');
-  if (!hasSelection){
-    return;
+  body.hidden = true;
+  body.innerHTML = '';
+  body.setAttribute('aria-hidden', 'true');
+
+  if (state.dictToggleButton){
+    const titles = selectedMeta.map(meta => meta.title || meta.id);
+    let buttonLabel = 'Выбрать словарь';
+    if (titles.length === 1){
+      buttonLabel = titles[0];
+    }else if (titles.length === 2){
+      buttonLabel = `${titles[0]}, ${titles[1]}`;
+    }else if (titles.length > 2){
+      buttonLabel = `${titles[0]} + ещё ${titles.length - 1}`;
+    }
+    state.dictToggleButton.textContent = buttonLabel;
+    const ariaLabel = titles.length
+      ? `Выбрано словарей: ${titles.join(', ')}`
+      : 'Выбрать словарь';
+    state.dictToggleButton.setAttribute('aria-label', ariaLabel);
+    state.dictToggleButton.setAttribute('title', ariaLabel);
   }
-  const chips = document.createElement('div');
-  chips.className = 'dict-chips';
-  selectedMeta.forEach(meta => {
-    const chip = document.createElement('div');
-    chip.className = 'dict-chip';
-    chip.textContent = meta.title || meta.id;
-    chips.appendChild(chip);
-  });
-  body.appendChild(chips);
 }
 
 function updateCustomBoxVisibility(state){
