@@ -57,11 +57,16 @@
           <div class="dict-selector" id="quickDictSelector">
             <div class="menu-block-title">Словарь</div>
             <div class="dict-selected" id="quickDictSummary" aria-live="polite">
-              <button class="dict-summary-toggle" type="button">Выбрано</button>
+              <button class="dict-summary-toggle" type="button">Выбрать</button>
               <div class="dict-summary-body" hidden></div>
             </div>
-            <div class="dict-grid" id="quickDictGrid" hidden>
-              <div class="dict-empty muted">Загрузка словарей…</div>
+            <div class="dict-dropdown-panel" id="quickDictDropdown" hidden>
+              <div class="dict-grid" id="quickDictGrid">
+                <div class="dict-empty muted">Загрузка словарей…</div>
+              </div>
+              <div class="dict-actions">
+                <button class="btn ghost dict-ok-btn" type="button">Ок</button>
+              </div>
             </div>
           </div>
           <div class="difficulty-block" id="quickDifficultyBlock" data-difficulty-target="quick">
@@ -183,11 +188,16 @@
       <div class="dict-selector" id="teamDictSelector">
         <h2>Словарь</h2>
         <div class="dict-selected" id="teamDictSummary" aria-live="polite">
-          <button class="dict-summary-toggle" type="button">Выбрано</button>
+          <button class="dict-summary-toggle" type="button">Выбрать</button>
           <div class="dict-summary-body" hidden></div>
         </div>
-        <div class="dict-grid" id="teamDictGrid" hidden>
-          <div class="dict-empty muted">Загрузка словарей…</div>
+        <div class="dict-dropdown-panel" id="teamDictDropdown" hidden>
+          <div class="dict-grid" id="teamDictGrid">
+            <div class="dict-empty muted">Загрузка словарей…</div>
+          </div>
+          <div class="dict-actions">
+            <button class="btn ghost dict-ok-btn" type="button">Ок</button>
+          </div>
         </div>
       </div>
       <div class="difficulty-block" id="teamDifficultyBlock" data-difficulty-target="team">
