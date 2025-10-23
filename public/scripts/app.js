@@ -1,16 +1,66 @@
-const dictionarySource = (typeof globalThis !== 'undefined' && typeof globalThis.DICTS === 'object')
-  ? globalThis.DICTS
+const dictionaryService = (typeof globalThis !== 'undefined' && globalThis.DictionaryService)
+  ? globalThis.DictionaryService
   : null;
 
-if (!dictionarySource || !Object.keys(dictionarySource).length){
-  console.error('Не удалось загрузить словари. Проверьте подключение public/scripts/dicts.js.');
+if (!dictionaryService){
+  console.error('Не удалось найти сервис словарей. Проверьте подключение public/scripts/dicts.js.');
 }
 
-const getDictionaryWords = key => {
-  if (!dictionarySource || typeof key !== 'string') return null;
-  const words = dictionarySource[key];
-  return Array.isArray(words) ? words : null;
+const dictionaryState = {
+  ready: false,
+  list: [],
+  map: new Map(),
+  promise: null
 };
+const DIFFICULTY_ORDER = ['easy','medium','hard'];
+const ALL_DIFFICULTIES = [...DIFFICULTY_ORDER, 'mix'];
+
+function ensureDictionaryIndex(){
+  if (!dictionaryService){
+    dictionaryState.ready = true;
+    dictionaryState.list = [];
+    dictionaryState.map = new Map();
+    if (!dictionaryState.promise){
+      dictionaryState.promise = Promise.resolve([]);
+    }
+    return dictionaryState.promise;
+  }
+  if (!dictionaryState.promise){
+    dictionaryState.promise = Promise.resolve()
+      .then(()=> dictionaryService.getDictionaries())
+      .then(list => {
+        dictionaryState.list = Array.isArray(list) ? list : [];
+        dictionaryState.map = new Map(dictionaryState.list.map(item => [item.id, item]));
+        dictionaryState.ready = true;
+        return dictionaryState.list;
+      })
+      .catch(err => {
+        console.error('Не удалось получить список словарей:', err);
+        dictionaryState.list = [];
+        dictionaryState.map = new Map();
+        dictionaryState.ready = true;
+        return [];
+      });
+  }
+  return dictionaryState.promise;
+}
+
+function getDictionaryMeta(id){
+  return dictionaryState.map.get(id) || null;
+}
+
+async function loadDictionaryEntries(dictId, difficulty){
+  if (!dictionaryService) throw new Error('Сервис словарей недоступен.');
+  await ensureDictionaryIndex();
+  const normalizedDifficulty = difficulty || 'easy';
+  try{
+    const entries = await dictionaryService.getWords(dictId, normalizedDifficulty);
+    return Array.isArray(entries) ? entries : [];
+  }catch(err){
+    console.error(`Не удалось загрузить словарь ${dictId}/${normalizedDifficulty}:`, err);
+    throw err;
+  }
+}
 
 // --- Utilities & state ---
 const $ = sel => document.querySelector(sel);
@@ -19,6 +69,200 @@ let screen = 'viewMenu';
 let qTimerId = null;
 let qTimerRunning = false;
 let tTimerId = null;
+const WORD_PLACEHOLDER = '—';
+const WORD_SECRET_PLACEHOLDER = '•••';
+const WORD_DESCRIPTION_FALLBACK = 'Описание недоступно';
+const WORD_DESCRIPTION_HIDDEN = 'Слово скрыто';
+const WORD_HELP_FALLBACK = 'Подсказка недоступна';
+
+function updateWordView(view, { entry, hidden, helpState }){
+  const hasEntry = !!entry && typeof entry.term === 'string' && entry.term.trim().length;
+  const isHidden = !!hidden;
+  if (view.word){
+    if (!hasEntry){
+      view.word.textContent = WORD_PLACEHOLDER;
+    }else{
+      view.word.textContent = isHidden ? WORD_SECRET_PLACEHOLDER : entry.term;
+    }
+  }
+  if (view.description){
+    if (!hasEntry){
+      view.description.textContent = WORD_PLACEHOLDER;
+      view.description.classList.add('is-empty');
+    }else if (isHidden){
+      view.description.textContent = WORD_DESCRIPTION_HIDDEN;
+      view.description.classList.add('is-empty');
+    }else{
+      const text = entry.description && entry.description.trim() ? entry.description.trim() : WORD_DESCRIPTION_FALLBACK;
+      view.description.textContent = text;
+      view.description.classList.toggle('is-empty', !entry.description || !entry.description.trim());
+    }
+  }
+  const hasHelp = hasEntry && !isHidden && entry?.about && entry.about.trim().length;
+  if (view.helpBtn){
+    view.helpBtn.disabled = !hasHelp;
+    view.helpBtn.classList.toggle('is-disabled', !hasHelp);
+    const expanded = hasHelp && helpState?.open;
+    view.helpBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    view.helpBtn.setAttribute('title', hasHelp ? 'Помочь' : WORD_HELP_FALLBACK);
+    if (!hasHelp && helpState){
+      helpState.open = false;
+    }
+  }
+  if (view.helpBox){
+    const shouldShow = hasHelp && helpState?.open;
+    if (shouldShow){
+      view.helpBox.textContent = entry.about.trim();
+      view.helpBox.hidden = false;
+    }else{
+      view.helpBox.hidden = true;
+      view.helpBox.textContent = hasHelp ? entry.about.trim() : '';
+    }
+  }
+}
+
+function initDifficultyControls(state){
+  if (!state) return;
+  const container = state.difficultyContainer;
+  if (!container) return;
+  const buttons = {};
+  container.querySelectorAll('.difficulty-btn').forEach(btn => {
+    const level = btn.dataset.level;
+    if (!level) return;
+    buttons[level] = btn;
+  });
+  state.difficultyButtons = buttons;
+
+  const apply = (level) => {
+    if (!buttons[level]) return;
+    state.difficulty = level;
+    Object.entries(buttons).forEach(([key, button]) => {
+      const isActive = key === level;
+      button.classList.toggle('is-active', isActive);
+      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+  };
+
+  state.setDifficulty = (level, opts = {}) => {
+    if (!buttons[level]) return;
+    apply(level);
+    if (!opts.silent && typeof state.onDifficultyChange === 'function'){
+      state.onDifficultyChange(level);
+    }
+  };
+
+  Object.entries(buttons).forEach(([level, btn]) => {
+    btn.addEventListener('click', () => {
+      if (btn.disabled) return;
+      state.setDifficulty(level);
+    });
+  });
+
+  const defaultLevel = buttons.easy ? 'easy'
+    : buttons.medium ? 'medium'
+    : buttons.hard ? 'hard'
+    : buttons.mix ? 'mix'
+    : null;
+  if (defaultLevel){
+    state.setDifficulty(defaultLevel, { silent:true });
+  }
+}
+
+function getOrderedDifficulties(meta){
+  if (!meta) return [];
+  const keys = Object.keys(meta.difficulties || {});
+  const ordered = DIFFICULTY_ORDER.filter(level => keys.includes(level));
+  const extras = keys.filter(level => !DIFFICULTY_ORDER.includes(level));
+  return [...ordered, ...extras];
+}
+
+function updateDifficultyAvailability(state, dictId){
+  if (!state || !state.difficultyContainer) return;
+  if (!dictId || dictId === 'custom'){
+    state.difficultyContainer.style.display = 'none';
+    return;
+  }
+  state.difficultyContainer.style.display = '';
+  const meta = getDictionaryMeta(dictId);
+  const availableList = getOrderedDifficulties(meta);
+  const hasAny = availableList.length > 0;
+  const mixAvailable = hasAny;
+  if (!state.difficultyButtons) state.difficultyButtons = {};
+  Object.entries(state.difficultyButtons).forEach(([level, btn]) => {
+    if (!btn) return;
+    const allowed = level === 'mix' ? mixAvailable : availableList.includes(level);
+    btn.disabled = !allowed;
+    btn.classList.toggle('is-disabled', !allowed);
+    if (!allowed){
+      btn.setAttribute('aria-pressed', 'false');
+      btn.classList.remove('is-active');
+    }
+  });
+  let target = state.difficulty || 'easy';
+  if (target === 'mix' && !mixAvailable){
+    target = availableList[0] || 'mix';
+  }else if (target !== 'mix' && !availableList.includes(target)){
+    target = availableList[0] || (mixAvailable ? 'mix' : target);
+  }
+  if (target === 'mix' && !mixAvailable){
+    target = availableList[0] || 'mix';
+  }
+  if (!state.difficultyButtons[target] || state.difficultyButtons[target].disabled){
+    target = availableList.find(level => state.difficultyButtons[level] && !state.difficultyButtons[level].disabled)
+      || (mixAvailable && state.difficultyButtons.mix && !state.difficultyButtons.mix.disabled ? 'mix' : null);
+  }
+  if (!target){
+    const fallback = ['easy','medium','hard','mix'];
+    target = fallback.find(level => state.difficultyButtons[level] && !state.difficultyButtons[level].disabled) || state.difficulty;
+  }
+  if (target && state.setDifficulty){
+    state.setDifficulty(target, { silent:true });
+  }
+}
+
+function sanitizeWordNames(list){
+  if (!Array.isArray(list)) return [];
+  return list
+    .map(item => typeof item === 'string' ? item : (item && typeof item.term === 'string' ? item.term : ''))
+    .filter(Boolean);
+}
+
+function populateDictionarySelect(select){
+  if (!select) return;
+  const previousValue = select.value;
+  select.innerHTML = '';
+  const hasDictionaries = dictionaryState.list.length > 0;
+  if (hasDictionaries){
+    dictionaryState.list.forEach(dict => {
+      const option = document.createElement('option');
+      option.value = dict.id;
+      option.textContent = dict.title || dict.id;
+      select.appendChild(option);
+    });
+  } else {
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Словари недоступны';
+    placeholder.disabled = true;
+    select.appendChild(placeholder);
+  }
+  const customOption = document.createElement('option');
+  customOption.value = 'custom';
+  customOption.textContent = 'Свой словарь';
+  select.appendChild(customOption);
+  if (hasDictionaries){
+    let nextValue = previousValue;
+    if (previousValue !== 'custom' && !dictionaryState.list.some(dict => dict.id === previousValue)){
+      nextValue = dictionaryState.list[0].id;
+    }
+    if (!nextValue){
+      nextValue = dictionaryState.list[0].id;
+    }
+    select.value = nextValue;
+  }else{
+    select.value = 'custom';
+  }
+}
 const backBtn = $('#btnBack');
 const helpBtn = $('#btnHelp');
 const modeQuickBtn = $('#modeQuick');
@@ -142,8 +386,8 @@ function sanitizeTeam(team, idx){
     points: toCount(team?.points),
     hit: toCount(team?.hit),
     miss: toCount(team?.miss),
-    hitWords: Array.isArray(team?.hitWords) ? [...team.hitWords] : [],
-    missWords: Array.isArray(team?.missWords) ? [...team.missWords] : []
+    hitWords: sanitizeWordNames(team?.hitWords),
+    missWords: sanitizeWordNames(team?.missWords)
   };
 }
 let teams = [];
@@ -250,6 +494,11 @@ $('#goTeam').onclick = () => {
 // Quick setup
 const qs = {
   dict: $('#quickDict'),
+  difficultyContainer: $('#quickDifficultyBlock'),
+  difficultyButtons: {},
+  difficultyMemory: new Map(),
+  currentDictionaryId: null,
+  difficulty: 'easy',
   customBox: $('#quickCustomBox'),
   customText: $('#quickCustomWords'),
   timerToggle: $('#quickTimerToggle'),
@@ -264,6 +513,10 @@ const qs = {
   ptsPlus: $('#quickPtsPlus'),
   ptsLabel: $('#quickPtsLabel'),
   start: $('#startQuick')
+};
+initDifficultyControls(qs);
+qs.onDifficultyChange = level => {
+  qs.difficulty = level;
 };
 const upQuickTime = () => qs.timeLabel.textContent = qs.time+' с';
 const upQuickPts = () => qs.ptsLabel.textContent = qs.pts;
@@ -280,7 +533,40 @@ const updateQuickTimerUI = () => {
 };
 qs.timeMinus.onclick = () => { qs.time = Math.max(30, qs.time-30); upQuickTime(); };
 qs.timePlus.onclick = () => { qs.time += 30; upQuickTime(); };
-qs.dict.onchange = () => qs.customBox.style.display = (qs.dict.value==='custom')?'block':'none';
+function handleQuickDictionaryChange(){
+  if (!qs.dict) return;
+  const value = qs.dict.value;
+  if (qs.customBox){
+    qs.customBox.style.display = value === 'custom' ? 'block' : 'none';
+  }
+  if (!value) return;
+  if (!dictionaryState.ready){
+    ensureDictionaryIndex().then(()=>{
+      if (qs.currentDictionaryId && qs.currentDictionaryId !== 'custom'){
+        qs.difficultyMemory.set(qs.currentDictionaryId, qs.difficulty);
+      }
+      qs.currentDictionaryId = value;
+      updateDifficultyAvailability(qs, value);
+      const remembered = qs.difficultyMemory.get(value);
+      if (remembered && qs.difficultyButtons?.[remembered] && !qs.difficultyButtons[remembered].disabled){
+        qs.setDifficulty(remembered, { silent:true });
+      }
+    });
+  }else{
+    if (qs.currentDictionaryId && qs.currentDictionaryId !== 'custom'){
+      qs.difficultyMemory.set(qs.currentDictionaryId, qs.difficulty);
+    }
+    qs.currentDictionaryId = value;
+    updateDifficultyAvailability(qs, value);
+    const remembered = qs.difficultyMemory.get(value);
+    if (remembered && qs.difficultyButtons?.[remembered] && !qs.difficultyButtons[remembered].disabled){
+      qs.setDifficulty(remembered, { silent:true });
+    }
+  }
+}
+if (qs.dict){
+  qs.dict.onchange = handleQuickDictionaryChange;
+}
 qs.ptsMinus.onclick = () => { qs.pts = Math.max(1, qs.pts-1); upQuickPts(); };
 qs.ptsPlus.onclick = () => { qs.pts += 1; upQuickPts(); };
 const updateQuickPts = () => {
@@ -295,19 +581,21 @@ if (qs.timerToggle) qs.timerToggle.onchange = updateQuickTimerUI;
 updateQuickTimerUI();
 qs.ptsToggle.onchange = updateQuickPts;
 updateQuickPts();
-if (qs.dict){
-  qs.dict.value = 'medium';
-  qs.dict.dispatchEvent(new Event('change'));
+if (qs.customBox){
+  qs.customBox.style.display = 'none';
 }
 
 // Quick game state
 const initialQuickStats = readJson(QUICK_STATS_KEY, {hitWords:[], missWords:[]}) || {hitWords:[], missWords:[]};
-let qHitWords = Array.isArray(initialQuickStats.hitWords) ? [...initialQuickStats.hitWords] : [];
-let qMissWords = Array.isArray(initialQuickStats.missWords) ? [...initialQuickStats.missWords] : [];
+let qHitWords = sanitizeWordNames(initialQuickStats.hitWords);
+let qMissWords = sanitizeWordNames(initialQuickStats.missWords);
 let qWords=[], qIndex=0, qHide=false, qRemain=0, qHit=qHitWords.length, qMiss=qMissWords.length, qTarget=null;
 
 const qUI = {
   word: $('#qWord'),
+  description: $('#qDescription'),
+  helpBtn: $('#qHelpBtn'),
+  helpBox: $('#qHelpBox'),
   hit: $('#qHit'), miss: $('#qMiss'),
   next: $('#qNext'), hitBtn: $('#qHitBtn'), skipBtn: $('#qSkipBtn'),
   hideBtn: $('#qHideBtn'), meaningBtn: $('#qMeaningBtn'),
@@ -315,6 +603,18 @@ const qUI = {
   restartTimerBtn: $('#qRestartTimer'),
   statsBtn: $('#qStatsBtn')
 };
+const qHelpState = { open:false };
+
+function updateQuickWordView(){
+  updateWordView(qUI, { entry: qWords[qIndex] || null, hidden: qHide, helpState: qHelpState });
+}
+if (qUI.helpBtn){
+  qUI.helpBtn.addEventListener('click', () => {
+    if (qUI.helpBtn.disabled) return;
+    qHelpState.open = !qHelpState.open;
+    updateQuickWordView();
+  });
+}
 
 const updateQuickCounters = () => {
   if (qUI.hit) qUI.hit.textContent = String(qHit);
@@ -327,13 +627,25 @@ const persistQuickStats = () => {
   });
 };
 updateQuickCounters();
+updateQuickWordView();
 
 const pad = n => String(n).padStart(2,'0');
-const formatWordList = list => list.length ? list.join(', ') : '—';
+const formatWordList = list => {
+  if (!Array.isArray(list) || !list.length) return '—';
+  const items = list.map(item => typeof item === 'string' ? item : (item && typeof item.term === 'string' ? item.term : ''))
+    .filter(Boolean);
+  return items.length ? items.join(', ') : '—';
+};
 const parseCustomWords = raw => (raw || '')
   .split(/[,\n\r]+/)
   .map(s=>s.trim())
-  .filter(Boolean);
+  .filter(Boolean)
+  .map((term, idx) => ({
+    id: `custom_${idx+1}`,
+    term,
+    description: '',
+    about: ''
+  }));
 
 function updateQuickTimerButton(){
   const restartBtn = document.getElementById('qRestartTimer');
@@ -391,62 +703,80 @@ function showWordStats(title, hitList, missList){
   alert(`${title}\n\nУгаданные (${hitList.length}):\n${formatWordList(hitList)}\n\nПропущенные (${missList.length}):\n${formatWordList(missList)}`);
 }
 
-function startQuickGame(){
-  // build words
-  let dictKey = qs.dict?.value;
-  let selectedDict = getDictionaryWords(dictKey);
-  if (!dictKey || (!selectedDict && dictKey!=='custom')){
-    dictKey = 'medium';
-    if (qs.dict){
-      qs.dict.value = 'medium';
-      qs.dict.dispatchEvent(new Event('change'));
+async function startQuickGame(){
+  if (qs.start) qs.start.disabled = true;
+  try{
+    const dictKey = qs.dict?.value;
+    if (!dictKey){
+      alert('Выберите словарь');
+      return;
     }
-    selectedDict = getDictionaryWords(dictKey);
-  }
-  if (dictKey==='custom'){
-    qWords = parseCustomWords(qs.customText?.value);
-  }else if (selectedDict){
-    qWords = [...selectedDict];
-  }else{
-    alert('Не удалось загрузить словарь. Попробуйте обновить страницу.');
-    return;
-  }
-  if (qWords.length===0){ alert('Добавьте хотя бы одно слово'); return; }
-  shuffle(qWords);
-  qIndex=0; qHide=false; qHit=0; qMiss=0; qTarget = qs.ptsToggle.checked ? qs.pts : null;
-  qHitWords = [];
-  qMissWords = [];
-  persistQuickStats();
-  updateQuickCounters();
-  qUI.word.textContent = qWords[qIndex];
-  qUI.hideBtn.textContent = 'Скрыть слово';
+    let entries = [];
+    if (dictKey === 'custom'){
+      entries = parseCustomWords(qs.customText?.value);
+    }else{
+      try{
+        entries = await loadDictionaryEntries(dictKey, qs.difficulty || 'easy');
+      }catch(err){
+        alert('Не удалось загрузить словарь. Попробуйте обновить страницу.');
+        return;
+      }
+      entries = entries.map((entry, idx) => ({
+        ...entry,
+        id: entry.id || `${dictKey}_${qs.difficulty || 'easy'}_${idx+1}`
+      }));
+    }
+    entries = entries.filter(entry => entry && typeof entry.term === 'string' && entry.term.trim().length);
+    if (!entries.length){
+      alert('Добавьте хотя бы одно слово');
+      return;
+    }
+    qWords = entries.map(entry => ({ ...entry }));
+    shuffle(qWords);
+    qIndex=0; qHide=false; qHelpState.open=false;
+    qHit=0; qMiss=0; qTarget = qs.ptsToggle.checked ? qs.pts : null;
+    qHitWords = [];
+    qMissWords = [];
+    persistQuickStats();
+    updateQuickCounters();
+    updateQuickWordView();
+    if (qUI.hideBtn) qUI.hideBtn.textContent = 'Скрыть слово';
 
-  // timer
-  stopQuickTimer();
-  if (qs.timerToggle.checked){
-    restartQuickTimer();
-  }else if (qUI.tBox){
-    qUI.tBox.style.display='none';
-    qRemain = 0;
+    // timer
+    stopQuickTimer();
+    if (qs.timerToggle.checked){
+      restartQuickTimer();
+    }else if (qUI.tBox){
+      qUI.tBox.style.display='none';
+      qRemain = 0;
+    }
+    updateQuickTimerButton();
+    show('viewQuickGame');
+  }finally{
+    if (qs.start) qs.start.disabled = false;
   }
-  updateQuickTimerButton();
-  show('viewQuickGame');
 }
-$('#startQuick').onclick = startQuickGame;
-if (modeQuickBtn) modeQuickBtn.onclick = startQuickGame;
+if (qs.start){
+  qs.start.onclick = () => { startQuickGame().catch(err => console.error(err)); };
+}
+if (modeQuickBtn){
+  modeQuickBtn.onclick = () => { startQuickGame().catch(err => console.error(err)); };
+}
 
 function nextWord(){
+  if (!qWords.length) return;
   qIndex = (qIndex+1) % qWords.length;
   qHide=false;
-  qUI.word.textContent = qWords[qIndex];
-  qUI.hideBtn.textContent = 'Скрыть слово';
+  qHelpState.open = false;
+  updateQuickWordView();
+  if (qUI.hideBtn) qUI.hideBtn.textContent = 'Скрыть слово';
 }
 
 qUI.next.onclick = nextWord;
 qUI.hitBtn.onclick = ()=>{
   qHit++;
   const current = qWords[qIndex];
-  if (current) qHitWords.push(current);
+  if (current?.term) qHitWords.push(current.term);
   persistQuickStats();
   updateQuickCounters();
   if (qTarget!==null && qHit>=qTarget){
@@ -460,7 +790,7 @@ qUI.hitBtn.onclick = ()=>{
 };
 qUI.skipBtn.onclick = ()=>{
   const current = qWords[qIndex];
-  if (current) qMissWords.push(current);
+  if (current?.term) qMissWords.push(current.term);
   qMiss++;
   persistQuickStats();
   updateQuickCounters();
@@ -468,13 +798,20 @@ qUI.skipBtn.onclick = ()=>{
 };
 qUI.hideBtn.onclick = ()=>{
   qHide = !qHide;
-  qUI.word.textContent = qHide ? '•••' : qWords[qIndex];
+  if (qHide){
+    qHelpState.open = false;
+  }
+  updateQuickWordView();
   qUI.hideBtn.textContent = qHide ? 'Показать слово' : 'Скрыть слово';
 };
 if (qUI.restartTimerBtn){
   qUI.restartTimerBtn.onclick = restartQuickTimer;
 }
-qUI.meaningBtn.onclick = ()=> window.open('https://ru.wikipedia.org/wiki/'+encodeURIComponent(qWords[qIndex]), '_blank');
+qUI.meaningBtn.onclick = ()=>{
+  const current = qWords[qIndex];
+  if (!current?.term) return;
+  window.open('https://ru.wikipedia.org/wiki/'+encodeURIComponent(current.term), '_blank');
+};
 if (qUI.statsBtn){
   qUI.statsBtn.onclick = ()=>{
     showWordStats('Быстрый режим', qHitWords, qMissWords);
@@ -620,6 +957,11 @@ $('#teamAdd').onclick = ()=>{
 
 const ts = {
   dict: $('#teamDict'),
+  difficultyContainer: $('#teamDifficultyBlock'),
+  difficultyButtons: {},
+  difficultyMemory: new Map(),
+  currentDictionaryId: null,
+  difficulty: 'easy',
   customBox: $('#teamCustomBox'),
   customText: $('#teamCustomWords'),
   timerToggle: $('#teamTimerToggle'),
@@ -629,7 +971,12 @@ const ts = {
   timeLabel: $('#teamTimeLabel'),
   ptsToggle: $('#teamPtsToggle'),
   ptsControls: $('#ptsControls'),
-  pts: 10, ptsMinus: $('#ptsMinus'), ptsPlus: $('#ptsPlus'), ptsLabel: $('#ptsLabel')
+  pts: 10, ptsMinus: $('#ptsMinus'), ptsPlus: $('#ptsPlus'), ptsLabel: $('#ptsLabel'),
+  start: $('#startTeam')
+};
+initDifficultyControls(ts);
+ts.onDifficultyChange = level => {
+  ts.difficulty = level;
 };
 const upTeamTime = () => ts.timeLabel.textContent = ts.time+' с';
 const upPts = () => ts.ptsLabel.textContent = ts.pts;
@@ -638,7 +985,43 @@ ts.timeMinus.onclick = ()=>{ ts.time = Math.max(30, ts.time-30); upTeamTime(); }
 ts.timePlus.onclick = ()=>{ ts.time += 30; upTeamTime(); };
 ts.ptsMinus.onclick = ()=>{ ts.pts = Math.max(1, ts.pts-1); upPts(); };
 ts.ptsPlus.onclick = ()=>{ ts.pts += 1; upPts(); };
-ts.dict.onchange = ()=> ts.customBox.style.display = (ts.dict.value==='custom')?'block':'none';
+function handleTeamDictionaryChange(){
+  if (!ts.dict) return;
+  const value = ts.dict.value;
+  if (ts.customBox){
+    ts.customBox.style.display = value === 'custom' ? 'block' : 'none';
+  }
+  if (!value) return;
+  if (!dictionaryState.ready){
+    ensureDictionaryIndex().then(()=>{
+      if (ts.currentDictionaryId && ts.currentDictionaryId !== 'custom'){
+        ts.difficultyMemory.set(ts.currentDictionaryId, ts.difficulty);
+      }
+      ts.currentDictionaryId = value;
+      updateDifficultyAvailability(ts, value);
+      const remembered = ts.difficultyMemory.get(value);
+      if (remembered && ts.difficultyButtons?.[remembered] && !ts.difficultyButtons[remembered].disabled){
+        ts.setDifficulty(remembered, { silent:true });
+      }
+    });
+  }else{
+    if (ts.currentDictionaryId && ts.currentDictionaryId !== 'custom'){
+      ts.difficultyMemory.set(ts.currentDictionaryId, ts.difficulty);
+    }
+    ts.currentDictionaryId = value;
+    updateDifficultyAvailability(ts, value);
+    const remembered = ts.difficultyMemory.get(value);
+    if (remembered && ts.difficultyButtons?.[remembered] && !ts.difficultyButtons[remembered].disabled){
+      ts.setDifficulty(remembered, { silent:true });
+    }
+  }
+}
+if (ts.dict){
+  ts.dict.onchange = handleTeamDictionaryChange;
+}
+if (ts.customBox){
+  ts.customBox.style.display = 'none';
+}
 const updateTeamTimerUI = ()=>{
   if (!ts.timerToggle) return;
   const enabled = ts.timerToggle.checked;
@@ -659,12 +1042,25 @@ updateTeamTimerUI();
 ts.ptsToggle.onchange = updatePtsUI;
 updatePtsUI();
 
+ensureDictionaryIndex().then(() => {
+  populateDictionarySelect(qs.dict);
+  populateDictionarySelect(ts.dict);
+  handleQuickDictionaryChange();
+  handleTeamDictionaryChange();
+});
+
 function syncTeamSettingsFromMenu(){
   if (!qs || !ts) return;
   if (qs.dict && ts.dict){
     const dictValue = qs.dict.value || 'medium';
+    if (dictValue !== 'custom'){
+      ts.difficultyMemory.set(dictValue, qs.difficulty);
+    }
     ts.dict.value = dictValue;
     ts.dict.dispatchEvent(new Event('change'));
+    if (dictValue !== 'custom' && ts.difficultyButtons?.[qs.difficulty] && !ts.difficultyButtons[qs.difficulty].disabled){
+      ts.setDifficulty(qs.difficulty, { silent:true });
+    }
     if (dictValue === 'custom' && ts.customText && qs.customText){
       ts.customText.value = qs.customText.value;
     }
@@ -695,6 +1091,9 @@ let teamPointGoal = 10;
 
 const tUI = {
   word: $('#tWord'),
+  description: $('#tDescription'),
+  helpBtn: $('#tHelpBtn'),
+  helpBox: $('#tHelpBox'),
   turnName: $('#turnTeamName'),
   tBox: $('#tTimerBox'), tLabel: $('#tTimer'),
   table: $('#scoreTable'),
@@ -704,6 +1103,19 @@ const tUI = {
   status: $('#tRoundStatus'),
   statsBtn: $('#tStatsBtn')
 };
+const tHelpState = { open:false };
+
+function updateTeamWordView(){
+  updateWordView(tUI, { entry: tWords[tIndex] || null, hidden: tHide, helpState: tHelpState });
+}
+if (tUI.helpBtn){
+  tUI.helpBtn.addEventListener('click', () => {
+    if (tUI.helpBtn.disabled) return;
+    tHelpState.open = !tHelpState.open;
+    updateTeamWordView();
+  });
+}
+updateTeamWordView();
 
 function updateTurnHeader(){
   if (!teams[turn]) return;
@@ -731,7 +1143,7 @@ function renderScore(){
 }
 
 function setRoundControlsEnabled(enabled){
-  [tUI.next, tUI.hit, tUI.skip, tUI.hideBtn, tUI.meaning].forEach(btn=>{
+  [tUI.next, tUI.hit, tUI.skip, tUI.hideBtn, tUI.meaning, tUI.helpBtn].forEach(btn=>{
     if (btn){
       btn.disabled = !enabled;
     }
@@ -740,7 +1152,9 @@ function setRoundControlsEnabled(enabled){
 
 function resetWordView(){
   tHide = false;
-  if (tUI.word) tUI.word.textContent = '—';
+  tIndex = Math.min(tIndex, tWords.length ? tWords.length - 1 : -1);
+  tHelpState.open = false;
+  updateTeamWordView();
   if (tUI.hideBtn) tUI.hideBtn.textContent = 'Скрыть слово';
 }
 
@@ -748,7 +1162,8 @@ function advanceWord(){
   if (!tWords.length) return;
   tIndex = (tIndex + 1) % tWords.length;
   tHide = false;
-  if (tUI.word) tUI.word.textContent = tWords[tIndex];
+  tHelpState.open = false;
+  updateTeamWordView();
   if (tUI.hideBtn) tUI.hideBtn.textContent = 'Скрыть слово';
 }
 
@@ -765,70 +1180,79 @@ function preRoundMessage(name, initial){
   }
 }
 
-function startTeamGame(){
+async function startTeamGame(){
   if (teams.length<2){ alert('Нужно минимум 2 команды'); return; }
-  let dictKey = ts.dict?.value;
-  let selectedDict = getDictionaryWords(dictKey);
-  if (!dictKey || (!selectedDict && dictKey !== 'custom')){
-    dictKey = 'medium';
-    if (ts.dict){
-      ts.dict.value = 'medium';
-      ts.dict.dispatchEvent(new Event('change'));
-    }
-    selectedDict = getDictionaryWords(dictKey);
-  }
-  if (dictKey==='custom'){
-    tWords = parseCustomWords(ts.customText?.value);
-  }else{
-    if (selectedDict){
-      tWords = [...selectedDict];
-    }else{
-      alert('Не удалось загрузить словарь. Попробуйте обновить страницу.');
+  if (ts.start) ts.start.disabled = true;
+  try{
+    const dictKey = ts.dict?.value;
+    if (!dictKey){
+      alert('Выберите словарь');
       return;
     }
-  }
-  if (tWords.length===0){ alert('Добавьте хотя бы одно слово'); return; }
-  shuffle(tWords);
-  teams = teams.map((t, idx)=>(
-    {
-      name: t.name || defaultTeamName(idx),
-      icon: t.icon || TEAM_ICONS[idx % TEAM_ICONS.length].id,
-      points:0,
-      hit:0,
-      miss:0,
-      hitWords:[],
-      missWords:[]
+    let entries = [];
+    if (dictKey === 'custom'){
+      entries = parseCustomWords(ts.customText?.value);
+    }else{
+      try{
+        entries = await loadDictionaryEntries(dictKey, ts.difficulty || 'easy');
+      }catch(err){
+        alert('Не удалось загрузить словарь. Попробуйте обновить страницу.');
+        return;
+      }
+      entries = entries.map((entry, idx) => ({
+        ...entry,
+        id: entry.id || `${dictKey}_${ts.difficulty || 'easy'}_${idx+1}`
+      }));
     }
-  ));
-  persistTeams();
-  tIndex=-1; tHide=false; turn=0; roundActive=false; timerExpired=false;
-  teamTimerEnabled = !!ts.timerToggle?.checked;
-  teamPointsEnabled = !!ts.ptsToggle?.checked;
-  teamPointGoal = ts.pts;
-  renderScore();
-  updateTurnHeader();
-  resetWordView();
-  setRoundControlsEnabled(false);
-  clearInterval(tTimerId); tTimerId=null;
-  if (teamTimerEnabled){
-    tUI.tBox.style.display='inline-flex';
-    tRemain = ts.time;
-    tUI.tLabel.textContent = `${pad(Math.floor(tRemain/60))}:${pad(tRemain%60)}`;
-  }else{
-    tUI.tBox.style.display='none';
+    entries = entries.filter(entry => entry && typeof entry.term === 'string' && entry.term.trim().length);
+    if (!entries.length){ alert('Добавьте хотя бы одно слово'); return; }
+    tWords = entries.map(entry => ({ ...entry }));
+    shuffle(tWords);
+    teams = teams.map((t, idx)=>(
+      {
+        name: t.name || defaultTeamName(idx),
+        icon: t.icon || TEAM_ICONS[idx % TEAM_ICONS.length].id,
+        points:0,
+        hit:0,
+        miss:0,
+        hitWords:[],
+        missWords:[]
+      }
+    ));
+    persistTeams();
+    tIndex=-1; tHide=false; tHelpState.open=false; turn=0; roundActive=false; timerExpired=false;
+    teamTimerEnabled = !!ts.timerToggle?.checked;
+    teamPointsEnabled = !!ts.ptsToggle?.checked;
+    teamPointGoal = ts.pts;
+    renderScore();
+    updateTurnHeader();
+    resetWordView();
+    setRoundControlsEnabled(false);
+    clearInterval(tTimerId); tTimerId=null;
+    if (teamTimerEnabled){
+      tUI.tBox.style.display='inline-flex';
+      tRemain = ts.time;
+      tUI.tLabel.textContent = `${pad(Math.floor(tRemain/60))}:${pad(tRemain%60)}`;
+    }else{
+      tUI.tBox.style.display='none';
+    }
+    if (tUI.startRound){
+      tUI.startRound.style.display='inline-flex';
+      tUI.startRound.disabled=false;
+    }
+    if (tUI.endRound){
+      tUI.endRound.style.display='none';
+    }
+    const currentName = teams[turn]?.name || defaultTeamName(turn);
+    preRoundMessage(currentName, true);
+    show('viewTeamGame');
+  }finally{
+    if (ts.start) ts.start.disabled = false;
   }
-  if (tUI.startRound){
-    tUI.startRound.style.display='inline-flex';
-    tUI.startRound.disabled=false;
-  }
-  if (tUI.endRound){
-    tUI.endRound.style.display='none';
-  }
-  const currentName = teams[turn]?.name || defaultTeamName(turn);
-  preRoundMessage(currentName, true);
-  show('viewTeamGame');
 }
-$('#startTeam').onclick = startTeamGame;
+if (ts.start){
+  ts.start.onclick = () => { startTeamGame().catch(err => console.error(err)); };
+}
 
 function beginRound(){
   if (roundActive) return;
@@ -931,12 +1355,17 @@ tUI.next.onclick = ()=>{
 tUI.hideBtn.onclick = ()=>{
   if (!roundActive || tIndex<0) return;
   tHide = !tHide;
-  tUI.word.textContent = tHide ? '•••' : tWords[tIndex];
+  if (tHide){
+    tHelpState.open = false;
+  }
+  updateTeamWordView();
   tUI.hideBtn.textContent = tHide ? 'Показать слово' : 'Скрыть слово';
 };
 tUI.meaning.onclick = ()=>{
   if (!roundActive || tIndex<0) return;
-  window.open('https://ru.wikipedia.org/wiki/'+encodeURIComponent(tWords[tIndex]), '_blank');
+  const current = tWords[tIndex];
+  if (!current?.term) return;
+  window.open('https://ru.wikipedia.org/wiki/'+encodeURIComponent(current.term), '_blank');
 };
 
 if (tUI.statsBtn){
@@ -958,7 +1387,7 @@ if (tUI.statsBtn){
 tUI.hit.onclick = ()=>{
   if (!roundActive) return;
   const current = tWords[tIndex];
-  if (current) teams[turn].hitWords.push(current);
+  if (current?.term) teams[turn].hitWords.push(current.term);
   teams[turn].hit++;
   if (teamPointsEnabled) teams[turn].points++;
   renderScore();
@@ -976,7 +1405,7 @@ tUI.hit.onclick = ()=>{
 tUI.skip.onclick = ()=>{
   if (!roundActive) return;
   const current = tWords[tIndex];
-  if (current) teams[turn].missWords.push(current);
+  if (current?.term) teams[turn].missWords.push(current.term);
   teams[turn].miss++;
   if (teamPointsEnabled) teams[turn].points--;
   renderScore();

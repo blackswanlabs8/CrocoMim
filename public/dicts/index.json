@@ -1,0 +1,13 @@
+{
+  "dictionaries": [
+    {
+      "id": "anime",
+      "title": "Аниме",
+      "difficulties": {
+        "easy": { "path": "anime_easy.md", "label": "Лёгкий" },
+        "medium": { "path": "anime_medium.md", "label": "Средний" },
+        "hard": { "path": "anime_hard.md", "label": "Сложный" }
+      }
+    }
+  ]
+}
