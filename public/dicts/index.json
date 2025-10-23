@@ -18,6 +18,34 @@
         "medium": { "path": "agronomy_medium_v3.md", "label": "Средний" },
         "hard": { "path": "agronomy_hard_v3.md", "label": "Сложный" }
       }
+    },
+    {
+      "id": "cars_v3",
+      "title": "Автомобили",
+      "description": "Обновлённые подборки терминов про автомобили.",
+      "difficulties": {
+        "easy": { "path": "cars_easy_v3.md", "label": "Лёгкий" },
+        "medium": { "path": "cars_medium_v3.md", "label": "Средний" },
+        "hard": { "path": "cars_hard_v3.md", "label": "Сложный" }
+      }
+    },
+    {
+      "id": "harry_potter",
+      "title": "Гарри Поттер",
+      "difficulties": {
+        "easy": { "path": "harry_potter_easy.md", "label": "Лёгкий" },
+        "medium": { "path": "harry_potter_medium.md", "label": "Средний" },
+        "hard": { "path": "harry_potter_hard.md", "label": "Сложный" }
+      }
+    },
+    {
+      "id": "marvel",
+      "title": "Вселенная Marvel",
+      "difficulties": {
+        "easy": { "path": "marvel_easy.md", "label": "Лёгкий" },
+        "medium": { "path": "marvel_medium.md", "label": "Средний" },
+        "hard": { "path": "marvel_hard.md", "label": "Сложный" }
+      }
     }
   ]
 }
