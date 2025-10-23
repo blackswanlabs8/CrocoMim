@@ -19,7 +19,7 @@ const CUSTOM_DICTIONARY_META = {
   id: 'custom',
   title: 'Свой словарь',
   description: 'Вставьте слова ниже',
-  iconText: 'СВ'
+  icon: 'edit'
 };
 
 const ICON_SANITIZE_RE = /[^A-Za-zА-Яа-яЁё0-9]/g;
@@ -51,10 +51,20 @@ function getDictionaryIconText(meta){
 }
 
 function createDictionaryIconElement(meta, className){
+  if (!meta) return null;
+  const iconName = typeof meta.icon === 'string' ? meta.icon.trim() : '';
+  const baseClasses = typeof className === 'string' ? className.split(/\s+/).filter(Boolean) : [];
+  if (iconName){
+    const span = document.createElement('span');
+    span.classList.add(...baseClasses, 'material-symbols-rounded');
+    span.textContent = iconName;
+    span.setAttribute('aria-hidden', 'true');
+    return span;
+  }
   const text = getDictionaryIconText(meta);
   if (!text) return null;
   const span = document.createElement('span');
-  span.className = className;
+  span.classList.add(...baseClasses, 'dict-icon--text');
   span.textContent = text;
   span.setAttribute('aria-hidden', 'true');
   return span;

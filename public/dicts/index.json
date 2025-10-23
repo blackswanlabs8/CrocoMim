@@ -3,7 +3,7 @@
     {
       "id": "animals",
       "title": "Животные",
-      "iconText": "ЖИ",
+      "icon": "pets",
       "description": "Классические и редкие представители животного мира.",
       "difficulties": {
         "easy": { "path": "Animals_Easy.md", "label": "Лёгкий" },
@@ -14,7 +14,7 @@
     {
       "id": "anime",
       "title": "Аниме",
-      "iconText": "АН",
+      "icon": "movie",
       "difficulties": {
         "easy": { "path": "anime_easy.md", "label": "Лёгкий" },
         "medium": { "path": "anime_medium.md", "label": "Средний" },
@@ -24,7 +24,7 @@
     {
       "id": "agronomy_v3",
       "title": "Агрономия",
-      "iconText": "АГ",
+      "icon": "agriculture",
       "description": "Слова из агрономии с подробными подсказками.",
       "difficulties": {
         "easy": { "path": "agronomy_easy_v3.md", "label": "Лёгкий" },
@@ -35,7 +35,7 @@
     {
       "id": "cars_v3",
       "title": "Автомобили",
-      "iconText": "АВ",
+      "icon": "directions_car",
       "description": "Обновлённые подборки терминов про автомобили.",
       "difficulties": {
         "easy": { "path": "cars_easy_v3.md", "label": "Лёгкий" },
@@ -46,7 +46,7 @@
     {
       "id": "emotions",
       "title": "Эмоции",
-      "iconText": "ЭМ",
+      "icon": "emoji_emotions",
       "description": "Подборка чувств и состояний с жестами для подсказок.",
       "difficulties": {
         "easy": { "path": "emocii_easy.md", "label": "Лёгкий" },
@@ -57,7 +57,7 @@
     {
       "id": "harry_potter",
       "title": "Гарри Поттер",
-      "iconText": "ГП",
+      "icon": "menu_book",
       "difficulties": {
         "easy": { "path": "harry_potter_easy.md", "label": "Лёгкий" },
         "medium": { "path": "harry_potter_medium.md", "label": "Средний" },
@@ -67,7 +67,7 @@
     {
       "id": "kids",
       "title": "Детский",
-      "iconText": "ДЕ",
+      "icon": "child_care",
       "description": "Простые слова, рассчитанные на игру с детьми.",
       "difficulties": {
         "easy": { "path": "kids_easy.md", "label": "Лёгкий" },
@@ -78,7 +78,7 @@
     {
       "id": "marvel",
       "title": "Марвел",
-      "iconText": "МА",
+      "icon": "auto_awesome",
       "difficulties": {
         "easy": { "path": "marvel_easy.md", "label": "Лёгкий" },
         "medium": { "path": "marvel_medium.md", "label": "Средний" },
@@ -88,7 +88,7 @@
     {
       "id": "geography",
       "title": "География",
-      "iconText": "ГЕ",
+      "icon": "public",
       "description": "Страны, города и объекты со всего мира.",
       "difficulties": {
         "easy": { "path": "Geography_Easy.md", "label": "Лёгкий" },
