@@ -623,6 +623,162 @@ if (themeMoonBtn){
   });
 }
 
+const floatingFooterController = (() => {
+  const states = [];
+  const sentinelMap = new Map();
+  const mediaQuery = (typeof window !== 'undefined' && typeof window.matchMedia === 'function')
+    ? window.matchMedia('(max-width: 768px)')
+    : null;
+  let observer = null;
+
+  const px = value => {
+    const num = parseFloat(value);
+    return Number.isNaN(num) ? 0 : num;
+  };
+
+  const ensureMediaListener = handler => {
+    if (!mediaQuery) return;
+    if (typeof mediaQuery.addEventListener === 'function'){
+      mediaQuery.addEventListener('change', handler);
+    }else if (typeof mediaQuery.addListener === 'function'){
+      mediaQuery.addListener(handler);
+    }
+  };
+
+  const computeSentinelVisible = state => {
+    const rect = state.sentinel.getBoundingClientRect();
+    const viewportHeight = window.innerHeight || document.documentElement?.clientHeight || 0;
+    return rect.top < viewportHeight && rect.bottom > 0;
+  };
+
+  const updateMetrics = state => {
+    if (!state) return;
+    if (state.app){
+      const appRect = state.app.getBoundingClientRect();
+      const appStyle = getComputedStyle(state.app);
+      const paddingLeft = px(appStyle.paddingLeft);
+      const paddingRight = px(appStyle.paddingRight);
+      const width = Math.max(0, appRect.width - paddingLeft - paddingRight);
+      const left = appRect.left + paddingLeft;
+      state.footer.style.setProperty('--menu-footer-fixed-left', `${left}px`);
+      state.footer.style.setProperty('--menu-footer-fixed-width', `${width}px`);
+    }
+    const footerStyle = getComputedStyle(state.footer);
+    const gapValue = px(footerStyle.getPropertyValue('--menu-footer-float-gap')) || px(footerStyle.paddingBottom);
+    state.gap = gapValue;
+    state.height = state.footer.offsetHeight;
+    state.footer.style.setProperty('--menu-footer-placeholder-height', `${state.height}px`);
+    if (state.parent){
+      const parentStyle = getComputedStyle(state.parent);
+      const rowGap = parentStyle.rowGap && parentStyle.rowGap !== 'normal'
+        ? px(parentStyle.rowGap)
+        : px(parentStyle.gap);
+      state.parentGap = rowGap;
+    }
+    if (!state.isFloating){
+      state.placeholder.style.height = '0px';
+      if (state.parentGap){
+        state.placeholder.style.marginTop = `-${state.parentGap}px`;
+      }else{
+        state.placeholder.style.marginTop = '0px';
+      }
+    }else{
+      state.placeholder.style.marginTop = '0px';
+      state.placeholder.style.height = `${state.height}px`;
+    }
+  };
+
+  const applyFloating = (state, shouldFloat) => {
+    if (!state || state.isFloating === shouldFloat) return;
+    state.isFloating = shouldFloat;
+    if (shouldFloat){
+      state.footer.classList.add('is-floating');
+      state.placeholder.style.height = `${state.height}px`;
+      state.placeholder.style.marginTop = '0px';
+    }else{
+      state.footer.classList.remove('is-floating');
+      state.placeholder.style.height = '0px';
+      if (state.parentGap){
+        state.placeholder.style.marginTop = `-${state.parentGap}px`;
+      }else{
+        state.placeholder.style.marginTop = '0px';
+      }
+    }
+  };
+
+  const refreshState = (state, sentinelVisible) => {
+    if (!state) return;
+    updateMetrics(state);
+    const visible = typeof sentinelVisible === 'boolean' ? sentinelVisible : computeSentinelVisible(state);
+    if (!mediaQuery || !mediaQuery.matches){
+      applyFloating(state, false);
+      return;
+    }
+    applyFloating(state, !visible);
+  };
+
+  const refreshAll = () => {
+    states.forEach(state => refreshState(state));
+  };
+
+  const observerCallback = entries => {
+    entries.forEach(entry => {
+      const state = sentinelMap.get(entry.target);
+      if (!state) return;
+      const visible = entry.isIntersecting || entry.intersectionRatio > 0;
+      refreshState(state, visible);
+    });
+  };
+
+  const init = () => {
+    if (typeof IntersectionObserver === 'undefined') return;
+    const footers = Array.from(document.querySelectorAll('.menu-footer'));
+    if (!footers.length) return;
+    footers.forEach(footer => {
+      const placeholder = document.createElement('div');
+      placeholder.className = 'menu-footer-placeholder';
+      placeholder.setAttribute('aria-hidden', 'true');
+
+      const sentinel = document.createElement('div');
+      sentinel.className = 'menu-footer-sentinel';
+      sentinel.setAttribute('aria-hidden', 'true');
+      placeholder.appendChild(sentinel);
+      footer.after(placeholder);
+
+      const state = {
+        footer,
+        placeholder,
+        sentinel,
+        app: footer.closest('.app'),
+        parent: footer.parentElement,
+        height: footer.offsetHeight || 0,
+        gap: 0,
+        parentGap: 0,
+        isFloating: false
+      };
+      states.push(state);
+      sentinelMap.set(sentinel, state);
+
+      if (typeof ResizeObserver !== 'undefined'){
+        const ro = new ResizeObserver(() => refreshState(state));
+        ro.observe(footer);
+        state.resizeObserver = ro;
+      }
+    });
+
+    if (!states.length) return;
+    observer = new IntersectionObserver(observerCallback, { threshold:[0, 0.5, 1] });
+    states.forEach(state => observer.observe(state.sentinel));
+    ensureMediaListener(() => refreshAll());
+    window.addEventListener('resize', refreshAll);
+    refreshAll();
+  };
+
+  return { init, refresh: refreshAll };
+})();
+
+floatingFooterController.init();
+
 const TEAM_ICONS = [
   {id:'sun', emoji:'🌞', bg:'linear-gradient(135deg,#fde047,#f97316)', color:'#1f2937'},
   {id:'rocket', emoji:'🚀', bg:'linear-gradient(135deg,#60a5fa,#2563eb)', color:'#0f172a'},
@@ -719,6 +875,7 @@ const show = v => {
   screen = v;
   writeScreenPref(v);
   window.scrollTo(0, 0);
+  floatingFooterController.refresh();
   if (themeContainer) themeContainer.style.display = v === 'viewMenu' ? 'flex' : 'none';
   if (headerTitle) headerTitle.style.display = v === 'viewMenu' ? 'flex' : 'none';
   if (v==='viewMenu'){
