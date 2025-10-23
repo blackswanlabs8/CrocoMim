@@ -12,6 +12,7 @@ const dictionaryState = {
   map: new Map(),
   promise: null
 };
+const dictionarySelectors = new Set();
 const DIFFICULTY_ORDER = ['easy','medium','hard'];
 const ALL_DIFFICULTIES = [...DIFFICULTY_ORDER, 'mix'];
 const CUSTOM_DICTIONARY_META = {
@@ -202,18 +203,19 @@ function ensureDictionarySummaryStructure(state){
     }
     toggle.type = 'button';
     toggle.classList.add('dict-summary-toggle');
-    toggle.textContent = 'Выбрано';
+    toggle.textContent = 'Выбрать';
     toggle.setAttribute('aria-haspopup', 'true');
     if (!toggle.dataset.boundToggle){
       toggle.addEventListener('click', () => {
-        setDictionarySelectorOpen(state, true);
+        setDictionarySelectorOpen(state, !state.isSelectorOpen);
       });
       toggle.dataset.boundToggle = '1';
     }
     state.dictToggleButton = toggle;
   }
-  if (state.dictToggleButton && state.dictGrid?.id){
-    state.dictToggleButton.setAttribute('aria-controls', state.dictGrid.id);
+  const controlsTarget = state.dictPanel?.id || state.dictGrid?.id;
+  if (state.dictToggleButton && controlsTarget){
+    state.dictToggleButton.setAttribute('aria-controls', controlsTarget);
     state.dictToggleButton.setAttribute('aria-expanded', state.isSelectorOpen ? 'true' : 'false');
   }
   if (!state.dictSummaryBody){
@@ -229,24 +231,31 @@ function ensureDictionarySummaryStructure(state){
 }
 
 function ensureDictionaryActions(state){
-  if (!state?.dictContainer) return null;
+  if (!state?.dictPanel) return null;
   if (!state.dictActions){
-    const actions = document.createElement('div');
-    actions.className = 'dict-actions';
-    const okButton = document.createElement('button');
-    okButton.type = 'button';
-    okButton.className = 'btn ghost dict-ok-btn';
-    okButton.textContent = 'Ок';
-    okButton.addEventListener('click', () => {
-      setDictionarySelectorOpen(state, false);
-      if (state.dictToggleButton){
-        state.dictToggleButton.focus();
-      }
-    });
-    actions.appendChild(okButton);
-    actions.hidden = true;
-    actions.setAttribute('aria-hidden', 'true');
-    state.dictContainer.appendChild(actions);
+    let actions = state.dictPanel.querySelector('.dict-actions');
+    if (!actions){
+      actions = document.createElement('div');
+      actions.className = 'dict-actions';
+      state.dictPanel.appendChild(actions);
+    }
+    let okButton = actions.querySelector('.dict-ok-btn');
+    if (!okButton){
+      okButton = document.createElement('button');
+      okButton.type = 'button';
+      okButton.className = 'btn ghost dict-ok-btn';
+      okButton.textContent = 'Ок';
+      actions.appendChild(okButton);
+    }
+    if (!okButton.dataset.boundOk){
+      okButton.addEventListener('click', () => {
+        setDictionarySelectorOpen(state, false);
+        if (state.dictToggleButton){
+          state.dictToggleButton.focus();
+        }
+      });
+      okButton.dataset.boundOk = '1';
+    }
     state.dictActions = actions;
     state.dictOkButton = okButton;
   }
@@ -256,14 +265,24 @@ function ensureDictionaryActions(state){
 function setDictionarySelectorOpen(state, open){
   if (!state?.dictContainer) return;
   const isOpen = !!open;
+  if (isOpen){
+    dictionarySelectors.forEach(other => {
+      if (!other || other === state) return;
+      if (other.isSelectorOpen){
+        setDictionarySelectorOpen(other, false);
+      }
+    });
+  }
   state.isSelectorOpen = isOpen;
   state.dictContainer.classList.toggle('is-open', isOpen);
+  if (state.dictPanel){
+    state.dictPanel.hidden = !isOpen;
+    state.dictPanel.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+  }
   if (state.dictGrid){
-    state.dictGrid.hidden = !isOpen;
     state.dictGrid.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
   }
   if (state.dictActions){
-    state.dictActions.hidden = !isOpen;
     state.dictActions.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
   }
   if (state.dictToggleButton){
@@ -478,6 +497,10 @@ function createCustomDictionaryCard(state){
 
 function setupDictionarySelector(state){
   if (!state || !state.dictGrid) return;
+  if (!state.dictPanel && state.dictContainer){
+    state.dictPanel = state.dictContainer.querySelector('.dict-dropdown-panel');
+  }
+  dictionarySelectors.add(state);
   state.dictElements = new Map();
   state.selectedDictionaries = state.selectedDictionaries || new Set();
   const grid = state.dictGrid;
@@ -497,6 +520,9 @@ function setupDictionarySelector(state){
   ensureDictionarySummaryStructure(state);
   applyDictionarySelectionChange(state, { emit:false });
   setDictionarySelectorOpen(state, false);
+  if (state.dictPanel){
+    state.dictPanel.setAttribute('aria-hidden', 'true');
+  }
 }
 const backBtn = $('#btnBack');
 const helpBtn = $('#btnHelp');
@@ -730,6 +756,7 @@ $('#goTeam').onclick = () => {
 const qs = {
   dictContainer: $('#quickDictSelector'),
   dictGrid: $('#quickDictGrid'),
+  dictPanel: $('#quickDictDropdown'),
   dictSummary: $('#quickDictSummary'),
   difficultyContainer: $('#quickDifficultyBlock'),
   difficultyButtons: {},
@@ -1186,6 +1213,7 @@ $('#teamAdd').onclick = ()=>{
 const ts = {
   dictContainer: $('#teamDictSelector'),
   dictGrid: $('#teamDictGrid'),
+  dictPanel: $('#teamDictDropdown'),
   dictSummary: $('#teamDictSummary'),
   difficultyContainer: $('#teamDifficultyBlock'),
   difficultyButtons: {},
@@ -1252,6 +1280,25 @@ ensureDictionaryIndex().then(() => {
   }
   applyDictionarySelectionChange(qs, { emit:false });
   applyDictionarySelectionChange(ts, { emit:false });
+});
+
+document.addEventListener('click', (event) => {
+  dictionarySelectors.forEach(state => {
+    if (!state?.isSelectorOpen) return;
+    if (state.dictContainer && state.dictContainer.contains(event.target)) return;
+    setDictionarySelectorOpen(state, false);
+  });
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  dictionarySelectors.forEach(state => {
+    if (!state?.isSelectorOpen) return;
+    setDictionarySelectorOpen(state, false);
+    if (state.dictToggleButton){
+      state.dictToggleButton.focus();
+    }
+  });
 });
 
 function syncTeamSettingsFromMenu(){
