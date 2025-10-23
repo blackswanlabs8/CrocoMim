@@ -1,6 +1,16 @@
 {
   "dictionaries": [
     {
+      "id": "animals",
+      "title": "Животные",
+      "description": "Классические и редкие представители животного мира.",
+      "difficulties": {
+        "easy": { "path": "Animals_Easy.md", "label": "Лёгкий" },
+        "medium": { "path": "Animals_Medium.md", "label": "Средний" },
+        "hard": { "path": "Animals_Hard.md", "label": "Сложный" }
+      }
+    },
+    {
       "id": "anime",
       "title": "Аниме",
       "difficulties": {
@@ -30,6 +40,16 @@
       }
     },
     {
+      "id": "emotions",
+      "title": "Эмоции",
+      "description": "Подборка чувств и состояний с жестами для подсказок.",
+      "difficulties": {
+        "easy": { "path": "emocii_easy.md", "label": "Лёгкий" },
+        "medium": { "path": "emocii_medium.md", "label": "Средний" },
+        "hard": { "path": "emocii_hard.md", "label": "Сложный" }
+      }
+    },
+    {
       "id": "harry_potter",
       "title": "Гарри Поттер",
       "difficulties": {
@@ -39,12 +59,32 @@
       }
     },
     {
+      "id": "kids",
+      "title": "Детский",
+      "description": "Простые слова, рассчитанные на игру с детьми.",
+      "difficulties": {
+        "easy": { "path": "kids_easy.md", "label": "Лёгкий" },
+        "medium": { "path": "kids_medium.md", "label": "Средний" },
+        "hard": { "path": "kids_hard.md", "label": "Сложный" }
+      }
+    },
+    {
       "id": "marvel",
       "title": "Марвел",
       "difficulties": {
         "easy": { "path": "marvel_easy.md", "label": "Лёгкий" },
         "medium": { "path": "marvel_medium.md", "label": "Средний" },
         "hard": { "path": "marvel_hard.md", "label": "Сложный" }
+      }
+    },
+    {
+      "id": "geography",
+      "title": "География",
+      "description": "Страны, города и объекты со всего мира.",
+      "difficulties": {
+        "easy": { "path": "Geography_Easy.md", "label": "Лёгкий" },
+        "medium": { "path": "Geografy_medium.md", "label": "Средний" },
+        "hard": { "path": "Geography_Hard.md", "label": "Сложный" }
       }
     }
   ]
