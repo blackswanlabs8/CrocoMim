@@ -31,7 +31,7 @@
     },
     {
       "id": "harry_potter",
-      "title": "Гарри Поттер",
+      "title": "Вселенная Harry Potter",
       "difficulties": {
         "easy": { "path": "harry_potter_easy.md", "label": "Лёгкий" },
         "medium": { "path": "harry_potter_medium.md", "label": "Средний" },
