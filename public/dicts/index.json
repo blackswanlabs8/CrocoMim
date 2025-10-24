@@ -1,17 +1,6 @@
 {
   "dictionaries": [
     {
-      "id": "programming_it",
-      "title": "IT и программирование",
-      "icon": "terminal",
-      "description": "Термины и технологии из мира разработки.",
-      "difficulties": {
-        "easy": { "path": "programming_it_easy.md", "label": "Лёгкий" },
-        "medium": { "path": "programming_it_medium.md", "label": "Средний" },
-        "hard": { "path": "programming_it_hard.md", "label": "Сложный" }
-      }
-    },
-    {
       "id": "cars_v3",
       "title": "Автомобили",
       "icon": "directions_car",
@@ -119,6 +108,17 @@
         "easy": { "path": "internet_easy.md", "label": "Лёгкий" },
         "medium": { "path": "internet_medium.md", "label": "Средний" },
         "hard": { "path": "internet_hard.md", "label": "Сложный" }
+      }
+    },
+    {
+      "id": "programming_it",
+      "title": "ИТ",
+      "icon": "terminal",
+      "description": "Термины и технологии из мира разработки.",
+      "difficulties": {
+        "easy": { "path": "programming_it_easy.md", "label": "Лёгкий" },
+        "medium": { "path": "programming_it_medium.md", "label": "Средний" },
+        "hard": { "path": "programming_it_hard.md", "label": "Сложный" }
       }
     },
     {
