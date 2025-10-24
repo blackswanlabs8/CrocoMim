@@ -1,35 +1,14 @@
 {
   "dictionaries": [
     {
-      "id": "animals",
-      "title": "Животные",
-      "icon": "pets",
-      "description": "Классические и редкие представители животного мира.",
+      "id": "programming_it",
+      "title": "IT и программирование",
+      "icon": "terminal",
+      "description": "Термины и технологии из мира разработки.",
       "difficulties": {
-        "easy": { "path": "Animals_Easy.md", "label": "Лёгкий" },
-        "medium": { "path": "Animals_Medium.md", "label": "Средний" },
-        "hard": { "path": "Animals_Hard.md", "label": "Сложный" }
-      }
-    },
-    {
-      "id": "anime",
-      "title": "Аниме",
-      "icon": "movie",
-      "difficulties": {
-        "easy": { "path": "anime_easy.md", "label": "Лёгкий" },
-        "medium": { "path": "anime_medium.md", "label": "Средний" },
-        "hard": { "path": "anime_hard.md", "label": "Сложный" }
-      }
-    },
-    {
-      "id": "agronomy_v3",
-      "title": "Агрономия",
-      "icon": "agriculture",
-      "description": "Слова из агрономии с подробными подсказками.",
-      "difficulties": {
-        "easy": { "path": "agronomy_easy_v3.md", "label": "Лёгкий" },
-        "medium": { "path": "agronomy_medium_v3.md", "label": "Средний" },
-        "hard": { "path": "agronomy_hard_v3.md", "label": "Сложный" }
+        "easy": { "path": "programming_it_easy.md", "label": "Лёгкий" },
+        "medium": { "path": "programming_it_medium.md", "label": "Средний" },
+        "hard": { "path": "programming_it_hard.md", "label": "Сложный" }
       }
     },
     {
@@ -44,24 +23,47 @@
       }
     },
     {
-      "id": "emotions",
-      "title": "Эмоции",
-      "icon": "emoji_emotions",
-      "description": "Подборка чувств и состояний с жестами для подсказок.",
+      "id": "agronomy_v3",
+      "title": "Агрономия",
+      "icon": "agriculture",
+      "description": "Слова из агрономии с подробными подсказками.",
       "difficulties": {
-        "easy": { "path": "emocii_easy.md", "label": "Лёгкий" },
-        "medium": { "path": "emocii_medium.md", "label": "Средний" },
-        "hard": { "path": "emocii_hard.md", "label": "Сложный" }
+        "easy": { "path": "agronomy_easy_v3.md", "label": "Лёгкий" },
+        "medium": { "path": "agronomy_medium_v3.md", "label": "Средний" },
+        "hard": { "path": "agronomy_hard_v3.md", "label": "Сложный" }
+      }
+    },
+    {
+      "id": "anime",
+      "title": "Аниме",
+      "icon": "animation",
+      "description": "Тайтлы, герои и атрибуты из мира аниме.",
+      "difficulties": {
+        "easy": { "path": "anime_easy.md", "label": "Лёгкий" },
+        "medium": { "path": "anime_medium.md", "label": "Средний" },
+        "hard": { "path": "anime_hard.md", "label": "Сложный" }
       }
     },
     {
       "id": "harry_potter",
       "title": "Гарри Поттер",
       "icon": "menu_book",
+      "description": "Персонажи, артефакты и события волшебного мира.",
       "difficulties": {
         "easy": { "path": "harry_potter_easy.md", "label": "Лёгкий" },
         "medium": { "path": "harry_potter_medium.md", "label": "Средний" },
         "hard": { "path": "harry_potter_hard.md", "label": "Сложный" }
+      }
+    },
+    {
+      "id": "geography",
+      "title": "География",
+      "icon": "public",
+      "description": "Страны, города и объекты со всего мира.",
+      "difficulties": {
+        "easy": { "path": "Geography_Easy.md", "label": "Лёгкий" },
+        "medium": { "path": "Geografy_medium.md", "label": "Средний" },
+        "hard": { "path": "Geography_Hard.md", "label": "Сложный" }
       }
     },
     {
@@ -76,9 +78,54 @@
       }
     },
     {
+      "id": "animals",
+      "title": "Животные",
+      "icon": "pets",
+      "description": "Классические и редкие представители животного мира.",
+      "difficulties": {
+        "easy": { "path": "Animals_Easy.md", "label": "Лёгкий" },
+        "medium": { "path": "Animals_Medium.md", "label": "Средний" },
+        "hard": { "path": "Animals_Hard.md", "label": "Сложный" }
+      }
+    },
+    {
+      "id": "games",
+      "title": "Игры",
+      "icon": "sports_esports",
+      "description": "Игры, жанры, герои и игровые термины.",
+      "difficulties": {
+        "easy": { "path": "games_easy.md", "label": "Лёгкий" },
+        "medium": { "path": "games_medium.md", "label": "Средний" },
+        "hard": { "path": "games_hard.md", "label": "Сложный" }
+      }
+    },
+    {
+      "id": "famous_people",
+      "title": "Известные люди",
+      "icon": "stars",
+      "description": "Легендарные артисты, учёные, спортсмены и лидеры.",
+      "difficulties": {
+        "easy": { "path": "famous_people_easy.md", "label": "Лёгкий" },
+        "medium": { "path": "famous_people_medium.md", "label": "Средний" },
+        "hard": { "path": "famous_people_hard.md", "label": "Сложный" }
+      }
+    },
+    {
+      "id": "internet",
+      "title": "Интернет",
+      "icon": "language",
+      "description": "Сервисы, сленг и явления из цифрового мира.",
+      "difficulties": {
+        "easy": { "path": "internet_easy.md", "label": "Лёгкий" },
+        "medium": { "path": "internet_medium.md", "label": "Средний" },
+        "hard": { "path": "internet_hard.md", "label": "Сложный" }
+      }
+    },
+    {
       "id": "marvel",
       "title": "Марвел",
-      "icon": "auto_awesome",
+      "icon": "shield",
+      "description": "Герои и атрибуты вселенной Marvel.",
       "difficulties": {
         "easy": { "path": "marvel_easy.md", "label": "Лёгкий" },
         "medium": { "path": "marvel_medium.md", "label": "Средний" },
@@ -86,14 +133,91 @@
       }
     },
     {
-      "id": "geography",
-      "title": "География",
-      "icon": "public",
-      "description": "Страны, города и объекты со всего мира.",
+      "id": "memes",
+      "title": "Мемы",
+      "icon": "mood",
+      "description": "Свежие мемы и интернет-курьёзы для весёлой партии.",
       "difficulties": {
-        "easy": { "path": "Geography_Easy.md", "label": "Лёгкий" },
-        "medium": { "path": "Geografy_medium.md", "label": "Средний" },
-        "hard": { "path": "Geography_Hard.md", "label": "Сложный" }
+        "easy": { "path": "memy_easy.md", "label": "Лёгкий" },
+        "medium": { "path": "memy_medium.md", "label": "Средний" },
+        "hard": { "path": "memy_hard.md", "label": "Сложный" }
+      }
+    },
+    {
+      "id": "professions",
+      "title": "Профессии",
+      "icon": "work",
+      "description": "Разнообразные профессии и роды занятий.",
+      "difficulties": {
+        "easy": { "path": "Profeccii_easy.md", "label": "Лёгкий" },
+        "medium": { "path": "Profeccii_medium.md", "label": "Средний" },
+        "hard": { "path": "Profeccii_hard.md", "label": "Сложный" }
+      }
+    },
+    {
+      "id": "fairy_tales",
+      "title": "Сказки",
+      "icon": "auto_stories",
+      "description": "Классические и современные сказочные сюжеты.",
+      "difficulties": {
+        "easy": { "path": "skazky_easy.md", "label": "Лёгкий" },
+        "medium": { "path": "skazky_medium.md", "label": "Средний" },
+        "hard": { "path": "skazky_hard.md", "label": "Сложный" }
+      }
+    },
+    {
+      "id": "sport",
+      "title": "Спорт",
+      "icon": "sports_soccer",
+      "description": "Виды спорта, экипировка и легенды соревнований.",
+      "difficulties": {
+        "easy": { "path": "sport_easy.md", "label": "Лёгкий" },
+        "medium": { "path": "sport_medium.md", "label": "Средний" },
+        "hard": { "path": "sport_hard.md", "label": "Сложный" }
+      }
+    },
+    {
+      "id": "techno_gadgets",
+      "title": "Техно и гаджеты",
+      "icon": "devices",
+      "description": "Гаджеты, устройства и технологии будущего.",
+      "difficulties": {
+        "easy": { "path": "techno-gadgets_easy.md", "label": "Лёгкий" },
+        "medium": { "path": "techno-gadgets_medium.md", "label": "Средний" },
+        "hard": { "path": "techno-gadgets_hard.md", "label": "Сложный" }
+      }
+    },
+    {
+      "id": "university",
+      "title": "Университет",
+      "icon": "school",
+      "description": "Студенческая жизнь, предметы и кампусные истории.",
+      "difficulties": {
+        "easy": { "path": "university_easy.md", "label": "Лёгкий" },
+        "medium": { "path": "university_medium.md", "label": "Средний" },
+        "hard": { "path": "university_hard.md", "label": "Сложный" }
+      }
+    },
+    {
+      "id": "films_serials",
+      "title": "Фильмы и сериалы",
+      "icon": "movie_filter",
+      "description": "Популярные фильмы, сериалы и их персонажи.",
+      "difficulties": {
+        "easy": { "path": "films&serials_easy.md", "label": "Лёгкий" },
+        "medium": { "path": "films&serials_medium.md", "label": "Средний" },
+        "hard": { "path": "films&serials_hard.md", "label": "Сложный" }
+      }
+    },
+    {
+      "id": "emotions",
+      "title": "Эмоции",
+      "icon": "emoji_emotions",
+      "description": "Подборка чувств и состояний с жестами для подсказок.",
+      "difficulties": {
+        "easy": { "path": "emocii_easy.md", "label": "Лёгкий" },
+        "medium": { "path": "emocii_medium.md", "label": "Средний" },
+        "hard": { "path": "emocii_hard.md", "label": "Сложный" }
       }
     }
   ]
