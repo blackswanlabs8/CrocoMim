@@ -78,6 +78,17 @@
       }
     },
     {
+      "id": "adults",
+      "title": "Для взрослых",
+      "icon": "local_bar",
+      "description": "Подборка слов для компании без детей.",
+      "difficulties": {
+        "easy": { "path": "Vzroslyi_easy.md", "label": "Лёгкий" },
+        "medium": { "path": "Vzroslyi_medium.md", "label": "Средний" },
+        "hard": { "path": "Vzroslyi_hard.md", "label": "Сложный" }
+      }
+    },
+    {
       "id": "marvel",
       "title": "Марвел",
       "icon": "shield",
