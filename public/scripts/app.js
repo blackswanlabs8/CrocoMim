@@ -601,23 +601,78 @@ const themeMoonBtn = $('#themeMoon');
 const themeContainer = $('#themeContainer');
 const headerTitle = $('.title');
 const bodyEl = document.body;
-const HELP_TEXT = [
-  '🐊 CrocoMim — игра в объяснение слов мимикой и жестами.',
+const helpOverlay = $('#helpOverlay');
+const helpDialog = helpOverlay ? helpOverlay.querySelector('.help-overlay__dialog') : null;
+const HELP_FALLBACK_TEXT = [
+  '🐊 CrocoMim — игра, где показываешь слова с помощью жестов и мимики, без слов! Крокодил и Пантомима.',
   '',
-  'Режимы:',
-  '⚡ Быстрый — один ведущий, счётчик угаданных и пропущенных слов, опционально таймер и цель по очкам.',
-  '👥 Команда — команды ходят по очереди, ведите счёт очков и отслеживайте результат каждого раунда.',
+  '🎮 Режимы',
+  '• ⚡ Быстрый — один ведущий, счёт + таймер (опционально).',
+  '• 👥 Команда — по очереди, добавьте команды (игроки или другие названия) с таблицей очков.',
   '',
-  'Настройки:',
-  '• Словарь — выберите готовую подборку слов или переключитесь на «Свой словарь».',
-  '• Свой словарь — вставьте свои слова через запятую или перенос строки, чтобы играть с ними.',
-  '• Таймер — активируйте галочку и задайте продолжительность раунда шагом 30 секунд.',
-  '• Очки до победы — задайте цель по очкам; в командном режиме счёт виден в таблице.',
-  '• Тема — на главном экране переключайте светлую и тёмную темы для удобства.',
+  '📚 Слова',
+  '• 📖 Выбери словари → слова перемешаются в одну колоду.',
+  '• 🔁 Сложность: Лёгкий / Средний / Сложный / Микс (все уровни сложности смешаются).',
+  '• ✏️ Свой словарь — вставь слова через запятую или с новой строки.',
   '',
-  'Новая справка:',
-  '• Обновлённая памятка всегда под рукой — нажмите «?» в шапке, чтобы открыть её снова.'
+  '🛠 Во время игры',
+  '• 💡 Подсказка — подсказка, как можно показать (если есть).',
+  '• 🌐 Значение — откроет Википедию с этим словом (если есть).',
+  '',
+  '⚙ Настройки',
+  '• ⏱ Таймер: 30/60/90… сек.',
+  '• 🎯 Очки до победы.',
+  '• 🌗 Тема: светлая / тёмная.',
+  '',
+  '❓ Справка',
+  'Нажми «?» в шапке — инструкция всегда рядом!',
+  '',
+  '🎭 Жестикулируй! Угадывай! Получай удовольствие!'
 ].join('\n');
+const helpState = { lastFocused:null, bodyOverflow:'' };
+const isHelpOpen = () => !!(helpOverlay && !helpOverlay.hidden);
+const openHelp = () => {
+  if (!helpOverlay){
+    alert(HELP_FALLBACK_TEXT);
+    return;
+  }
+  if (isHelpOpen()) return;
+  helpState.lastFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  helpState.bodyOverflow = document.body.style.overflow;
+  document.body.style.overflow = 'hidden';
+  helpOverlay.hidden = false;
+  requestAnimationFrame(() => {
+    if (helpDialog && typeof helpDialog.focus === 'function'){
+      helpDialog.focus();
+    }
+  });
+};
+const closeHelp = () => {
+  if (!helpOverlay || helpOverlay.hidden) return;
+  helpOverlay.hidden = true;
+  document.body.style.overflow = helpState.bodyOverflow || '';
+  const target = helpState.lastFocused && typeof helpState.lastFocused.focus === 'function'
+    ? helpState.lastFocused
+    : helpBtn;
+  if (target && typeof target.focus === 'function'){
+    target.focus();
+  }
+};
+if (helpOverlay){
+  helpOverlay.addEventListener('click', event => {
+    const el = event.target instanceof Element ? event.target.closest('[data-help-close]') : null;
+    if (el){
+      event.preventDefault();
+      closeHelp();
+    }
+  });
+}
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && isHelpOpen()){
+    event.preventDefault();
+    closeHelp();
+  }
+});
 const THEME_KEY = 'croc-theme';
 const SCREEN_KEY = 'croc-screen';
 const QUICK_STATS_KEY = 'croc-quick-stats';
@@ -814,9 +869,12 @@ backBtn.onclick = () => {
   if (typeof tTimerId !== 'undefined'){ clearInterval(tTimerId); tTimerId=null; }
   show('viewMenu');
 };
-helpBtn.onclick = () => {
-  alert(HELP_TEXT);
-};
+if (helpBtn){
+  helpBtn.addEventListener('click', event => {
+    event.preventDefault();
+    openHelp();
+  });
+}
 
 $('#goTeam').onclick = () => {
   ensureTeamsSeed();

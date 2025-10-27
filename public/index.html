@@ -322,6 +322,49 @@
   <div class="footer" id="globalFooter" style="display:none"></div>
 </div>
 
+<div id="helpOverlay" class="help-overlay" hidden>
+  <div class="help-overlay__backdrop" data-help-close></div>
+  <div class="help-overlay__dialog" role="dialog" aria-modal="true" aria-labelledby="helpTitle" tabindex="-1">
+    <button class="help-overlay__close" type="button" aria-label="Закрыть справку" data-help-close>
+      <span aria-hidden="true">✕</span>
+    </button>
+    <div class="crocomim-help">
+      <h1 id="helpTitle">🐊 CrocoMim — игра, где показываешь слова с помощью жестов и мимики, без слов! Крокодил и Пантомима.</h1>
+
+      <h2>🎮 Режимы</h2>
+      <ul>
+        <li><strong>⚡ Быстрый</strong> — один ведущий, счёт + таймер (опционально).</li>
+        <li><strong>👥 Команда</strong> — по очереди, добавьте команды (игроки или другие названия) с таблицей очков.</li>
+      </ul>
+
+      <h2>📚 Слова</h2>
+      <ul>
+        <li>📖 Выбери словари → слова перемешаются в одну колоду.</li>
+        <li>🔁 Сложность: Лёгкий / Средний / Сложный / Микс (все уровни сложности смешаются).</li>
+        <li><strong>✏️ Свой словарь</strong> — вставь слова через запятую или с новой строки.</li>
+      </ul>
+
+      <h2>🛠 Во время игры</h2>
+      <ul>
+        <li>💡 Подсказка — подсказка, как можно показать (если есть).</li>
+        <li>🌐 Значение — откроет Википедию с этим словом (если есть).</li>
+      </ul>
+
+      <h2>⚙ Настройки</h2>
+      <ul>
+        <li>⏱ Таймер: 30/60/90… сек.</li>
+        <li>🎯 Очки до победы.</li>
+        <li>🌗 Тема: светлая / тёмная.</li>
+      </ul>
+
+      <h2>❓ Справка</h2>
+      <p>Нажми <strong>«?»</strong> в шапке — инструкция всегда рядом!</p>
+
+      <p>🎭 Жестикулируй! Угадывай! Получай удовольствие!</p>
+    </div>
+  </div>
+</div>
+
   <script src="./scripts/dicts.js"></script>
   <script src="./scripts/app.js"></script>
 </body>
