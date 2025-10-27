@@ -467,6 +467,13 @@ function applyDictionarySelectionChange(state, opts = {}){
     if (state.customSelected) payload.push(CUSTOM_DICTIONARY_META.id);
     state.onDictionaryChange(payload);
   }
+  if (opts.persist !== false){
+    if (state === qs){
+      persistQuickSettings();
+    }else if (state === ts){
+      persistTeamSettings();
+    }
+  }
 }
 
 function setDictionarySelection(state, ids, opts = {}){
@@ -620,8 +627,15 @@ const HELP_TEXT = [
 ].join('\n');
 const THEME_KEY = 'croc-theme';
 const SCREEN_KEY = 'croc-screen';
+const QUICK_SETTINGS_KEY = 'croc-quick-settings';
+const TEAM_SETTINGS_KEY = 'croc-team-settings';
 const QUICK_STATS_KEY = 'croc-quick-stats';
 const TEAM_STATS_KEY = 'croc-team-stats';
+
+let savedQuickSettings = null;
+let savedTeamSettings = null;
+let pendingQuickSelectionIds = null;
+let pendingTeamSelectionIds = null;
 
 const syncThemeControls = mode => {
   if (themeSlider) themeSlider.value = mode === 'dark' ? '1' : '0';
@@ -852,16 +866,53 @@ const qs = {
   ptsLabel: $('#quickPtsLabel'),
   start: $('#startQuick')
 };
+const rawQuickSettings = readJson(QUICK_SETTINGS_KEY, null);
+if (rawQuickSettings && typeof rawQuickSettings === 'object'){
+  const ids = Array.isArray(rawQuickSettings.selectedDictionaries)
+    ? rawQuickSettings.selectedDictionaries.filter(id => typeof id === 'string')
+    : [];
+  pendingQuickSelectionIds = ids.slice();
+  qs.selectedDictionaries = new Set(ids);
+  qs.customSelected = !!rawQuickSettings.customSelected;
+  const difficulty = typeof rawQuickSettings.difficulty === 'string' ? rawQuickSettings.difficulty : '';
+  if (ALL_DIFFICULTIES.includes(difficulty)){
+    qs.difficulty = difficulty;
+  }
+  const timeVal = Number(rawQuickSettings.time);
+  if (Number.isFinite(timeVal) && timeVal > 0){
+    qs.time = timeVal;
+  }
+  const ptsVal = Number(rawQuickSettings.points);
+  if (Number.isFinite(ptsVal) && ptsVal > 0){
+    qs.pts = ptsVal;
+  }
+  if (qs.timerToggle) qs.timerToggle.checked = !!rawQuickSettings.timerEnabled;
+  if (qs.ptsToggle) qs.ptsToggle.checked = !!rawQuickSettings.pointsEnabled;
+  if (qs.customText) qs.customText.value = typeof rawQuickSettings.customText === 'string' ? rawQuickSettings.customText : '';
+  savedQuickSettings = {
+    selectedDictionaries: new Set(ids),
+    customSelected: qs.customSelected,
+    difficulty: qs.difficulty,
+    timerEnabled: !!rawQuickSettings.timerEnabled,
+    time: qs.time,
+    pointsEnabled: !!rawQuickSettings.pointsEnabled,
+    points: qs.pts,
+    customText: typeof rawQuickSettings.customText === 'string' ? rawQuickSettings.customText : ''
+  };
+}else{
+  if (qs.customText) qs.customText.value = '';
+  if (qs.timerToggle) qs.timerToggle.checked = false;
+  if (qs.ptsToggle) qs.ptsToggle.checked = false;
+}
 initDifficultyControls(qs);
 qs.onDifficultyChange = level => {
   qs.difficulty = level;
+  persistQuickSettings();
 };
 const upQuickTime = () => qs.timeLabel.textContent = qs.time+' с';
 const upQuickPts = () => qs.ptsLabel.textContent = qs.pts;
 upQuickTime();
 upQuickPts();
-qs.timerToggle.checked = false;
-qs.ptsToggle.checked = false;
 const updateQuickTimerUI = () => {
   if (!qs.timerToggle) return;
   const enabled = qs.timerToggle.checked;
@@ -869,10 +920,26 @@ const updateQuickTimerUI = () => {
   if (qs.timeLabel) qs.timeLabel.classList.toggle('disabled', !enabled);
   updateQuickTimerButton();
 };
-qs.timeMinus.onclick = () => { qs.time = Math.max(30, qs.time-30); upQuickTime(); };
-qs.timePlus.onclick = () => { qs.time += 30; upQuickTime(); };
-qs.ptsMinus.onclick = () => { qs.pts = Math.max(1, qs.pts-1); upQuickPts(); };
-qs.ptsPlus.onclick = () => { qs.pts += 1; upQuickPts(); };
+qs.timeMinus.onclick = () => {
+  qs.time = Math.max(30, qs.time-30);
+  upQuickTime();
+  persistQuickSettings();
+};
+qs.timePlus.onclick = () => {
+  qs.time += 30;
+  upQuickTime();
+  persistQuickSettings();
+};
+qs.ptsMinus.onclick = () => {
+  qs.pts = Math.max(1, qs.pts-1);
+  upQuickPts();
+  persistQuickSettings();
+};
+qs.ptsPlus.onclick = () => {
+  qs.pts += 1;
+  upQuickPts();
+  persistQuickSettings();
+};
 const updateQuickPts = () => {
   if (!qs.ptsControls) return;
   const enabled = qs.ptsToggle.checked;
@@ -881,11 +948,22 @@ const updateQuickPts = () => {
   [qs.ptsMinus, qs.ptsPlus].forEach(btn=>{ if (btn) btn.disabled = !enabled; });
   if (qs.ptsLabel) qs.ptsLabel.classList.toggle('disabled', !enabled);
 };
-if (qs.timerToggle) qs.timerToggle.onchange = updateQuickTimerUI;
+if (qs.timerToggle) qs.timerToggle.onchange = () => {
+  updateQuickTimerUI();
+  persistQuickSettings();
+};
 updateQuickTimerUI();
-qs.ptsToggle.onchange = updateQuickPts;
+qs.ptsToggle.onchange = () => {
+  updateQuickPts();
+  persistQuickSettings();
+};
 updateQuickPts();
 updateCustomBoxVisibility(qs);
+if (qs.customText){
+  qs.customText.addEventListener('input', () => {
+    persistQuickSettings();
+  });
+}
 
 // Quick game state
 const initialQuickStats = readJson(QUICK_STATS_KEY, {hitWords:[], missWords:[]}) || {hitWords:[], missWords:[]};
@@ -1321,17 +1399,72 @@ const ts = {
   pts: 10, ptsMinus: $('#ptsMinus'), ptsPlus: $('#ptsPlus'), ptsLabel: $('#ptsLabel'),
   start: $('#startTeam')
 };
+const rawTeamSettings = readJson(TEAM_SETTINGS_KEY, null);
+if (rawTeamSettings && typeof rawTeamSettings === 'object'){
+  const ids = Array.isArray(rawTeamSettings.selectedDictionaries)
+    ? rawTeamSettings.selectedDictionaries.filter(id => typeof id === 'string')
+    : [];
+  pendingTeamSelectionIds = ids.slice();
+  ts.selectedDictionaries = new Set(ids);
+  ts.customSelected = !!rawTeamSettings.customSelected;
+  const difficulty = typeof rawTeamSettings.difficulty === 'string' ? rawTeamSettings.difficulty : '';
+  if (ALL_DIFFICULTIES.includes(difficulty)){
+    ts.difficulty = difficulty;
+  }
+  const timeVal = Number(rawTeamSettings.time);
+  if (Number.isFinite(timeVal) && timeVal > 0){
+    ts.time = timeVal;
+  }
+  const ptsVal = Number(rawTeamSettings.points);
+  if (Number.isFinite(ptsVal) && ptsVal > 0){
+    ts.pts = ptsVal;
+  }
+  if (ts.timerToggle) ts.timerToggle.checked = !!rawTeamSettings.timerEnabled;
+  if (ts.ptsToggle) ts.ptsToggle.checked = !!rawTeamSettings.pointsEnabled;
+  if (ts.customText) ts.customText.value = typeof rawTeamSettings.customText === 'string' ? rawTeamSettings.customText : '';
+  savedTeamSettings = {
+    selectedDictionaries: new Set(ids),
+    customSelected: ts.customSelected,
+    difficulty: ts.difficulty,
+    timerEnabled: !!rawTeamSettings.timerEnabled,
+    time: ts.time,
+    pointsEnabled: !!rawTeamSettings.pointsEnabled,
+    points: ts.pts,
+    customText: typeof rawTeamSettings.customText === 'string' ? rawTeamSettings.customText : ''
+  };
+}else{
+  if (ts.customText) ts.customText.value = '';
+  if (ts.timerToggle) ts.timerToggle.checked = false;
+  if (ts.ptsToggle) ts.ptsToggle.checked = false;
+}
 initDifficultyControls(ts);
 ts.onDifficultyChange = level => {
   ts.difficulty = level;
+  persistTeamSettings();
 };
 const upTeamTime = () => ts.timeLabel.textContent = ts.time+' с';
 const upPts = () => ts.ptsLabel.textContent = ts.pts;
 upTeamTime(); upPts();
-ts.timeMinus.onclick = ()=>{ ts.time = Math.max(30, ts.time-30); upTeamTime(); };
-ts.timePlus.onclick = ()=>{ ts.time += 30; upTeamTime(); };
-ts.ptsMinus.onclick = ()=>{ ts.pts = Math.max(1, ts.pts-1); upPts(); };
-ts.ptsPlus.onclick = ()=>{ ts.pts += 1; upPts(); };
+ts.timeMinus.onclick = () => {
+  ts.time = Math.max(30, ts.time-30);
+  upTeamTime();
+  persistTeamSettings();
+};
+ts.timePlus.onclick = () => {
+  ts.time += 30;
+  upTeamTime();
+  persistTeamSettings();
+};
+ts.ptsMinus.onclick = () => {
+  ts.pts = Math.max(1, ts.pts-1);
+  upPts();
+  persistTeamSettings();
+};
+ts.ptsPlus.onclick = () => {
+  ts.pts += 1;
+  upPts();
+  persistTeamSettings();
+};
 updateCustomBoxVisibility(ts);
 const updateTeamTimerUI = ()=>{
   if (!ts.timerToggle) return;
@@ -1348,26 +1481,125 @@ const updatePtsUI = ()=>{
   [ts.ptsMinus, ts.ptsPlus].forEach(btn=>{ if (btn) btn.disabled = !enabled; });
   if (ts.ptsLabel) ts.ptsLabel.classList.toggle('disabled', !enabled);
 };
-if (ts.timerToggle) ts.timerToggle.onchange = updateTeamTimerUI;
+if (ts.timerToggle) ts.timerToggle.onchange = () => {
+  updateTeamTimerUI();
+  persistTeamSettings();
+};
 updateTeamTimerUI();
-ts.ptsToggle.onchange = updatePtsUI;
+ts.ptsToggle.onchange = () => {
+  updatePtsUI();
+  persistTeamSettings();
+};
 updatePtsUI();
+if (ts.customText){
+  ts.customText.addEventListener('input', () => {
+    persistTeamSettings();
+  });
+}
+
+function collectQuickSettings(){
+  const selected = Array.from(qs?.selectedDictionaries || []);
+  const difficulty = ALL_DIFFICULTIES.includes(qs?.difficulty) ? qs.difficulty : 'easy';
+  const timeVal = Number(qs?.time);
+  const ptsVal = Number(qs?.pts);
+  const customText = typeof qs?.customText?.value === 'string' ? qs.customText.value : '';
+  return {
+    selectedDictionaries: selected,
+    customSelected: !!qs?.customSelected,
+    difficulty,
+    timerEnabled: !!qs?.timerToggle?.checked,
+    time: Number.isFinite(timeVal) && timeVal > 0 ? timeVal : 60,
+    pointsEnabled: !!qs?.ptsToggle?.checked,
+    points: Number.isFinite(ptsVal) && ptsVal > 0 ? ptsVal : 10,
+    customText
+  };
+}
+
+function persistQuickSettings(){
+  const data = collectQuickSettings();
+  writeJson(QUICK_SETTINGS_KEY, data);
+  savedQuickSettings = {
+    selectedDictionaries: new Set(data.selectedDictionaries),
+    customSelected: data.customSelected,
+    difficulty: data.difficulty,
+    timerEnabled: data.timerEnabled,
+    time: data.time,
+    pointsEnabled: data.pointsEnabled,
+    points: data.points,
+    customText: data.customText
+  };
+  pendingQuickSelectionIds = data.selectedDictionaries.slice();
+}
+
+function collectTeamSettings(){
+  const selected = Array.from(ts?.selectedDictionaries || []);
+  const difficulty = ALL_DIFFICULTIES.includes(ts?.difficulty) ? ts.difficulty : 'easy';
+  const timeVal = Number(ts?.time);
+  const ptsVal = Number(ts?.pts);
+  const customText = typeof ts?.customText?.value === 'string' ? ts.customText.value : '';
+  return {
+    selectedDictionaries: selected,
+    customSelected: !!ts?.customSelected,
+    difficulty,
+    timerEnabled: !!ts?.timerToggle?.checked,
+    time: Number.isFinite(timeVal) && timeVal > 0 ? timeVal : 60,
+    pointsEnabled: !!ts?.ptsToggle?.checked,
+    points: Number.isFinite(ptsVal) && ptsVal > 0 ? ptsVal : 10,
+    customText
+  };
+}
+
+function persistTeamSettings(){
+  const data = collectTeamSettings();
+  writeJson(TEAM_SETTINGS_KEY, data);
+  savedTeamSettings = {
+    selectedDictionaries: new Set(data.selectedDictionaries),
+    customSelected: data.customSelected,
+    difficulty: data.difficulty,
+    timerEnabled: data.timerEnabled,
+    time: data.time,
+    pointsEnabled: data.pointsEnabled,
+    points: data.points,
+    customText: data.customText
+  };
+  pendingTeamSelectionIds = data.selectedDictionaries.slice();
+}
 
 ensureDictionaryIndex().then(() => {
   setupDictionarySelector(qs);
   setupDictionarySelector(ts);
-  if (dictionaryState.list.length && !qs.selectedDictionaries.size){
+  const quickSelection = (pendingQuickSelectionIds && pendingQuickSelectionIds.length)
+    ? pendingQuickSelectionIds
+    : Array.from(qs.selectedDictionaries || []);
+  if (quickSelection.length){
+    setDictionarySelection(qs, quickSelection, { emit:false, persist:false });
+  }else if (dictionaryState.list.length){
     const firstId = dictionaryState.list[0].id;
-    setDictionarySelection(qs, [firstId], { emit:false });
-    updateDifficultyAvailabilityForSelection(qs);
+    setDictionarySelection(qs, [firstId], { emit:false, persist:false });
+  }else{
+    setDictionarySelection(qs, [], { emit:false, persist:false });
   }
+  setCustomSelection(qs, qs.customSelected, { emit:false, persist:false });
+  if (qs.difficultyButtons?.[qs.difficulty]){
+    qs.setDifficulty(qs.difficulty, { silent:true });
+  }
+  updateDifficultyAvailabilityForSelection(qs);
+
   if (ts.dictElements){
-    setDictionarySelection(ts, Array.from(qs.selectedDictionaries || []), { emit:false });
-    setCustomSelection(ts, qs.customSelected, { emit:false });
+    const teamSelection = (pendingTeamSelectionIds && pendingTeamSelectionIds.length)
+      ? pendingTeamSelectionIds
+      : quickSelection;
+    setDictionarySelection(ts, teamSelection, { emit:false, persist:false });
+    const teamCustom = savedTeamSettings ? savedTeamSettings.customSelected : qs.customSelected;
+    setCustomSelection(ts, teamCustom, { emit:false, persist:false });
+    const teamDifficulty = savedTeamSettings?.difficulty || qs.difficulty;
+    if (teamDifficulty && ts.difficultyButtons?.[teamDifficulty] && !ts.difficultyButtons[teamDifficulty].disabled){
+      ts.setDifficulty(teamDifficulty, { silent:true });
+    }
     updateDifficultyAvailabilityForSelection(ts);
+    applyDictionarySelectionChange(ts, { emit:false, persist:false });
   }
-  applyDictionarySelectionChange(qs, { emit:false });
-  applyDictionarySelectionChange(ts, { emit:false });
+  applyDictionarySelectionChange(qs, { emit:false, persist:false });
 });
 
 document.addEventListener('click', (event) => {
@@ -1396,34 +1628,48 @@ function syncTeamSettingsFromMenu(){
       if (!ts.dictElements || !ts.dictElements.size){
         setupDictionarySelector(ts);
       }
-      setDictionarySelection(ts, Array.from(qs.selectedDictionaries || []), { emit:false });
-      setCustomSelection(ts, qs.customSelected, { emit:false });
-      updateDifficultyAvailabilityForSelection(ts);
-      if (qs.selectedDictionaries?.size){
-        const targetDifficulty = qs.difficulty;
-        if (ts.difficultyButtons?.[targetDifficulty] && !ts.difficultyButtons[targetDifficulty].disabled){
-          ts.setDifficulty(targetDifficulty, { silent:true });
-        }
+      const quickSelection = Array.from(qs.selectedDictionaries || []);
+      const savedSelection = savedTeamSettings ? Array.from(savedTeamSettings.selectedDictionaries || []) : [];
+      const targetSelection = savedSelection.length ? savedSelection : quickSelection;
+      if (targetSelection.length){
+        setDictionarySelection(ts, targetSelection, { emit:false, persist:false });
+      }else{
+        setDictionarySelection(ts, [], { emit:false, persist:false });
       }
-      applyDictionarySelectionChange(ts, { emit:false });
+      const teamCustom = savedTeamSettings ? savedTeamSettings.customSelected : qs.customSelected;
+      setCustomSelection(ts, teamCustom, { emit:false, persist:false });
+      updateDifficultyAvailabilityForSelection(ts);
+      const targetDifficulty = savedTeamSettings?.difficulty || qs.difficulty;
+      if (targetDifficulty && ts.difficultyButtons?.[targetDifficulty] && !ts.difficultyButtons[targetDifficulty].disabled){
+        ts.setDifficulty(targetDifficulty, { silent:true });
+      }
+      applyDictionarySelectionChange(ts, { emit:false, persist:false });
     }
-    if (ts.customText && qs.customText){
-      ts.customText.value = qs.customText.value;
+    if (ts.customText){
+      if (savedTeamSettings){
+        ts.customText.value = savedTeamSettings.customText || '';
+      }else if (qs.customText){
+        ts.customText.value = qs.customText.value;
+      }
     }
-    if (typeof qs.time === 'number'){
-      ts.time = qs.time;
+    const sourceTime = savedTeamSettings ? savedTeamSettings.time : qs.time;
+    if (Number.isFinite(sourceTime)){
+      ts.time = sourceTime;
       upTeamTime();
     }
-    if (ts.timerToggle && qs.timerToggle){
-      ts.timerToggle.checked = qs.timerToggle.checked;
+    if (ts.timerToggle){
+      const timerEnabled = savedTeamSettings ? savedTeamSettings.timerEnabled : !!qs.timerToggle?.checked;
+      ts.timerToggle.checked = !!timerEnabled;
       updateTeamTimerUI();
     }
-    if (typeof qs.pts === 'number'){
-      ts.pts = qs.pts;
+    const sourcePts = savedTeamSettings ? savedTeamSettings.points : qs.pts;
+    if (Number.isFinite(sourcePts)){
+      ts.pts = sourcePts;
       upPts();
     }
-    if (ts.ptsToggle && qs.ptsToggle){
-      ts.ptsToggle.checked = qs.ptsToggle.checked;
+    if (ts.ptsToggle){
+      const ptsEnabled = savedTeamSettings ? savedTeamSettings.pointsEnabled : !!qs.ptsToggle?.checked;
+      ts.ptsToggle.checked = !!ptsEnabled;
     }
     updatePtsUI();
   };
