@@ -148,15 +148,9 @@
 
   <!-- QUICK GAME -->
   <div id="viewQuickGame" class="stack" style="display:none">
-    <div class="section row" style="justify-content:space-between; align-items:center">
-      <div class="row" style="gap:10px; flex-wrap:wrap">
-        <div class="chip">Угадано: <span id="qHit">0</span></div>
-        <div class="chip">Пропущено: <span id="qMiss">0</span></div>
-        <div class="chip" id="qTimerBox" style="display:none">⏱ <span id="qTimer">00:00</span></div>
-      </div>
-      <button class="btn ghost" id="qStatsBtn" type="button">Статистика</button>
+    <div class="section" id="qBreadcrumbSection" hidden>
+      <div id="qBreadcrumbs" class="word-breadcrumbs"></div>
     </div>
-
     <div class="word-card word-card-expanded">
       <div class="word-card-main">
         <div id="qWord" class="word">—</div>
@@ -185,6 +179,15 @@
         <button class="btn ghost" id="qRestartTimer" style="display:none">Перезапустить таймер</button>
         <button class="btn ghost" id="qMeaningBtn">Значение слова (Википедия)</button>
       </div>
+    </div>
+
+    <div class="section row quick-stats" style="justify-content:space-between; align-items:center">
+      <div class="row" style="gap:10px; flex-wrap:wrap">
+        <div class="chip">Угадано: <span id="qHit">0</span></div>
+        <div class="chip">Пропущено: <span id="qMiss">0</span></div>
+        <div class="chip" id="qTimerBox" style="display:none">⏱ <span id="qTimer">00:00</span></div>
+      </div>
+      <button class="btn ghost" id="qStatsBtn" type="button">Статистика</button>
     </div>
   </div>
 
@@ -267,6 +270,10 @@
         <div class="chip">Ход: <strong id="turnTeamName">Команда 1</strong></div>
         <div class="chip" id="tTimerBox" style="display:none">⏱ <span id="tTimer">00:00</span></div>
       </div>
+    </div>
+
+    <div class="section" id="tBreadcrumbSection" hidden>
+      <div id="tBreadcrumbs" class="word-breadcrumbs"></div>
     </div>
 
     <div class="word-card word-card-expanded">

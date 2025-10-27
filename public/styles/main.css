@@ -534,7 +534,7 @@ body{
 }
 
 /* Word card */
-.word-card{
+.word-card{ 
   background:linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.05)), var(--card);
   border:1px solid var(--panel-border);
   border-radius:22px;
@@ -545,6 +545,30 @@ body{
   justify-content:center;
   text-align:center;
   box-shadow:var(--shadow);
+}
+.word-breadcrumbs{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:8px;
+  font-size:14px;
+  color:var(--muted);
+}
+.word-breadcrumbs .crumb{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.word-breadcrumbs .crumb-label{
+  font-weight:600;
+  color:var(--muted-strong, var(--text));
+}
+.word-breadcrumbs .crumb-value{
+  color:var(--text);
+}
+.word-breadcrumbs .crumb-separator{
+  color:var(--muted);
+  font-size:12px;
 }
 .word-card.word-card-expanded{
   align-items:stretch;

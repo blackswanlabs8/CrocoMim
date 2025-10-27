@@ -15,6 +15,12 @@ const dictionaryState = {
 const dictionarySelectors = new Set();
 const DIFFICULTY_ORDER = ['easy','medium','hard'];
 const ALL_DIFFICULTIES = [...DIFFICULTY_ORDER, 'mix'];
+const DIFFICULTY_LABELS = {
+  easy: 'Лёгкий',
+  medium: 'Средний',
+  hard: 'Сложный',
+  mix: 'Микс'
+};
 const CUSTOM_DICTIONARY_META = {
   id: 'custom',
   title: 'Свой словарь',
@@ -121,6 +127,8 @@ async function loadDictionaryEntries(dictId, difficulty){
 const $ = sel => document.querySelector(sel);
 const VIEWS = ['viewMenu','viewQuickGame','viewTeamSetup','viewTeamGame'];
 let screen = 'viewMenu';
+let qBreadcrumbData = null;
+let tBreadcrumbData = null;
 let qTimerId = null;
 let qTimerRunning = false;
 let tTimerId = null;
@@ -790,6 +798,11 @@ const show = v => {
     backBtn.style.pointerEvents = 'auto';
     if (modeQuickBtn) modeQuickBtn.classList.remove('active');
   }
+  if (v === 'viewQuickGame'){
+    applyWordBreadcrumbs(qUI, qBreadcrumbData);
+  }else if (v === 'viewTeamGame'){
+    applyWordBreadcrumbs(tUI, tBreadcrumbData);
+  }
 };
 
 // Header buttons
@@ -885,6 +898,8 @@ const qUI = {
   description: $('#qDescription'),
   helpBtn: $('#qHelpBtn'),
   helpBox: $('#qHelpBox'),
+  breadcrumbsWrap: $('#qBreadcrumbSection'),
+  breadcrumbs: $('#qBreadcrumbs'),
   hit: $('#qHit'), miss: $('#qMiss'),
   next: $('#qNext'), hitBtn: $('#qHitBtn'), skipBtn: $('#qSkipBtn'),
   hideBtn: $('#qHideBtn'), meaningBtn: $('#qMeaningBtn'),
@@ -1046,6 +1061,8 @@ async function startQuickGame(){
       }
       return;
     }
+    qBreadcrumbData = buildBreadcrumbData(selectedIds, includeCustom, difficulty);
+    applyWordBreadcrumbs(qUI, qBreadcrumbData);
     qWords = entries.map(entry => ({ ...entry }));
     shuffle(qWords);
     qIndex=0; qHide=false; qHelpState.open=false;
@@ -1419,6 +1436,8 @@ const tUI = {
   description: $('#tDescription'),
   helpBtn: $('#tHelpBtn'),
   helpBox: $('#tHelpBox'),
+  breadcrumbsWrap: $('#tBreadcrumbSection'),
+  breadcrumbs: $('#tBreadcrumbs'),
   turnName: $('#turnTeamName'),
   tBox: $('#tTimerBox'), tLabel: $('#tTimer'),
   table: $('#scoreTable'),
@@ -1559,6 +1578,8 @@ async function startTeamGame(){
       }
       return;
     }
+    tBreadcrumbData = buildBreadcrumbData(selectedIds, includeCustom, difficulty);
+    applyWordBreadcrumbs(tUI, tBreadcrumbData);
     tWords = entries.map(entry => ({ ...entry }));
     shuffle(tWords);
     teams = teams.map((t, idx)=>(
@@ -1778,6 +1799,81 @@ const escapeHtml = str => str
   .replace(/>/g,'&gt;')
   .replace(/"/g,'&quot;')
   .replace(/'/g,'&#39;');
+function getDifficultyLabel(level){
+  if (!level) return '';
+  const normalized = String(level).toLowerCase();
+  if (DIFFICULTY_LABELS[normalized]) return DIFFICULTY_LABELS[normalized];
+  return level;
+}
+function describeDictionarySelection(dictIds, includeCustom){
+  const names = [];
+  const seen = new Set();
+  (Array.isArray(dictIds) ? dictIds : []).forEach(dictId => {
+    const meta = getDictionaryMeta(dictId);
+    const title = typeof meta?.title === 'string' && meta.title.trim() ? meta.title.trim() : '';
+    const fallback = meta?.id || dictId;
+    const label = title || (typeof fallback === 'string' ? fallback : '');
+    if (label && !seen.has(label)){
+      seen.add(label);
+      names.push(label);
+    }
+  });
+  if (includeCustom){
+    const customTitle = typeof CUSTOM_DICTIONARY_META?.title === 'string' && CUSTOM_DICTIONARY_META.title.trim()
+      ? CUSTOM_DICTIONARY_META.title.trim()
+      : 'Свой словарь';
+    if (!seen.has(customTitle)){
+      seen.add(customTitle);
+      names.push(customTitle);
+    }
+  }
+  if (!names.length){
+    return { text:'', prefix:'' };
+  }
+  return {
+    text: names.join(', '),
+    prefix: names.length > 1 ? 'Словари' : 'Словарь'
+  };
+}
+function buildBreadcrumbData(dictIds, includeCustom, difficulty){
+  const dictInfo = describeDictionarySelection(dictIds, includeCustom);
+  const difficultyLabel = getDifficultyLabel(difficulty);
+  return {
+    dictionaryText: dictInfo.text,
+    dictionaryPrefix: dictInfo.prefix,
+    difficultyText: difficultyLabel,
+    difficultyPrefix: difficultyLabel ? 'Сложность' : ''
+  };
+}
+function applyWordBreadcrumbs(ui, data){
+  if (!ui || !ui.breadcrumbs) return;
+  const wrap = ui.breadcrumbsWrap || ui.breadcrumbs.parentElement || null;
+  if (!data || (!data.dictionaryText && !data.difficultyText)){
+    if (ui.breadcrumbs) ui.breadcrumbs.innerHTML = '';
+    if (wrap) wrap.hidden = true;
+    return;
+  }
+  const parts = [];
+  if (data.dictionaryText){
+    const label = data.dictionaryPrefix || 'Словарь';
+    parts.push(`
+      <span class="crumb">
+        <span class="crumb-label">${escapeHtml(label)}:</span>
+        <span class="crumb-value">${escapeHtml(data.dictionaryText)}</span>
+      </span>`);
+  }
+  if (data.difficultyText){
+    const label = data.difficultyPrefix || 'Сложность';
+    parts.push(`
+      <span class="crumb">
+        <span class="crumb-label">${escapeHtml(label)}:</span>
+        <span class="crumb-value">${escapeHtml(data.difficultyText)}</span>
+      </span>`);
+  }
+  const separator = '<span class="crumb-separator">•</span>';
+  ui.breadcrumbs.innerHTML = parts.join(separator);
+  if (wrap) wrap.hidden = false;
+}
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } return a }
 
 // initial
