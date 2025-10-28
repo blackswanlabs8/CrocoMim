@@ -64,11 +64,11 @@ jobs:
         with:
           script: |
             const sha = context.payload.pull_request.head.sha;
-            const state = '${{ steps.status.outputs.STATE }}'; // success | failure | error | pending
+            const state = '${{ steps.status.outputs.STATE }}';
             const description = '${{ steps.status.outputs.DESC }}';
             const target_url = '${{ steps.vars.outputs.PREVIEW_URL }}';
 
-            await github.repos.createCommitStatus({
+            await github.rest.repos.createCommitStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
               sha,
