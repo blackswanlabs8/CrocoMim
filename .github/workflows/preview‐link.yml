@@ -1,0 +1,46 @@
+name: Publish preview link
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  pull-requests: write
+  statuses: write       # для возможности добавлять статус к коммиту
+  contents: read        # стандарт
+
+jobs:
+  generate-and-comment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set variables
+        id: vars
+        run: |
+          echo "BRANCH=${{ github.head_ref }}" >> $GITHUB_OUTPUT
+          echo "OWNER=${{ github.repository_owner }}" >> $GITHUB_OUTPUT
+          # repo name: e.g. owner/repo, split:
+          REPO=${{ github.repository }}
+          REPO_NAME=${REPO##*/}
+          echo "REPO_NAME=${REPO_NAME}" >> $GITHUB_OUTPUT
+          # Generate the URL:
+          echo "URL=https://htmlpreview.github.io/?https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.head_ref }}/public/index.html" >> $GITHUB_OUTPUT
+
+      - name: Comment on Pull Request
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          message: |
+            A preview of this branch is available here:
+            [👉 Preview link](${{ steps.vars.outputs.URL }})
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Add commit status
+        uses: dawidd6/action-update-status@v2   # или аналог
+        with:
+          sha: ${{ github.event.pull_request.head.sha }}
+          state: success
+          context: "Preview Site"
+          description: "View preview of this branch"
+          target_url: ${{ steps.vars.outputs.URL }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
