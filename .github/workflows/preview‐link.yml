@@ -4,43 +4,66 @@ on:
   pull_request:
     types: [opened, reopened, synchronize]
 
+# Минимальные права для добавления комментариев и статусов
 permissions:
+  contents: read
   pull-requests: write
-  statuses: write       # для возможности добавлять статус к коммиту
-  contents: read        # стандарт
+  statuses: write
+  checks: write
 
 jobs:
-  generate-and-comment:
+  preview-link:
+    name: Generate preview link and annotate PR
     runs-on: ubuntu-latest
+
     steps:
-      - name: Set variables
+      - name: Compute preview URL
         id: vars
         run: |
+          # Имя ветки PR (ветка-источник)
           echo "BRANCH=${{ github.head_ref }}" >> $GITHUB_OUTPUT
-          echo "OWNER=${{ github.repository_owner }}" >> $GITHUB_OUTPUT
-          # repo name: e.g. owner/repo, split:
-          REPO=${{ github.repository }}
-          REPO_NAME=${REPO##*/}
-          echo "REPO_NAME=${REPO_NAME}" >> $GITHUB_OUTPUT
-          # Generate the URL:
-          echo "URL=https://htmlpreview.github.io/?https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.head_ref }}/public/index.html" >> $GITHUB_OUTPUT
 
-      - name: Comment on Pull Request
+          # Полный raw URL к index.html (меняйте путь, если у вас другой)
+          RAW_URL="https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.head_ref }}/public/index.html"
+          echo "RAW_URL=$RAW_URL" >> $GITHUB_OUTPUT
+
+          # Итоговая ссылка через htmlpreview
+          PREVIEW_URL="https://htmlpreview.github.io/?$RAW_URL"
+          echo "PREVIEW_URL=$PREVIEW_URL" >> $GITHUB_OUTPUT
+
+      - name: Check preview availability (HEAD request)
+        id: check
+        run: |
+          set -e
+          url="${{ steps.vars.outputs.RAW_URL }}"
+          echo "Checking: $url"
+          # HEAD-запрос; получим код ответа
+          code=$(curl -s -o /dev/null -w "%{http_code}" -I "$url")
+          echo "HTTP_CODE=$code" >> $GITHUB_OUTPUT
+          echo "HTTP code: $code"
+          # не падаем, даже если 404 — пусть статус выставится как failure на следующем шаге
+
+      - name: Comment (create or update) on PR with preview link
         uses: thollander/actions-comment-pull-request@v3
         with:
           message: |
-            A preview of this branch is available here:
-            [👉 Preview link](${{ steps.vars.outputs.URL }})
+            ✅ **Preview for this branch**
+
+            [▶️ Открыть превью](${{ steps.vars.outputs.PREVIEW_URL }})
+
+            _Raw_: `${{ steps.vars.outputs.RAW_URL }}`
+          comment-tag: preview-link
+          mode: upsert
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Add commit status
-        uses: dawidd6/action-update-status@v2   # или аналог
+      - name: Set commit status (success/failure) with link
+        uses: dawidd6/action-update-status@v2
         with:
           sha: ${{ github.event.pull_request.head.sha }}
-          state: success
+          state: ${{ steps.check.outputs.HTTP_CODE == '200' && 'success' || 'failure' }}
           context: "Preview Site"
-          description: "View preview of this branch"
-          target_url: ${{ steps.vars.outputs.URL }}
+          description: ${{ steps.check.outputs.HTTP_CODE == '200' && 'Preview is available' || 'index.html not found (HTTP ' + steps.check.outputs.HTTP_CODE + ')' }}
+          target_url: ${{ steps.vars.outputs.PREVIEW_URL }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
