@@ -1,4 +1,5 @@
-const CACHE_NAME = 'crocomim-static-v2';
+const CACHE_NAME = 'crocomim-static-v3';
+const DICTS_CACHE = 'crocomim-dicts-runtime';
 const ASSETS = [
   './',
   './index.html',
@@ -6,7 +7,6 @@ const ASSETS = [
   './scripts/app.js',
   './scripts/dicts.js',
   './manifest.json',
-  './dicts/index.json',
   './icons/icon.svg'
 ];
 
@@ -24,27 +24,71 @@ self.addEventListener('activate', event => {
   );
 });
 
+const isSameOrigin = request => request.url.startsWith(self.location.origin);
+const isDictRequest = request => {
+  if (!isSameOrigin(request)) {
+    return false;
+  }
+  const url = new URL(request.url);
+  return url.pathname.startsWith('/dicts/');
+};
+
+const networkFirstDict = async request => {
+  try {
+    const response = await fetch(request);
+    const copy = response.clone();
+    const cache = await caches.open(DICTS_CACHE);
+    await cache.put(request, copy);
+    return response;
+  } catch (error) {
+    const cache = await caches.open(DICTS_CACHE);
+    const cached = await cache.match(request);
+    if (cached) {
+      return cached;
+    }
+    throw error;
+  }
+};
+
+const cacheFirstStatic = async request => {
+  const cached = await caches.match(request);
+  if (cached) {
+    return cached;
+  }
+  try {
+    const response = await fetch(request);
+    const copy = response.clone();
+    const cache = await caches.open(CACHE_NAME);
+    await cache.put(request, copy);
+    return response;
+  } catch (error) {
+    if (request.mode === 'navigate') {
+      const fallback = await caches.match('./index.html');
+      if (fallback) {
+        return fallback;
+      }
+    }
+    throw error;
+  }
+};
+
 self.addEventListener('fetch', event => {
   const { request } = event;
-  if (request.method !== 'GET' || !request.url.startsWith(self.location.origin)) {
+
+  if (request.method !== 'GET') {
     return;
   }
 
-  event.respondWith(
-    caches.match(request).then(cached => {
-      if (cached) {
-        return cached;
-      }
-      return fetch(request).then(response => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
-        return response;
-      }).catch(() => {
-        if (request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
-        return Response.error();
-      });
-    })
-  );
+  if (isDictRequest(request)) {
+    event.respondWith(
+      networkFirstDict(request).catch(() => Response.error())
+    );
+    return;
+  }
+
+  if (isSameOrigin(request)) {
+    event.respondWith(
+      cacheFirstStatic(request).catch(() => Response.error())
+    );
+  }
 });
