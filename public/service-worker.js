@@ -1,10 +1,12 @@
-const CACHE_NAME = 'crocomim-static-v1';
+const CACHE_NAME = 'crocomim-static-v2';
 const ASSETS = [
   './',
   './index.html',
   './styles/main.css',
   './scripts/app.js',
+  './scripts/dicts.js',
   './manifest.json',
+  './dicts/index.json',
   './icons/icon.svg'
 ];
 
