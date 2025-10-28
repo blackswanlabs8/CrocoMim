@@ -456,6 +456,12 @@ body{
   justify-content:center;
   text-align:center;
 }
+#startQuick,
+#startTeam{
+  background:var(--warning);
+  color:#211a05;
+  box-shadow:0 6px 16px rgba(245,158,11,.3);
+}
 .btn:hover{ background:var(--accent-2) }
 .btn:active{ transform:translateY(1px) }
 .btn:disabled{
