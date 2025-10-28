@@ -1,7 +1,7 @@
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-HTML_PATH = ROOT / 'сrocomim.html'
+HTML_PATH = ROOT / 'public' / 'index.html'
 
 def main():
     html = HTML_PATH.read_text(encoding='utf-8')
