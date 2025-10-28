@@ -1232,36 +1232,108 @@ function ensureTeamsSeed(){
   persistTeams();
 }
 const teamList = $('#teamList');
-function renderTeams(){
-  teamList.innerHTML='';
-  teams.forEach((team, index)=>{
-    if (!team.name) team.name = defaultTeamName(index);
-    if (!team.icon) team.icon = TEAM_ICONS[index % TEAM_ICONS.length].id;
-    const iconDef = getTeamIcon(team.icon);
-    const card=document.createElement('div');
-    card.className='section team-card';
-    card.innerHTML = `
+const teamCardTemplate = document.querySelector('#teamCardTemplate');
+const teamRenameBtn = $('#teamRename');
+let activeTeamIndex = 0;
+
+function createTeamCard(){
+  if (teamCardTemplate && teamCardTemplate.content){
+    const root = teamCardTemplate.content.firstElementChild;
+    if (root){
+      return root.cloneNode(true);
+    }
+  }
+  const card = document.createElement('div');
+  card.className = 'section team-card';
+  card.innerHTML = `
       <div class="team-card-top">
-        <button class="team-avatar-btn" type="button" style="background:${iconDef.bg};color:${iconDef.color}" data-index="${index}">
-          <span>${iconDef.emoji}</span>
+        <button class="team-avatar-btn" type="button">
+          <span aria-hidden="true">🐊</span>
+          <span class="visually-hidden">Редактировать команду</span>
         </button>
       </div>
       <div class="team-body">
         <div class="team-name"></div>
         <form class="team-edit" data-team-form>
-          <label class="visually-hidden" for="teamName-${index}">Название команды</label>
-          <input class="input team-edit-input" id="teamName-${index}" name="teamName" type="text" maxlength="40" autocomplete="off">
+          <label class="visually-hidden">Название команды</label>
+          <input class="input team-edit-input" type="text" maxlength="40" autocomplete="off">
           <div class="team-edit-actions">
             <button class="btn btn-small" type="submit">Сохранить</button>
             <button class="btn ghost btn-small" type="button" data-cancel>Отмена</button>
           </div>
         </form>
-        <button class="team-delete" type="button" title="Удалить команду" data-index="${index}">🗑️</button>
+        <button class="team-delete" type="button" title="Удалить команду">🗑️</button>
       </div>`;
+  return card;
+}
+
+function updateTeamRenameBtn(){
+  if (!teamRenameBtn){
+    return;
+  }
+  if (!teams.length){
+    teamRenameBtn.disabled = true;
+    teamRenameBtn.setAttribute('aria-label', 'Нет команд для переименования');
+    return;
+  }
+  const current = teams[activeTeamIndex] || makeTeam(defaultTeamName(activeTeamIndex), TEAM_ICONS[activeTeamIndex % TEAM_ICONS.length].id);
+  const currentName = current.name || defaultTeamName(activeTeamIndex);
+  teamRenameBtn.disabled = false;
+  teamRenameBtn.setAttribute('aria-label', `Переименовать команду «${currentName}»`);
+}
+
+function setActiveTeam(index){
+  if (!teams.length) return;
+  const nextIndex = Math.max(0, Math.min(index, teams.length - 1));
+  if (nextIndex === activeTeamIndex) return;
+  const prevCard = teamList.querySelector('.team-card.is-selected');
+  if (prevCard){
+    prevCard.classList.remove('is-selected');
+  }
+  activeTeamIndex = nextIndex;
+  const nextCard = teamList.querySelector(`.team-card[data-index="${activeTeamIndex}"]`);
+  if (nextCard){
+    nextCard.classList.add('is-selected');
+  }
+  updateTeamRenameBtn();
+}
+
+function renderTeams(){
+  if (teams.length === 0){
+    activeTeamIndex = 0;
+  } else if (activeTeamIndex >= teams.length){
+    activeTeamIndex = teams.length - 1;
+  }
+  teamList.innerHTML='';
+  teams.forEach((team, index)=>{
+    if (!team.name) team.name = defaultTeamName(index);
+    if (!team.icon) team.icon = TEAM_ICONS[index % TEAM_ICONS.length].id;
+    const iconDef = getTeamIcon(team.icon);
+    const card = createTeamCard();
+    card.classList.add('section', 'team-card');
+    card.dataset.index = String(index);
+    const avatarBtn = card.querySelector('.team-avatar-btn');
+    if (avatarBtn){
+      avatarBtn.style.background = iconDef.bg;
+      avatarBtn.style.color = iconDef.color;
+      avatarBtn.dataset.index = String(index);
+      const iconSpan = avatarBtn.querySelector('span');
+      if (iconSpan){
+        iconSpan.textContent = iconDef.emoji;
+      }
+    }
     const nameLabel = card.querySelector('.team-name');
     const editForm = card.querySelector('[data-team-form]');
     const input = card.querySelector('.team-edit-input');
-    const avatarBtn = card.querySelector('.team-avatar-btn');
+    const labelEl = card.querySelector('[data-team-label]');
+    if (input){
+      input.id = `teamName-${index}`;
+      input.name = 'teamName';
+    }
+    if (labelEl){
+      labelEl.setAttribute('for', `teamName-${index}`);
+      labelEl.textContent = `Название команды ${index + 1}`;
+    }
     const getCurrentName = () => teams[index]?.name || defaultTeamName(index);
     const syncDisplayName = () => {
       const currentName = getCurrentName();
@@ -1303,14 +1375,21 @@ function renderTeams(){
     };
     syncDisplayName();
     if (input) input.value = getCurrentName();
+    const activateAnd = handler => {
+      return (...args) => {
+        setActiveTeam(index);
+        handler?.(...args);
+      };
+    };
     if (avatarBtn){
-      avatarBtn.onclick = () => toggleEditMode('avatar');
+      avatarBtn.onclick = activateAnd(() => toggleEditMode('avatar'));
     }
     if (nameLabel){
-      nameLabel.addEventListener('click', () => toggleEditMode('name'));
+      nameLabel.addEventListener('click', activateAnd(() => toggleEditMode('name')));
       nameLabel.addEventListener('keydown', evt => {
         if (evt.key === 'Enter' || evt.key === ' ' || evt.key === 'Spacebar'){
           evt.preventDefault();
+          setActiveTeam(index);
           toggleEditMode('name');
         }
       });
@@ -1339,15 +1418,26 @@ function renderTeams(){
     const deleteBtn = card.querySelector('.team-delete');
     if (deleteBtn){
       deleteBtn.setAttribute('aria-label', `Удалить команду «${team.name || defaultTeamName(index)}»`);
-      deleteBtn.onclick = () => {
+      deleteBtn.onclick = evt => {
+        evt.stopPropagation();
         if (!confirm(`Удалить команду «${team.name || defaultTeamName(index)}»?`)) return;
         teams.splice(index, 1);
         renderTeams();
         persistTeams();
       };
     }
+    card.addEventListener('click', evt => {
+      if (evt.target.closest('.team-edit')){
+        return;
+      }
+      setActiveTeam(index);
+    });
+    if (index === activeTeamIndex){
+      card.classList.add('is-selected');
+    }
     teamList.appendChild(card);
   });
+  updateTeamRenameBtn();
 }
 $('#teamAdd').onclick = ()=>{
   const icon = TEAM_ICONS[teams.length % TEAM_ICONS.length].id;
@@ -1355,6 +1445,20 @@ $('#teamAdd').onclick = ()=>{
   renderTeams();
   persistTeams();
 };
+
+if (teamRenameBtn){
+  teamRenameBtn.addEventListener('click', () => {
+    if (!teams.length) return;
+    const current = teams[activeTeamIndex];
+    const currentName = current?.name || defaultTeamName(activeTeamIndex);
+    const nextName = prompt('Новое название команды:', currentName);
+    if (nextName === null) return;
+    const trimmed = nextName.trim();
+    teams[activeTeamIndex].name = trimmed || defaultTeamName(activeTeamIndex);
+    renderTeams();
+    persistTeams();
+  });
+}
 
 const ts = {
   dictContainer: $('#teamDictSelector'),

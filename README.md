@@ -22,3 +22,7 @@ python -m http.server 8000
 
 ## PWA
 Приложение содержит манифест и service worker с офлайн-кэшем базовых ресурсов. После первого посещения интерфейс будет доступен без подключения к сети.
+
+## Android-APK офлайн
+
+Инструкцию по упаковке текущей версии CrocoMim в офлайн-APK через Capacitor смотрите в файле [docs/android-offline-apk.md](docs/android-offline-apk.md).

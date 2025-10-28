@@ -672,6 +672,10 @@ body{
   gap:8px;
   text-align:center;
 }
+.team-card.is-selected{
+  box-shadow:0 0 0 2px var(--accent);
+  border-radius:20px;
+}
 .team-card-top{
   display:flex;
   flex-direction:column;
