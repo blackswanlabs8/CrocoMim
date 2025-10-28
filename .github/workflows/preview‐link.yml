@@ -4,7 +4,6 @@ on:
   pull_request:
     types: [opened, reopened, synchronize]
 
-# Минимальные права для добавления комментариев и статусов
 permissions:
   contents: read
   pull-requests: write
@@ -20,14 +19,9 @@ jobs:
       - name: Compute preview URL
         id: vars
         run: |
-          # Имя ветки PR (ветка-источник)
           echo "BRANCH=${{ github.head_ref }}" >> $GITHUB_OUTPUT
-
-          # Полный raw URL к index.html (меняйте путь, если у вас другой)
           RAW_URL="https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.head_ref }}/public/index.html"
           echo "RAW_URL=$RAW_URL" >> $GITHUB_OUTPUT
-
-          # Итоговая ссылка через htmlpreview
           PREVIEW_URL="https://htmlpreview.github.io/?$RAW_URL"
           echo "PREVIEW_URL=$PREVIEW_URL" >> $GITHUB_OUTPUT
 
@@ -36,12 +30,20 @@ jobs:
         run: |
           set -e
           url="${{ steps.vars.outputs.RAW_URL }}"
-          echo "Checking: $url"
-          # HEAD-запрос; получим код ответа
           code=$(curl -s -o /dev/null -w "%{http_code}" -I "$url")
           echo "HTTP_CODE=$code" >> $GITHUB_OUTPUT
           echo "HTTP code: $code"
-          # не падаем, даже если 404 — пусть статус выставится как failure на следующем шаге
+
+      - name: Compute status fields
+        id: status
+        run: |
+          if [ "${{ steps.check.outputs.HTTP_CODE }}" = "200" ]; then
+            echo "STATE=success" >> $GITHUB_OUTPUT
+            echo "DESC=Preview is available" >> $GITHUB_OUTPUT
+          else
+            echo "STATE=failure" >> $GITHUB_OUTPUT
+            echo "DESC=index.html not found (HTTP ${{ steps.check.outputs.HTTP_CODE }})" >> $GITHUB_OUTPUT
+          fi
 
       - name: Comment (create or update) on PR with preview link
         uses: thollander/actions-comment-pull-request@v3
@@ -57,13 +59,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set commit status (success/failure) with link
+      - name: Set commit status with link
         uses: dawidd6/action-update-status@v2
         with:
           sha: ${{ github.event.pull_request.head.sha }}
-          state: ${{ steps.check.outputs.HTTP_CODE == '200' && 'success' || 'failure' }}
+          state: ${{ steps.status.outputs.STATE }}
           context: "Preview Site"
-          description: ${{ steps.check.outputs.HTTP_CODE == '200' && 'Preview is available' || 'index.html not found (HTTP ' + steps.check.outputs.HTTP_CODE + ')' }}
+          description: ${{ steps.status.outputs.DESC }}
           target_url: ${{ steps.vars.outputs.PREVIEW_URL }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
