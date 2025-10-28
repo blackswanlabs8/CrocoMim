@@ -246,6 +246,131 @@ function sanitizeWordNames(list){
     .filter(Boolean);
 }
 
+function sanitizeSessionWord(entry){
+  if (!entry || typeof entry.term !== 'string') return null;
+  const term = entry.term.trim();
+  if (!term) return null;
+  return {
+    term,
+    description: typeof entry.description === 'string' ? entry.description : '',
+    about: typeof entry.about === 'string' ? entry.about : '',
+    dictionaryId: typeof entry.dictionaryId === 'string' ? entry.dictionaryId : '',
+    id: typeof entry.id === 'string' ? entry.id : '',
+    difficulty: typeof entry.difficulty === 'string' ? entry.difficulty : ''
+  };
+}
+
+function sanitizeBreadcrumbContext(context){
+  if (!context || typeof context !== 'object') return null;
+  const selectedIds = Array.isArray(context.selectedIds)
+    ? context.selectedIds.filter(id => typeof id === 'string')
+    : [];
+  const includeCustom = !!context.includeCustom;
+  const difficulty = typeof context.difficulty === 'string' ? context.difficulty : '';
+  if (!selectedIds.length && !includeCustom && !difficulty) return null;
+  return {
+    selectedIds,
+    includeCustom,
+    difficulty
+  };
+}
+
+function sanitizeQuickSession(raw){
+  if (!raw || typeof raw !== 'object') return null;
+  const words = Array.isArray(raw.words)
+    ? raw.words.map(sanitizeSessionWord).filter(Boolean)
+    : [];
+  if (!words.length) return null;
+  const indexRaw = Number(raw.index);
+  let index = Number.isFinite(indexRaw) ? Math.trunc(indexRaw) : 0;
+  index = Math.min(Math.max(index, 0), words.length - 1);
+  const hit = Number.isFinite(Number(raw.hit)) ? Math.max(0, Math.trunc(Number(raw.hit))) : 0;
+  const miss = Number.isFinite(Number(raw.miss)) ? Math.max(0, Math.trunc(Number(raw.miss))) : 0;
+  const targetRaw = raw.target;
+  let target = null;
+  if (targetRaw !== null && targetRaw !== undefined){
+    const numeric = Number(targetRaw);
+    if (Number.isFinite(numeric) && numeric >= 0){
+      target = Math.trunc(numeric);
+    }
+  }
+  const timerRemaining = Number.isFinite(Number(raw.timerRemaining))
+    ? Math.max(0, Math.trunc(Number(raw.timerRemaining)))
+    : 0;
+  const timerSetting = Number.isFinite(Number(raw.timerSetting)) && Number(raw.timerSetting) > 0
+    ? Math.trunc(Number(raw.timerSetting))
+    : 0;
+  return {
+    words,
+    index,
+    hide: !!raw.hide,
+    helpOpen: !!raw.helpOpen,
+    hit,
+    miss,
+    hitWords: sanitizeWordNames(raw.hitWords),
+    missWords: sanitizeWordNames(raw.missWords),
+    target,
+    timerEnabled: !!raw.timerEnabled,
+    timerRunning: !!raw.timerRunning,
+    timerRemaining,
+    breadcrumbContext: sanitizeBreadcrumbContext(raw.breadcrumbContext),
+    timerSetting,
+    difficulty: typeof raw.difficulty === 'string' ? raw.difficulty : '',
+    customSelected: !!raw.customSelected,
+    selectedDictionaries: Array.isArray(raw.selectedDictionaries)
+      ? raw.selectedDictionaries.filter(id => typeof id === 'string')
+      : [],
+    customText: typeof raw.customText === 'string' ? raw.customText : ''
+  };
+}
+
+function sanitizeTeamSession(raw){
+  if (!raw || typeof raw !== 'object') return null;
+  const words = Array.isArray(raw.words)
+    ? raw.words.map(sanitizeSessionWord).filter(Boolean)
+    : [];
+  if (!words.length) return null;
+  const indexRaw = Number(raw.index);
+  let index = Number.isFinite(indexRaw) ? Math.trunc(indexRaw) : -1;
+  if (index < -1) index = -1;
+  if (words.length && index >= words.length) index = words.length - 1;
+  const turnRaw = Number(raw.turn);
+  const turn = Number.isFinite(turnRaw) && turnRaw >= 0 ? Math.trunc(turnRaw) : 0;
+  const timerRemaining = Number.isFinite(Number(raw.timerRemaining))
+    ? Math.max(0, Math.trunc(Number(raw.timerRemaining)))
+    : 0;
+  const timerSetting = Number.isFinite(Number(raw.timerSetting)) && Number(raw.timerSetting) > 0
+    ? Math.trunc(Number(raw.timerSetting))
+    : 0;
+  const pointGoalRaw = Number(raw.teamPointGoal);
+  const teamPointGoal = Number.isFinite(pointGoalRaw) && pointGoalRaw >= 0
+    ? Math.trunc(pointGoalRaw)
+    : 0;
+  return {
+    words,
+    index,
+    hide: !!raw.hide,
+    helpOpen: !!raw.helpOpen,
+    turn,
+    roundActive: !!raw.roundActive,
+    timerExpired: !!raw.timerExpired,
+    timerEnabled: !!raw.timerEnabled,
+    timerRunning: !!raw.timerRunning,
+    timerRemaining,
+    teamPointsEnabled: !!raw.teamPointsEnabled,
+    teamPointGoal,
+    breadcrumbContext: sanitizeBreadcrumbContext(raw.breadcrumbContext),
+    statusText: typeof raw.statusText === 'string' ? raw.statusText : '',
+    timerSetting,
+    difficulty: typeof raw.difficulty === 'string' ? raw.difficulty : '',
+    customSelected: !!raw.customSelected,
+    selectedDictionaries: Array.isArray(raw.selectedDictionaries)
+      ? raw.selectedDictionaries.filter(id => typeof id === 'string')
+      : [],
+    customText: typeof raw.customText === 'string' ? raw.customText : ''
+  };
+}
+
 function ensureDictionarySummaryStructure(state){
   if (!state?.dictSummary) return null;
   const summary = state.dictSummary;
@@ -686,6 +811,8 @@ const QUICK_STATS_KEY = 'croc-quick-stats';
 const TEAM_STATS_KEY = 'croc-team-stats';
 const QUICK_SETTINGS_KEY = 'croc-quick-settings';
 const TEAM_SETTINGS_KEY = 'croc-team-settings';
+const QUICK_SESSION_KEY = 'croc-quick-session';
+const TEAM_SESSION_KEY = 'croc-team-session';
 
 let quickSavedProfile = null;
 let teamSavedProfile = null;
@@ -699,6 +826,8 @@ let teamInitialCustomSelected = false;
 let teamInitialDifficulty = null;
 let teamInitialTimerEnabled = false;
 let teamInitialPtsEnabled = false;
+let quickPendingSession = null;
+let teamPendingSession = null;
 
 const syncThemeControls = mode => {
   if (themeSlider) themeSlider.value = mode === 'dark' ? '1' : '0';
@@ -744,6 +873,10 @@ const readJson = (key, fallback) => {
 };
 const writeJson = (key, value) => {
   try{ localStorage.setItem(key, JSON.stringify(value)); }
+  catch{}
+};
+const removeStorageItem = key => {
+  try{ localStorage.removeItem(key); }
   catch{}
 };
 
@@ -935,18 +1068,33 @@ const show = v => {
   }
   if (v === 'viewQuickGame'){
     refreshQuickBreadcrumbs();
-  }else if (v === 'viewTeamGame'){
+    maybeShowQuickResumePrompt();
+  }else{
+    hideQuickResumePrompt();
+  }
+  if (v === 'viewTeamGame'){
     refreshTeamBreadcrumbs();
+    maybeShowTeamResumePrompt();
+  }else{
+    hideTeamResumePrompt();
   }
 };
 
 // Header buttons
 backBtn.onclick = () => {
-  if (screen==='viewQuickGame' || screen==='viewTeamGame'){
+  const leavingQuick = screen==='viewQuickGame';
+  const leavingTeam = screen==='viewTeamGame';
+  if (leavingQuick || leavingTeam){
     if (!confirm('Выйти в меню? Текущая партия будет завершена.')) return;
   }
   stopQuickTimer();
   if (typeof tTimerId !== 'undefined'){ clearInterval(tTimerId); tTimerId=null; }
+  if (leavingQuick){
+    clearQuickSession();
+  }
+  if (leavingTeam){
+    clearTeamSession();
+  }
   show('viewMenu');
 };
 if (helpBtn){
@@ -1047,6 +1195,7 @@ if (storedQuickSettingsRaw && typeof storedQuickSettingsRaw === 'object'){
   quickInitialTimerEnabled = !!(qs.timerToggle && qs.timerToggle.checked);
   quickInitialPtsEnabled = !!(qs.ptsToggle && qs.ptsToggle.checked);
 }
+quickPendingSession = sanitizeQuickSession(readJson(QUICK_SESSION_KEY, null));
 initDifficultyControls(qs);
 qs.onDifficultyChange = level => {
   qs.difficulty = level;
@@ -1136,19 +1285,179 @@ const qUI = {
   hideBtn: $('#qHideBtn'), meaningBtn: $('#qMeaningBtn'),
   tBox: $('#qTimerBox'), tLabel: $('#qTimer'),
   restartTimerBtn: $('#qRestartTimer'),
-  statsBtn: $('#qStatsBtn')
+  statsBtn: $('#qStatsBtn'),
+  resumeNotice: $('#quickResumeNotice'),
+  resumeBtn: $('#quickResumeBtn')
 };
 const qHelpState = { open:false };
+
+function setQuickControlsEnabled(enabled){
+  [qUI.hitBtn, qUI.skipBtn, qUI.next, qUI.hideBtn, qUI.meaningBtn, qUI.helpBtn].forEach(btn => {
+    if (btn) btn.disabled = !enabled;
+  });
+}
 
 function updateQuickWordView(){
   updateWordView(qUI, { entry: qWords[qIndex] || null, hidden: qHide, helpState: qHelpState });
   refreshQuickBreadcrumbs();
+}
+
+function collectQuickSession(){
+  if (!Array.isArray(qWords) || !qWords.length) return null;
+  const words = qWords.map(sanitizeSessionWord).filter(Boolean);
+  if (!words.length) return null;
+  const clampedIndex = Math.min(Math.max(Number.isFinite(qIndex) ? Math.trunc(qIndex) : 0, 0), words.length - 1);
+  const target = qTarget === null || qTarget === undefined
+    ? null
+    : (Number.isFinite(Number(qTarget)) ? Math.max(0, Math.trunc(Number(qTarget))) : null);
+  const timerRemaining = Number.isFinite(Number(qRemain)) ? Math.max(0, Math.trunc(Number(qRemain))) : 0;
+  const timerSetting = Number.isFinite(Number(qs.time)) && Number(qs.time) > 0 ? Math.trunc(Number(qs.time)) : 0;
+  return {
+    words,
+    index: clampedIndex,
+    hide: !!qHide,
+    helpOpen: !!qHelpState.open,
+    hit: Math.max(0, Math.trunc(Number.isFinite(qHit) ? qHit : 0)),
+    miss: Math.max(0, Math.trunc(Number.isFinite(qMiss) ? qMiss : 0)),
+    hitWords: sanitizeWordNames(qHitWords),
+    missWords: sanitizeWordNames(qMissWords),
+    target,
+    timerEnabled: !!(qs.timerToggle && qs.timerToggle.checked),
+    timerRunning: !!qTimerRunning,
+    timerRemaining,
+    breadcrumbContext: sanitizeBreadcrumbContext(qBreadcrumbContext),
+    timerSetting,
+    difficulty: typeof qs.difficulty === 'string' ? qs.difficulty : '',
+    customSelected: !!qs.customSelected,
+    selectedDictionaries: Array.from(qs.selectedDictionaries || []).filter(id => typeof id === 'string'),
+    customText: typeof qs.customText?.value === 'string' ? qs.customText.value : ''
+  };
+}
+
+function persistQuickSession(){
+  const session = collectQuickSession();
+  if (session){
+    writeJson(QUICK_SESSION_KEY, session);
+    return;
+  }
+  if (quickPendingSession){
+    return;
+  }
+  clearQuickSession();
+}
+
+function clearQuickSession(){
+  quickPendingSession = null;
+  removeStorageItem(QUICK_SESSION_KEY);
+}
+
+function showQuickResumePrompt(){
+  if (qUI.resumeNotice) qUI.resumeNotice.hidden = false;
+  setQuickControlsEnabled(false);
+  if (qUI.tBox) qUI.tBox.style.display = 'none';
+  if (qUI.restartTimerBtn) qUI.restartTimerBtn.style.display = 'none';
+}
+
+function hideQuickResumePrompt(){
+  if (qUI.resumeNotice) qUI.resumeNotice.hidden = true;
+}
+
+function maybeShowQuickResumePrompt(){
+  if (quickPendingSession){
+    showQuickResumePrompt();
+  }else{
+    hideQuickResumePrompt();
+    if (Array.isArray(qWords) && qWords.length){
+      setQuickControlsEnabled(true);
+    }
+  }
+}
+
+function applyQuickSession(session){
+  const data = sanitizeQuickSession(session);
+  if (!data) return;
+  quickPendingSession = null;
+  qBreadcrumbContext = data.breadcrumbContext || null;
+  qWords = data.words.map(word => ({ ...word }));
+  qIndex = Math.min(Math.max(data.index, 0), qWords.length ? qWords.length - 1 : 0);
+  qHide = !!data.hide;
+  qHelpState.open = !!data.helpOpen;
+  qHit = Math.max(0, data.hit || 0);
+  qMiss = Math.max(0, data.miss || 0);
+  qHitWords = Array.isArray(data.hitWords) ? data.hitWords.slice() : [];
+  qMissWords = Array.isArray(data.missWords) ? data.missWords.slice() : [];
+  qTarget = data.target === null ? null : data.target;
+  if (qs.ptsToggle){
+    qs.ptsToggle.checked = data.target !== null;
+  }
+  if (data.target !== null && Number.isFinite(data.target) && data.target > 0){
+    qs.pts = data.target;
+  }
+  upQuickPts();
+  if (qs.timerToggle){
+    qs.timerToggle.checked = data.timerEnabled;
+  }
+  if (data.timerSetting > 0){
+    qs.time = data.timerSetting;
+  }
+  upQuickTime();
+  updateQuickTimerUI();
+  updateQuickPts();
+  if (typeof qs.customSelected === 'boolean'){
+    qs.customSelected = !!data.customSelected;
+  }
+  if (qs.customText && typeof data.customText === 'string'){
+    qs.customText.value = data.customText;
+  }
+  updateCustomBoxVisibility(qs);
+  updateQuickCounters();
+  updateQuickWordView();
+  if (qUI.hideBtn) qUI.hideBtn.textContent = qHide ? 'Показать слово' : 'Скрыть слово';
+  if (qTimerId){
+    clearInterval(qTimerId);
+    qTimerId = null;
+  }
+  qTimerRunning = false;
+  const baseRemain = data.timerRemaining > 0
+    ? data.timerRemaining
+    : (data.timerSetting > 0 ? data.timerSetting : qs.time);
+  qRemain = Math.max(0, Math.trunc(Number(baseRemain) || 0));
+  if (data.timerEnabled){
+    if (qUI.tBox) qUI.tBox.style.display = 'inline-flex';
+    if (qUI.tLabel){
+      qUI.tLabel.textContent = `${pad(Math.floor(qRemain/60))}:${pad(qRemain%60)}`;
+    }
+    if (data.timerRunning && qRemain > 0){
+      startQuickTimerCountdown(qRemain);
+    }else{
+      qTimerRunning = false;
+      updateQuickTimerButton();
+      persistQuickSession();
+    }
+  }else{
+    if (qUI.tBox) qUI.tBox.style.display = 'none';
+    qRemain = 0;
+    qTimerRunning = false;
+    updateQuickTimerButton();
+    persistQuickSession();
+  }
+  setQuickControlsEnabled(true);
+  hideQuickResumePrompt();
 }
 if (qUI.helpBtn){
   qUI.helpBtn.addEventListener('click', () => {
     if (qUI.helpBtn.disabled) return;
     qHelpState.open = !qHelpState.open;
     updateQuickWordView();
+    persistQuickSession();
+  });
+}
+if (qUI.resumeBtn){
+  qUI.resumeBtn.addEventListener('click', () => {
+    if (!quickPendingSession) return;
+    qUI.resumeBtn.disabled = true;
+    applyQuickSession(quickPendingSession);
+    qUI.resumeBtn.disabled = false;
   });
 }
 
@@ -1213,11 +1522,15 @@ function stopQuickTimer(){
   qTimerId = null;
   qTimerRunning = false;
   updateQuickTimerButton();
+  if (Array.isArray(qWords) && qWords.length){
+    persistQuickSession();
+  }
 }
 
-function restartQuickTimer(){
-  if (!qs.timerToggle.checked){
+function startQuickTimerCountdown(remaining){
+  if (!qs.timerToggle || !qs.timerToggle.checked){
     if (qUI.tBox) qUI.tBox.style.display = 'none';
+    qRemain = 0;
     stopQuickTimer();
     return;
   }
@@ -1227,24 +1540,36 @@ function restartQuickTimer(){
   if (qTimerId){
     clearInterval(qTimerId);
   }
-  qRemain = qs.time;
+  qRemain = Math.max(0, Math.trunc(Number(remaining) || 0));
   qUI.tLabel.textContent = `${pad(Math.floor(qRemain/60))}:${pad(qRemain%60)}`;
-  qTimerRunning = true;
+  qTimerRunning = qRemain > 0;
   updateQuickTimerButton();
+  persistQuickSession();
+  if (!qTimerRunning){
+    return;
+  }
   qTimerId = setInterval(()=>{
-    qRemain--;
+    qRemain = Math.max(0, qRemain - 1);
+    if (qUI.tLabel){
+      qUI.tLabel.textContent = `${pad(Math.floor(qRemain/60))}:${pad(qRemain%60)}`;
+    }
     if (qRemain <= 0){
-      qUI.tLabel.textContent = '00:00';
+      if (qUI.tLabel) qUI.tLabel.textContent = '00:00';
       stopQuickTimer();
       playAlarm();
+      persistQuickSession();
       nextWord();
     }else{
-      qUI.tLabel.textContent = `${pad(Math.floor(qRemain/60))}:${pad(qRemain%60)}`;
       if (qRemain <= 10){
         playTick();
       }
+      persistQuickSession();
     }
   },1000);
+}
+
+function restartQuickTimer(){
+  startQuickTimerCountdown(qs.time);
 }
 
 function showWordStats(title, hitList, missList){
@@ -1325,6 +1650,8 @@ async function startQuickGame(){
       qRemain = 0;
     }
     updateQuickTimerButton();
+    quickPendingSession = null;
+    persistQuickSession();
     show('viewQuickGame');
   }finally{
     if (qs.start) qs.start.disabled = false;
@@ -1344,6 +1671,7 @@ function nextWord(){
   qHelpState.open = false;
   updateQuickWordView();
   if (qUI.hideBtn) qUI.hideBtn.textContent = 'Скрыть слово';
+  persistQuickSession();
 }
 
 qUI.next.onclick = nextWord;
@@ -1357,6 +1685,7 @@ qUI.hitBtn.onclick = ()=>{
     stopQuickTimer();
     playAlarm();
     alert('Вы достигли цели!');
+    clearQuickSession();
     show('viewMenu');
     return;
   }
@@ -1377,6 +1706,7 @@ qUI.hideBtn.onclick = ()=>{
   }
   updateQuickWordView();
   qUI.hideBtn.textContent = qHide ? 'Показать слово' : 'Скрыть слово';
+  persistQuickSession();
 };
 if (qUI.restartTimerBtn){
   qUI.restartTimerBtn.onclick = restartQuickTimer;
@@ -1609,6 +1939,7 @@ if (storedTeamSettingsRaw && typeof storedTeamSettingsRaw === 'object'){
   teamInitialTimerEnabled = !!(ts.timerToggle && ts.timerToggle.checked);
   teamInitialPtsEnabled = !!(ts.ptsToggle && ts.ptsToggle.checked);
 }
+teamPendingSession = sanitizeTeamSession(readJson(TEAM_SESSION_KEY, null));
 initDifficultyControls(ts);
 ts.onDifficultyChange = level => {
   ts.difficulty = level;
@@ -1835,7 +2166,9 @@ const tUI = {
   hideBtn: $('#tHideBtn'), meaning: $('#tMeaningBtn'),
   startRound: $('#tStartRound'), endRound: $('#tEndRound'),
   status: $('#tRoundStatus'),
-  statsBtn: $('#tStatsBtn')
+  statsBtn: $('#tStatsBtn'),
+  resumeNotice: $('#teamResumeNotice'),
+  resumeBtn: $('#teamResumeBtn')
 };
 const tHelpState = { open:false };
 
@@ -1851,7 +2184,194 @@ if (tUI.helpBtn){
   });
 }
 updateTeamWordView();
+if (tUI.resumeBtn){
+  tUI.resumeBtn.addEventListener('click', () => {
+    if (!teamPendingSession) return;
+    tUI.resumeBtn.disabled = true;
+    applyTeamSession(teamPendingSession);
+    tUI.resumeBtn.disabled = false;
+  });
+}
 
+function collectTeamSession(){
+  if (!Array.isArray(tWords) || !tWords.length) return null;
+  const words = tWords.map(sanitizeSessionWord).filter(Boolean);
+  if (!words.length) return null;
+  let index = Number.isFinite(tIndex) ? Math.trunc(tIndex) : -1;
+  if (index < -1) index = -1;
+  if (words.length && index >= words.length) index = words.length - 1;
+  const turnIndex = Number.isFinite(turn) && turn >= 0 ? Math.trunc(turn) : 0;
+  const timerRemaining = Number.isFinite(Number(tRemain)) ? Math.max(0, Math.trunc(Number(tRemain))) : 0;
+  const timerSetting = Number.isFinite(Number(ts.time)) && Number(ts.time) > 0 ? Math.trunc(Number(ts.time)) : 0;
+  const goal = Number.isFinite(Number(teamPointGoal)) && Number(teamPointGoal) >= 0
+    ? Math.trunc(Number(teamPointGoal))
+    : 0;
+  const statusText = typeof tUI.status?.textContent === 'string' ? tUI.status.textContent : '';
+  return {
+    words,
+    index,
+    hide: !!tHide,
+    helpOpen: !!tHelpState.open,
+    turn: turnIndex,
+    roundActive: !!roundActive,
+    timerExpired: !!timerExpired,
+    timerEnabled: !!teamTimerEnabled,
+    timerRunning: !!(teamTimerEnabled && roundActive && !timerExpired && tTimerId),
+    timerRemaining,
+    teamPointsEnabled: !!teamPointsEnabled,
+    teamPointGoal: goal,
+    breadcrumbContext: sanitizeBreadcrumbContext(tBreadcrumbContext),
+    statusText,
+    timerSetting,
+    difficulty: typeof ts.difficulty === 'string' ? ts.difficulty : '',
+    customSelected: !!ts.customSelected,
+    selectedDictionaries: Array.from(ts.selectedDictionaries || []).filter(id => typeof id === 'string'),
+    customText: typeof ts.customText?.value === 'string' ? ts.customText.value : ''
+  };
+}
+
+function persistTeamSession(){
+  const session = collectTeamSession();
+  if (session){
+    writeJson(TEAM_SESSION_KEY, session);
+    return;
+  }
+  if (teamPendingSession){
+    return;
+  }
+  clearTeamSession();
+}
+
+function clearTeamSession(){
+  teamPendingSession = null;
+  removeStorageItem(TEAM_SESSION_KEY);
+}
+
+function showTeamResumePrompt(){
+  if (tUI.resumeNotice) tUI.resumeNotice.hidden = false;
+  setRoundControlsEnabled(false);
+  if (tUI.startRound){
+    tUI.startRound.disabled = true;
+  }
+  if (tUI.endRound){
+    tUI.endRound.disabled = true;
+    tUI.endRound.style.display = 'none';
+  }
+  if (tUI.status){
+    tUI.status.textContent = 'Игра была приостановлена. Нажмите «Продолжить игру».';
+  }
+}
+
+function hideTeamResumePrompt(){
+  if (tUI.resumeNotice) tUI.resumeNotice.hidden = true;
+  if (tUI.startRound){
+    tUI.startRound.disabled = false;
+  }
+}
+
+function maybeShowTeamResumePrompt(){
+  if (teamPendingSession){
+    showTeamResumePrompt();
+  }else{
+    hideTeamResumePrompt();
+  }
+}
+
+function applyTeamSession(session){
+  const data = sanitizeTeamSession(session);
+  if (!data) return;
+  teamPendingSession = null;
+  tBreadcrumbContext = data.breadcrumbContext || null;
+  tWords = data.words.map(word => ({ ...word }));
+  tIndex = Math.max(-1, Math.min(data.index, tWords.length ? tWords.length - 1 : -1));
+  tHide = !!data.hide;
+  tHelpState.open = !!data.helpOpen;
+  turn = Math.max(0, Math.trunc(data.turn || 0));
+  if (teams.length && turn >= teams.length){
+    turn = teams.length - 1;
+  }
+  roundActive = !!data.roundActive;
+  timerExpired = !!data.timerExpired;
+  teamTimerEnabled = !!data.timerEnabled;
+  teamPointsEnabled = !!data.teamPointsEnabled;
+  teamPointGoal = Number.isFinite(data.teamPointGoal) ? Math.max(0, data.teamPointGoal) : teamPointGoal;
+  if (ts.timerToggle){
+    ts.timerToggle.checked = teamTimerEnabled;
+  }
+  if (data.timerSetting > 0){
+    ts.time = data.timerSetting;
+  }
+  if (ts.ptsToggle){
+    ts.ptsToggle.checked = teamPointsEnabled;
+  }
+  if (teamPointsEnabled && data.teamPointGoal > 0){
+    ts.pts = data.teamPointGoal;
+  }
+  upTeamTime();
+  upPts();
+  updateTeamTimerUI();
+  updatePtsUI();
+  if (typeof ts.customSelected === 'boolean'){
+    ts.customSelected = !!data.customSelected;
+  }
+  if (ts.customText && typeof data.customText === 'string'){
+    ts.customText.value = data.customText;
+  }
+  updateCustomBoxVisibility(ts);
+  renderScore();
+  updateTurnHeader();
+  updateTeamWordView();
+  if (tUI.hideBtn) tUI.hideBtn.textContent = tHide ? 'Показать слово' : 'Скрыть слово';
+  if (tTimerId){
+    clearInterval(tTimerId);
+    tTimerId = null;
+  }
+  const baseRemain = data.timerRemaining > 0
+    ? data.timerRemaining
+    : (data.timerSetting > 0 ? data.timerSetting : ts.time);
+  tRemain = Math.max(0, Math.trunc(Number(baseRemain) || 0));
+  if (teamTimerEnabled){
+    if (tUI.tBox) tUI.tBox.style.display = 'inline-flex';
+    if (tUI.tLabel){
+      tUI.tLabel.textContent = `${pad(Math.floor(tRemain/60))}:${pad(tRemain%60)}`;
+    }
+    if (roundActive && data.timerRunning && !timerExpired && tRemain > 0){
+      startTeamTimerCountdown(tRemain);
+    }
+  }else if (tUI.tBox){
+    tUI.tBox.style.display = 'none';
+  }
+  if (roundActive){
+    setRoundControlsEnabled(true);
+    if (tUI.startRound){
+      tUI.startRound.style.display = 'none';
+    }
+    if (tUI.endRound){
+      tUI.endRound.style.display = 'inline-flex';
+      tUI.endRound.disabled = false;
+    }
+    if (timerExpired){
+      if (tUI.next) tUI.next.disabled = true;
+      lockFinalActions();
+    }else if (tUI.next){
+      tUI.next.disabled = false;
+    }
+  }else{
+    setRoundControlsEnabled(false);
+    if (tUI.endRound){
+      tUI.endRound.style.display = 'none';
+    }
+    if (tUI.startRound){
+      tUI.startRound.style.display = 'inline-flex';
+      tUI.startRound.disabled = false;
+    }
+  }
+  if (data.statusText){
+    setStatus(data.statusText);
+  }
+  hideTeamResumePrompt();
+  persistTeamSession();
+}
 function updateTurnHeader(){
   if (!teams[turn]) return;
   const current = teams[turn];
@@ -1877,6 +2397,43 @@ function renderScore(){
   });
 }
 
+function startTeamTimerCountdown(remaining){
+  if (!teamTimerEnabled){
+    if (tUI.tBox) tUI.tBox.style.display = 'none';
+    return;
+  }
+  if (!tUI.tLabel) return;
+  if (tUI.tBox) tUI.tBox.style.display = 'inline-flex';
+  if (tTimerId){
+    clearInterval(tTimerId);
+  }
+  tRemain = Math.max(0, Math.trunc(Number(remaining) || 0));
+  tUI.tLabel.textContent = `${pad(Math.floor(tRemain/60))}:${pad(tRemain%60)}`;
+  if (tRemain <= 0){
+    clearInterval(tTimerId); tTimerId = null;
+    handleTimerEnd();
+    persistTeamSession();
+    return;
+  }
+  tTimerId = setInterval(()=>{
+    tRemain = Math.max(0, tRemain - 1);
+    if (tUI.tLabel){
+      tUI.tLabel.textContent = `${pad(Math.floor(tRemain/60))}:${pad(tRemain%60)}`;
+    }
+    if (tRemain <= 0){
+      clearInterval(tTimerId); tTimerId = null;
+      handleTimerEnd();
+      persistTeamSession();
+    }else{
+      if (tRemain <= 10){
+        playTick();
+      }
+      persistTeamSession();
+    }
+  },1000);
+  persistTeamSession();
+}
+
 function setRoundControlsEnabled(enabled){
   [tUI.next, tUI.hit, tUI.skip, tUI.hideBtn, tUI.meaning, tUI.helpBtn].forEach(btn=>{
     if (btn){
@@ -1900,6 +2457,7 @@ function advanceWord(){
   tHelpState.open = false;
   updateTeamWordView();
   if (tUI.hideBtn) tUI.hideBtn.textContent = 'Скрыть слово';
+  persistTeamSession();
 }
 
 function setStatus(text){
@@ -2009,6 +2567,8 @@ async function startTeamGame(){
     }
     const currentName = teams[turn]?.name || defaultTeamName(turn);
     preRoundMessage(currentName, true);
+    teamPendingSession = null;
+    persistTeamSession();
     show('viewTeamGame');
   }finally{
     if (ts.start) ts.start.disabled = false;
@@ -2034,24 +2594,10 @@ function beginRound(){
   setStatus(`Ход команды «${currentName}»`);
   clearInterval(tTimerId); tTimerId=null;
   if (teamTimerEnabled){
-    tUI.tBox.style.display='inline-flex';
-    tRemain = ts.time;
-    tUI.tLabel.textContent = `${pad(Math.floor(tRemain/60))}:${pad(tRemain%60)}`;
-    tTimerId = setInterval(()=>{
-      tRemain--;
-      if (tRemain <= 0){
-        clearInterval(tTimerId); tTimerId=null;
-        tUI.tLabel.textContent = '00:00';
-        handleTimerEnd();
-      }else{
-        tUI.tLabel.textContent = `${pad(Math.floor(tRemain/60))}:${pad(tRemain%60)}`;
-        if (tRemain <= 10){
-          playTick();
-        }
-      }
-    },1000);
+    startTeamTimerCountdown(ts.time);
   }else{
-    tUI.tBox.style.display='none';
+    if (tUI.tBox) tUI.tBox.style.display='none';
+    tRemain = ts.time;
   }
   advanceWord();
 }
@@ -2062,6 +2608,7 @@ function handleTimerEnd(){
   playAlarm();
   setStatus('Время вышло! Завершите объяснение и нажмите «Закончить».');
   if (tUI.next) tUI.next.disabled = true;
+  persistTeamSession();
 }
 
 function lockFinalActions(){
@@ -2095,6 +2642,7 @@ function finishRound(){
   }else{
     tUI.tBox.style.display='none';
   }
+  persistTeamSession();
 }
 
 function declareWinner(team){
@@ -2102,6 +2650,7 @@ function declareWinner(team){
   roundActive=false;
   timerExpired=false;
   alert('Победа: ' + team.name);
+  clearTeamSession();
   show('viewMenu');
 }
 
@@ -2124,6 +2673,7 @@ tUI.hideBtn.onclick = ()=>{
   }
   updateTeamWordView();
   tUI.hideBtn.textContent = tHide ? 'Показать слово' : 'Скрыть слово';
+  persistTeamSession();
 };
 tUI.meaning.onclick = ()=>{
   if (!roundActive || tIndex<0) return;
@@ -2156,6 +2706,7 @@ tUI.hit.onclick = ()=>{
   if (teamPointsEnabled) teams[turn].points++;
   renderScore();
   persistTeams();
+  persistTeamSession();
   if (teamPointsEnabled && teams[turn].points >= teamPointGoal){
     declareWinner(teams[turn]);
     return;
@@ -2174,6 +2725,7 @@ tUI.skip.onclick = ()=>{
   if (teamPointsEnabled) teams[turn].points--;
   renderScore();
   persistTeams();
+  persistTeamSession();
   if (timerExpired){
     lockFinalActions();
     return;
