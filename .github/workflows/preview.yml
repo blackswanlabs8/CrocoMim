@@ -1,0 +1,28 @@
+name: Publish HTML preview link
+
+on:
+  push:
+    branches:
+      - '*'
+  workflow_dispatch:
+
+jobs:
+  html-preview:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build HTML preview URL
+        id: preview
+        run: |
+          BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          RAW_URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${BRANCH}/public/index.html"
+          PREVIEW_URL="https://htmlpreview.github.io/?${RAW_URL}"
+          echo "preview_url=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Publish link to workflow summary
+        run: |
+          echo "### HTML preview for ${GITHUB_REPOSITORY}" >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ steps.preview.outputs.preview_url }}" >> "$GITHUB_STEP_SUMMARY"
