@@ -59,13 +59,21 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set commit status with link
-        uses: dawidd6/action-update-status@v2
+      - name: Set commit status with link (via GitHub API)
+        uses: actions/github-script@v7
         with:
-          sha: ${{ github.event.pull_request.head.sha }}
-          state: ${{ steps.status.outputs.STATE }}
-          context: "Preview Site"
-          description: ${{ steps.status.outputs.DESC }}
-          target_url: ${{ steps.vars.outputs.PREVIEW_URL }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const sha = context.payload.pull_request.head.sha;
+            const state = '${{ steps.status.outputs.STATE }}'; // success | failure | error | pending
+            const description = '${{ steps.status.outputs.DESC }}';
+            const target_url = '${{ steps.vars.outputs.PREVIEW_URL }}';
+
+            await github.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha,
+              state,
+              context: 'Preview Site',
+              description,
+              target_url
+            });
