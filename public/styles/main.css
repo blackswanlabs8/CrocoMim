@@ -849,6 +849,35 @@ body.theme-dark .help-overlay{
   background:rgba(8,15,28,.72);
 }
 
+@media (max-width:600px){
+  .help-overlay{
+    padding:16px;
+  }
+  .help-overlay__dialog{
+    padding:22px 18px 18px;
+  }
+  .crocomim-help{
+    font-size:.95rem;
+    line-height:1.35;
+  }
+  .crocomim-help h1{
+    font-size:1.2rem;
+    margin:0 0 12px;
+  }
+  .crocomim-help h2{
+    font-size:1rem;
+    margin:16px 0 6px;
+  }
+  .crocomim-help p{
+    margin:8px 0;
+    line-height:1.4;
+  }
+  .crocomim-help ul{
+    margin:2px 0 0;
+    padding-left:18px;
+  }
+}
+
 @media (max-width:960px){
   body{
     padding:18px 14px;
