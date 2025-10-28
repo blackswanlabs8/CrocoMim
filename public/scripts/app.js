@@ -467,6 +467,13 @@ function applyDictionarySelectionChange(state, opts = {}){
     if (state.customSelected) payload.push(CUSTOM_DICTIONARY_META.id);
     state.onDictionaryChange(payload);
   }
+  if (!opts.skipPersist){
+    if (state === qs){
+      persistQuickSettings();
+    }else if (state === ts){
+      persistTeamSettings();
+    }
+  }
 }
 
 function setDictionarySelection(state, ids, opts = {}){
@@ -677,6 +684,21 @@ const THEME_KEY = 'croc-theme';
 const SCREEN_KEY = 'croc-screen';
 const QUICK_STATS_KEY = 'croc-quick-stats';
 const TEAM_STATS_KEY = 'croc-team-stats';
+const QUICK_SETTINGS_KEY = 'croc-quick-settings';
+const TEAM_SETTINGS_KEY = 'croc-team-settings';
+
+let quickSavedProfile = null;
+let teamSavedProfile = null;
+let quickInitialSelectedIds = [];
+let quickInitialCustomSelected = false;
+let quickInitialDifficulty = null;
+let quickInitialTimerEnabled = false;
+let quickInitialPtsEnabled = false;
+let teamInitialSelectedIds = [];
+let teamInitialCustomSelected = false;
+let teamInitialDifficulty = null;
+let teamInitialTimerEnabled = false;
+let teamInitialPtsEnabled = false;
 
 const syncThemeControls = mode => {
   if (themeSlider) themeSlider.value = mode === 'dark' ? '1' : '0';
@@ -724,6 +746,64 @@ const writeJson = (key, value) => {
   try{ localStorage.setItem(key, JSON.stringify(value)); }
   catch{}
 };
+
+function collectQuickSettings(){
+  if (!qs) return null;
+  const selected = Array.from(qs.selectedDictionaries || [])
+    .filter(id => typeof id === 'string' && id !== CUSTOM_DICTIONARY_META.id);
+  const difficulty = typeof qs.difficulty === 'string' && ALL_DIFFICULTIES.includes(qs.difficulty)
+    ? qs.difficulty
+    : 'easy';
+  const time = Number(qs.time);
+  const pts = Number(qs.pts);
+  const profile = {
+    selectedDictionaries: selected,
+    customSelected: !!qs.customSelected,
+    difficulty,
+    timerEnabled: !!(qs.timerToggle && qs.timerToggle.checked),
+    time: Number.isFinite(time) && time > 0 ? time : 0,
+    ptsEnabled: !!(qs.ptsToggle && qs.ptsToggle.checked),
+    pts: Number.isFinite(pts) && pts > 0 ? pts : 0,
+    customText: typeof qs.customText?.value === 'string' ? qs.customText.value : ''
+  };
+  return profile;
+}
+
+function persistQuickSettings(){
+  const profile = collectQuickSettings();
+  if (!profile) return;
+  quickSavedProfile = { ...profile };
+  writeJson(QUICK_SETTINGS_KEY, profile);
+}
+
+function collectTeamSettings(){
+  if (!ts) return null;
+  const selected = Array.from(ts.selectedDictionaries || [])
+    .filter(id => typeof id === 'string' && id !== CUSTOM_DICTIONARY_META.id);
+  const difficulty = typeof ts.difficulty === 'string' && ALL_DIFFICULTIES.includes(ts.difficulty)
+    ? ts.difficulty
+    : 'easy';
+  const time = Number(ts.time);
+  const pts = Number(ts.pts);
+  const profile = {
+    selectedDictionaries: selected,
+    customSelected: !!ts.customSelected,
+    difficulty,
+    timerEnabled: !!(ts.timerToggle && ts.timerToggle.checked),
+    time: Number.isFinite(time) && time > 0 ? time : 0,
+    ptsEnabled: !!(ts.ptsToggle && ts.ptsToggle.checked),
+    pts: Number.isFinite(pts) && pts > 0 ? pts : 0,
+    customText: typeof ts.customText?.value === 'string' ? ts.customText.value : ''
+  };
+  return profile;
+}
+
+function persistTeamSettings(){
+  const profile = collectTeamSettings();
+  if (!profile) return;
+  teamSavedProfile = { ...profile };
+  writeJson(TEAM_SETTINGS_KEY, profile);
+}
 const initialTheme = readThemePref();
 applyTheme(initialTheme === 'dark' ? 'dark' : 'light');
 if (themeSlider){
@@ -910,16 +990,78 @@ const qs = {
   ptsLabel: $('#quickPtsLabel'),
   start: $('#startQuick')
 };
+
+const storedQuickSettingsRaw = readJson(QUICK_SETTINGS_KEY, null);
+if (storedQuickSettingsRaw && typeof storedQuickSettingsRaw === 'object'){
+  const selected = Array.isArray(storedQuickSettingsRaw.selectedDictionaries)
+    ? storedQuickSettingsRaw.selectedDictionaries.filter(id => typeof id === 'string' && id !== CUSTOM_DICTIONARY_META.id)
+    : [];
+  quickInitialSelectedIds = selected;
+  qs.selectedDictionaries = new Set(selected);
+  quickInitialCustomSelected = !!storedQuickSettingsRaw.customSelected;
+  qs.customSelected = quickInitialCustomSelected;
+  const storedDifficulty = typeof storedQuickSettingsRaw.difficulty === 'string' && ALL_DIFFICULTIES.includes(storedQuickSettingsRaw.difficulty)
+    ? storedQuickSettingsRaw.difficulty
+    : null;
+  if (storedDifficulty){
+    quickInitialDifficulty = storedDifficulty;
+    qs.difficulty = storedDifficulty;
+  }
+  const timerEnabled = !!storedQuickSettingsRaw.timerEnabled;
+  quickInitialTimerEnabled = timerEnabled;
+  if (qs.timerToggle){
+    qs.timerToggle.checked = timerEnabled;
+  }
+  const storedTime = Number(storedQuickSettingsRaw.time);
+  if (Number.isFinite(storedTime) && storedTime > 0){
+    qs.time = storedTime;
+  }
+  const ptsEnabled = !!storedQuickSettingsRaw.ptsEnabled;
+  quickInitialPtsEnabled = ptsEnabled;
+  if (qs.ptsToggle){
+    qs.ptsToggle.checked = ptsEnabled;
+  }
+  const storedPts = Number(storedQuickSettingsRaw.pts);
+  if (Number.isFinite(storedPts) && storedPts > 0){
+    qs.pts = storedPts;
+  }
+  if (qs.customText && typeof storedQuickSettingsRaw.customText === 'string'){
+    qs.customText.value = storedQuickSettingsRaw.customText;
+  }
+  quickSavedProfile = {
+    selectedDictionaries: [...selected],
+    customSelected: quickInitialCustomSelected,
+    difficulty: storedDifficulty || 'easy',
+    timerEnabled,
+    time: Number.isFinite(storedTime) && storedTime > 0 ? storedTime : 0,
+    ptsEnabled,
+    pts: Number.isFinite(storedPts) && storedPts > 0 ? storedPts : 0,
+    customText: typeof storedQuickSettingsRaw.customText === 'string' ? storedQuickSettingsRaw.customText : ''
+  };
+}else{
+  quickInitialSelectedIds = Array.from(qs.selectedDictionaries || []);
+  quickInitialCustomSelected = !!qs.customSelected;
+  quickInitialDifficulty = typeof qs.difficulty === 'string' && ALL_DIFFICULTIES.includes(qs.difficulty)
+    ? qs.difficulty
+    : null;
+  quickInitialTimerEnabled = !!(qs.timerToggle && qs.timerToggle.checked);
+  quickInitialPtsEnabled = !!(qs.ptsToggle && qs.ptsToggle.checked);
+}
 initDifficultyControls(qs);
 qs.onDifficultyChange = level => {
   qs.difficulty = level;
+  persistQuickSettings();
 };
 const upQuickTime = () => qs.timeLabel.textContent = qs.time+' с';
 const upQuickPts = () => qs.ptsLabel.textContent = qs.pts;
 upQuickTime();
 upQuickPts();
-qs.timerToggle.checked = false;
-qs.ptsToggle.checked = false;
+if (qs.timerToggle){
+  qs.timerToggle.checked = quickInitialTimerEnabled;
+}
+if (qs.ptsToggle){
+  qs.ptsToggle.checked = quickInitialPtsEnabled;
+}
 const updateQuickTimerUI = () => {
   if (!qs.timerToggle) return;
   const enabled = qs.timerToggle.checked;
@@ -927,10 +1069,26 @@ const updateQuickTimerUI = () => {
   if (qs.timeLabel) qs.timeLabel.classList.toggle('disabled', !enabled);
   updateQuickTimerButton();
 };
-qs.timeMinus.onclick = () => { qs.time = Math.max(30, qs.time-30); upQuickTime(); };
-qs.timePlus.onclick = () => { qs.time += 30; upQuickTime(); };
-qs.ptsMinus.onclick = () => { qs.pts = Math.max(1, qs.pts-1); upQuickPts(); };
-qs.ptsPlus.onclick = () => { qs.pts += 1; upQuickPts(); };
+qs.timeMinus.onclick = () => {
+  qs.time = Math.max(30, qs.time-30);
+  upQuickTime();
+  persistQuickSettings();
+};
+qs.timePlus.onclick = () => {
+  qs.time += 30;
+  upQuickTime();
+  persistQuickSettings();
+};
+qs.ptsMinus.onclick = () => {
+  qs.pts = Math.max(1, qs.pts-1);
+  upQuickPts();
+  persistQuickSettings();
+};
+qs.ptsPlus.onclick = () => {
+  qs.pts += 1;
+  upQuickPts();
+  persistQuickSettings();
+};
 const updateQuickPts = () => {
   if (!qs.ptsControls) return;
   const enabled = qs.ptsToggle.checked;
@@ -939,11 +1097,26 @@ const updateQuickPts = () => {
   [qs.ptsMinus, qs.ptsPlus].forEach(btn=>{ if (btn) btn.disabled = !enabled; });
   if (qs.ptsLabel) qs.ptsLabel.classList.toggle('disabled', !enabled);
 };
-if (qs.timerToggle) qs.timerToggle.onchange = updateQuickTimerUI;
+if (qs.timerToggle){
+  qs.timerToggle.onchange = () => {
+    updateQuickTimerUI();
+    persistQuickSettings();
+  };
+}
 updateQuickTimerUI();
-qs.ptsToggle.onchange = updateQuickPts;
+if (qs.ptsToggle){
+  qs.ptsToggle.onchange = () => {
+    updateQuickPts();
+    persistQuickSettings();
+  };
+}
 updateQuickPts();
 updateCustomBoxVisibility(qs);
+if (qs.customText){
+  qs.customText.addEventListener('input', () => {
+    persistQuickSettings();
+  });
+}
 
 // Quick game state
 const initialQuickStats = readJson(QUICK_STATS_KEY, {hitWords:[], missWords:[]}) || {hitWords:[], missWords:[]};
@@ -1379,17 +1552,97 @@ const ts = {
   pts: 10, ptsMinus: $('#ptsMinus'), ptsPlus: $('#ptsPlus'), ptsLabel: $('#ptsLabel'),
   start: $('#startTeam')
 };
+
+const storedTeamSettingsRaw = readJson(TEAM_SETTINGS_KEY, null);
+if (storedTeamSettingsRaw && typeof storedTeamSettingsRaw === 'object'){
+  const selected = Array.isArray(storedTeamSettingsRaw.selectedDictionaries)
+    ? storedTeamSettingsRaw.selectedDictionaries.filter(id => typeof id === 'string' && id !== CUSTOM_DICTIONARY_META.id)
+    : [];
+  teamInitialSelectedIds = selected;
+  ts.selectedDictionaries = new Set(selected);
+  teamInitialCustomSelected = !!storedTeamSettingsRaw.customSelected;
+  ts.customSelected = teamInitialCustomSelected;
+  const storedDifficulty = typeof storedTeamSettingsRaw.difficulty === 'string' && ALL_DIFFICULTIES.includes(storedTeamSettingsRaw.difficulty)
+    ? storedTeamSettingsRaw.difficulty
+    : null;
+  if (storedDifficulty){
+    teamInitialDifficulty = storedDifficulty;
+    ts.difficulty = storedDifficulty;
+  }
+  const timerEnabled = !!storedTeamSettingsRaw.timerEnabled;
+  teamInitialTimerEnabled = timerEnabled;
+  if (ts.timerToggle){
+    ts.timerToggle.checked = timerEnabled;
+  }
+  const storedTime = Number(storedTeamSettingsRaw.time);
+  if (Number.isFinite(storedTime) && storedTime > 0){
+    ts.time = storedTime;
+  }
+  const ptsEnabled = !!storedTeamSettingsRaw.ptsEnabled;
+  teamInitialPtsEnabled = ptsEnabled;
+  if (ts.ptsToggle){
+    ts.ptsToggle.checked = ptsEnabled;
+  }
+  const storedPts = Number(storedTeamSettingsRaw.pts);
+  if (Number.isFinite(storedPts) && storedPts > 0){
+    ts.pts = storedPts;
+  }
+  if (ts.customText && typeof storedTeamSettingsRaw.customText === 'string'){
+    ts.customText.value = storedTeamSettingsRaw.customText;
+  }
+  teamSavedProfile = {
+    selectedDictionaries: [...selected],
+    customSelected: teamInitialCustomSelected,
+    difficulty: storedDifficulty || 'easy',
+    timerEnabled,
+    time: Number.isFinite(storedTime) && storedTime > 0 ? storedTime : 0,
+    ptsEnabled,
+    pts: Number.isFinite(storedPts) && storedPts > 0 ? storedPts : 0,
+    customText: typeof storedTeamSettingsRaw.customText === 'string' ? storedTeamSettingsRaw.customText : ''
+  };
+}else{
+  teamInitialSelectedIds = Array.from(ts.selectedDictionaries || []);
+  teamInitialCustomSelected = !!ts.customSelected;
+  teamInitialDifficulty = typeof ts.difficulty === 'string' && ALL_DIFFICULTIES.includes(ts.difficulty)
+    ? ts.difficulty
+    : null;
+  teamInitialTimerEnabled = !!(ts.timerToggle && ts.timerToggle.checked);
+  teamInitialPtsEnabled = !!(ts.ptsToggle && ts.ptsToggle.checked);
+}
 initDifficultyControls(ts);
 ts.onDifficultyChange = level => {
   ts.difficulty = level;
+  persistTeamSettings();
 };
 const upTeamTime = () => ts.timeLabel.textContent = ts.time+' с';
 const upPts = () => ts.ptsLabel.textContent = ts.pts;
 upTeamTime(); upPts();
-ts.timeMinus.onclick = ()=>{ ts.time = Math.max(30, ts.time-30); upTeamTime(); };
-ts.timePlus.onclick = ()=>{ ts.time += 30; upTeamTime(); };
-ts.ptsMinus.onclick = ()=>{ ts.pts = Math.max(1, ts.pts-1); upPts(); };
-ts.ptsPlus.onclick = ()=>{ ts.pts += 1; upPts(); };
+if (ts.timerToggle){
+  ts.timerToggle.checked = teamInitialTimerEnabled;
+}
+if (ts.ptsToggle){
+  ts.ptsToggle.checked = teamInitialPtsEnabled;
+}
+ts.timeMinus.onclick = ()=>{
+  ts.time = Math.max(30, ts.time-30);
+  upTeamTime();
+  persistTeamSettings();
+};
+ts.timePlus.onclick = ()=>{
+  ts.time += 30;
+  upTeamTime();
+  persistTeamSettings();
+};
+ts.ptsMinus.onclick = ()=>{
+  ts.pts = Math.max(1, ts.pts-1);
+  upPts();
+  persistTeamSettings();
+};
+ts.ptsPlus.onclick = ()=>{
+  ts.pts += 1;
+  upPts();
+  persistTeamSettings();
+};
 updateCustomBoxVisibility(ts);
 const updateTeamTimerUI = ()=>{
   if (!ts.timerToggle) return;
@@ -1406,26 +1659,53 @@ const updatePtsUI = ()=>{
   [ts.ptsMinus, ts.ptsPlus].forEach(btn=>{ if (btn) btn.disabled = !enabled; });
   if (ts.ptsLabel) ts.ptsLabel.classList.toggle('disabled', !enabled);
 };
-if (ts.timerToggle) ts.timerToggle.onchange = updateTeamTimerUI;
+if (ts.timerToggle){
+  ts.timerToggle.onchange = () => {
+    updateTeamTimerUI();
+    persistTeamSettings();
+  };
+}
 updateTeamTimerUI();
-ts.ptsToggle.onchange = updatePtsUI;
+if (ts.ptsToggle){
+  ts.ptsToggle.onchange = () => {
+    updatePtsUI();
+    persistTeamSettings();
+  };
+}
 updatePtsUI();
+if (ts.customText){
+  ts.customText.addEventListener('input', () => {
+    persistTeamSettings();
+  });
+}
 
 ensureDictionaryIndex().then(() => {
   setupDictionarySelector(qs);
   setupDictionarySelector(ts);
-  if (dictionaryState.list.length && !qs.selectedDictionaries.size){
+
+  const hasQuickSavedSelection = Array.isArray(quickInitialSelectedIds) && quickInitialSelectedIds.length > 0;
+  if (hasQuickSavedSelection){
+    setDictionarySelection(qs, quickInitialSelectedIds, { emit:false, skipPersist:true });
+  }
+  setCustomSelection(qs, quickInitialCustomSelected, { emit:false, skipPersist:true });
+  if (quickInitialDifficulty && qs.difficultyButtons?.[quickInitialDifficulty] && !qs.difficultyButtons[quickInitialDifficulty].disabled){
+    qs.setDifficulty(quickInitialDifficulty, { silent:true });
+  }
+  if (!hasQuickSavedSelection && dictionaryState.list.length && !qs.selectedDictionaries.size){
     const firstId = dictionaryState.list[0].id;
     setDictionarySelection(qs, [firstId], { emit:false });
-    updateDifficultyAvailabilityForSelection(qs);
+  }else{
+    applyDictionarySelectionChange(qs, { emit:false, skipPersist:true });
   }
-  if (ts.dictElements){
-    setDictionarySelection(ts, Array.from(qs.selectedDictionaries || []), { emit:false });
-    setCustomSelection(ts, qs.customSelected, { emit:false });
-    updateDifficultyAvailabilityForSelection(ts);
+
+  if (Array.isArray(teamInitialSelectedIds) && teamInitialSelectedIds.length){
+    setDictionarySelection(ts, teamInitialSelectedIds, { emit:false, skipPersist:true });
   }
-  applyDictionarySelectionChange(qs, { emit:false });
-  applyDictionarySelectionChange(ts, { emit:false });
+  setCustomSelection(ts, teamInitialCustomSelected, { emit:false, skipPersist:true });
+  if (teamInitialDifficulty && ts.difficultyButtons?.[teamInitialDifficulty] && !ts.difficultyButtons[teamInitialDifficulty].disabled){
+    ts.setDifficulty(teamInitialDifficulty, { silent:true });
+  }
+  applyDictionarySelectionChange(ts, { emit:false, skipPersist:true });
 });
 
 document.addEventListener('click', (event) => {
@@ -1450,40 +1730,81 @@ document.addEventListener('keydown', (event) => {
 function syncTeamSettingsFromMenu(){
   if (!qs || !ts) return;
   const applySelection = () => {
+    const quickSelection = Array.from(qs.selectedDictionaries || [])
+      .filter(id => typeof id === 'string' && id !== CUSTOM_DICTIONARY_META.id);
+    const quickCustomSelected = !!qs.customSelected;
+    const quickDifficulty = typeof qs.difficulty === 'string' && ALL_DIFFICULTIES.includes(qs.difficulty)
+      ? qs.difficulty
+      : null;
+    const quickCustomText = typeof qs.customText?.value === 'string' ? qs.customText.value : '';
+    const quickTimerEnabled = !!(qs.timerToggle && qs.timerToggle.checked);
+    const quickTimeValue = Number(qs.time);
+    const quickPtsEnabled = !!(qs.ptsToggle && qs.ptsToggle.checked);
+    const quickPtsValue = Number(qs.pts);
+    const savedProfile = teamSavedProfile;
+    const finalSelection = savedProfile && Array.isArray(savedProfile.selectedDictionaries) && savedProfile.selectedDictionaries.length
+      ? savedProfile.selectedDictionaries
+      : quickSelection;
+    const finalCustomSelected = savedProfile && typeof savedProfile.customSelected === 'boolean'
+      ? savedProfile.customSelected
+      : quickCustomSelected;
+    const preferredDifficulty = savedProfile && typeof savedProfile.difficulty === 'string' && ALL_DIFFICULTIES.includes(savedProfile.difficulty)
+      ? savedProfile.difficulty
+      : quickDifficulty;
+    const finalCustomText = savedProfile && Object.prototype.hasOwnProperty.call(savedProfile || {}, 'customText')
+      ? String(savedProfile.customText ?? '')
+      : quickCustomText;
+    const finalTimerEnabled = savedProfile && Object.prototype.hasOwnProperty.call(savedProfile || {}, 'timerEnabled')
+      ? !!savedProfile.timerEnabled
+      : quickTimerEnabled;
+    const savedTime = savedProfile && Object.prototype.hasOwnProperty.call(savedProfile || {}, 'time')
+      ? Number(savedProfile.time)
+      : NaN;
+    const finalTime = Number.isFinite(savedTime) && savedTime > 0
+      ? savedTime
+      : (Number.isFinite(quickTimeValue) && quickTimeValue > 0 ? quickTimeValue : ts.time);
+    const finalPtsEnabled = savedProfile && Object.prototype.hasOwnProperty.call(savedProfile || {}, 'ptsEnabled')
+      ? !!savedProfile.ptsEnabled
+      : quickPtsEnabled;
+    const savedPts = savedProfile && Object.prototype.hasOwnProperty.call(savedProfile || {}, 'pts')
+      ? Number(savedProfile.pts)
+      : NaN;
+    const finalPts = Number.isFinite(savedPts) && savedPts > 0
+      ? savedPts
+      : (Number.isFinite(quickPtsValue) && quickPtsValue > 0 ? quickPtsValue : ts.pts);
+
     if (ts.dictGrid){
       if (!ts.dictElements || !ts.dictElements.size){
         setupDictionarySelector(ts);
       }
-      setDictionarySelection(ts, Array.from(qs.selectedDictionaries || []), { emit:false });
-      setCustomSelection(ts, qs.customSelected, { emit:false });
+      setDictionarySelection(ts, finalSelection, { emit:false, skipPersist:true });
+      setCustomSelection(ts, finalCustomSelected, { emit:false, skipPersist:true });
       updateDifficultyAvailabilityForSelection(ts);
-      if (qs.selectedDictionaries?.size){
-        const targetDifficulty = qs.difficulty;
-        if (ts.difficultyButtons?.[targetDifficulty] && !ts.difficultyButtons[targetDifficulty].disabled){
-          ts.setDifficulty(targetDifficulty, { silent:true });
-        }
+      if (preferredDifficulty && ts.difficultyButtons?.[preferredDifficulty] && !ts.difficultyButtons[preferredDifficulty].disabled){
+        ts.setDifficulty(preferredDifficulty, { silent:true });
       }
-      applyDictionarySelectionChange(ts, { emit:false });
+      applyDictionarySelectionChange(ts, { emit:false, skipPersist:true });
     }
-    if (ts.customText && qs.customText){
-      ts.customText.value = qs.customText.value;
+    if (ts.customText){
+      ts.customText.value = finalCustomText;
     }
-    if (typeof qs.time === 'number'){
-      ts.time = qs.time;
+    if (typeof finalTime === 'number' && Number.isFinite(finalTime) && finalTime > 0){
+      ts.time = finalTime;
       upTeamTime();
     }
-    if (ts.timerToggle && qs.timerToggle){
-      ts.timerToggle.checked = qs.timerToggle.checked;
+    if (ts.timerToggle){
+      ts.timerToggle.checked = finalTimerEnabled;
       updateTeamTimerUI();
     }
-    if (typeof qs.pts === 'number'){
-      ts.pts = qs.pts;
+    if (typeof finalPts === 'number' && Number.isFinite(finalPts) && finalPts > 0){
+      ts.pts = finalPts;
       upPts();
     }
-    if (ts.ptsToggle && qs.ptsToggle){
-      ts.ptsToggle.checked = qs.ptsToggle.checked;
+    if (ts.ptsToggle){
+      ts.ptsToggle.checked = finalPtsEnabled;
     }
     updatePtsUI();
+    persistTeamSettings();
   };
   if (!dictionaryState.ready){
     ensureDictionaryIndex().then(() => {
