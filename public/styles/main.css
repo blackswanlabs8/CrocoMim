@@ -656,7 +656,7 @@ body{
 .team-grid{
   display:grid;
   gap:10px;
-  grid-template-columns:repeat(auto-fit, minmax(90px, 1fr));
+  grid-template-columns:repeat(auto-fit, minmax(min(150px, calc((100% - 20px)/3)), 1fr));
 }
 .team-actions{
   justify-content:center;
