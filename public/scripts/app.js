@@ -126,6 +126,7 @@ async function loadDictionaryEntries(dictId, difficulty){
 // --- Utilities & state ---
 const $ = sel => document.querySelector(sel);
 const VIEWS = ['viewMenu','viewQuickGame','viewTeamSetup','viewTeamGame'];
+const menuFeedbackBtn = $('#menuFeedbackBtn');
 let screen = 'viewMenu';
 let qBreadcrumbContext = null;
 let tBreadcrumbContext = null;
@@ -137,10 +138,17 @@ const WORD_SECRET_PLACEHOLDER = '•••';
 const WORD_DESCRIPTION_FALLBACK = 'Описание недоступно';
 const WORD_DESCRIPTION_HIDDEN = 'Слово скрыто';
 const WORD_HELP_FALLBACK = 'Подсказка недоступна';
+const APP_VERSION = document.querySelector('meta[name="app-version"]')?.content || 'unknown';
+const APP_LANGUAGE = document.documentElement?.lang || 'ru';
 
 function updateWordView(view, { entry, hidden, helpState }){
   const hasEntry = !!entry && typeof entry.term === 'string' && entry.term.trim().length;
   const isHidden = !!hidden;
+  if (view.feedbackBtn){
+    const canSend = hasEntry;
+    view.feedbackBtn.disabled = !canSend;
+    view.feedbackBtn.setAttribute('aria-disabled', canSend ? 'false' : 'true');
+  }
   if (view.word){
     if (!hasEntry){
       view.word.textContent = WORD_PLACEHOLDER;
@@ -1275,6 +1283,7 @@ let qWords=[], qIndex=0, qHide=false, qRemain=0, qHit=qHitWords.length, qMiss=qM
 
 const qUI = {
   word: $('#qWord'),
+  feedbackBtn: $('#qFeedbackBtn'),
   description: $('#qDescription'),
   helpBtn: $('#qHelpBtn'),
   helpBox: $('#qHelpBox'),
@@ -2154,6 +2163,7 @@ let teamPointGoal = 10;
 
 const tUI = {
   word: $('#tWord'),
+  feedbackBtn: $('#tFeedbackBtn'),
   description: $('#tDescription'),
   helpBtn: $('#tHelpBtn'),
   helpBox: $('#tHelpBox'),
@@ -2833,9 +2843,104 @@ function applyWordBreadcrumbs(ui, data){
   ui.breadcrumbs.innerHTML = parts.join(separator);
   if (wrap) wrap.hidden = false;
 }
+
+function deriveQuickDifficulty(entry){
+  if (entry && typeof entry.difficulty === 'string' && entry.difficulty.trim()){
+    return entry.difficulty.trim();
+  }
+  const raw = typeof qs?.difficulty === 'string' ? qs.difficulty.trim() : '';
+  if (!raw || raw === 'mix') return null;
+  return raw;
+}
+
+function deriveTeamDifficulty(entry){
+  if (entry && typeof entry.difficulty === 'string' && entry.difficulty.trim()){
+    return entry.difficulty.trim();
+  }
+  const raw = typeof ts?.difficulty === 'string' ? ts.difficulty.trim() : '';
+  if (!raw || raw === 'mix') return null;
+  return raw;
+}
+
+function normalizeTermId(entry){
+  if (!entry) return null;
+  const id = typeof entry.id === 'string' ? entry.id.trim() : '';
+  const dict = typeof entry.dictionaryId === 'string' ? entry.dictionaryId.trim() : '';
+  const term = typeof entry.term === 'string' ? entry.term.trim() : '';
+  if (id && dict) return `${dict}:${id}`;
+  if (id) return id;
+  if (dict && term) return `${dict}:${term}`;
+  return term || null;
+}
+
+function buildFeedbackContext(mode){
+  const normalizedMode = mode === 'quick' || mode === 'team' ? mode : 'home';
+  const timestamp = new Date().toISOString();
+  const context = {
+    mode: normalizedMode,
+    termId: null,
+    termText: null,
+    difficulty: null,
+    timestamp,
+    appVersion: APP_VERSION,
+    language: APP_LANGUAGE || 'ru'
+  };
+  if (normalizedMode === 'quick'){
+    const entry = qWords[qIndex] || null;
+    context.termId = normalizeTermId(entry);
+    context.termText = entry && typeof entry.term === 'string' ? entry.term : null;
+    context.difficulty = deriveQuickDifficulty(entry);
+  }else if (normalizedMode === 'team'){
+    const entry = tWords[tIndex] || null;
+    context.termId = normalizeTermId(entry);
+    context.termText = entry && typeof entry.term === 'string' ? entry.term : null;
+    context.difficulty = deriveTeamDifficulty(entry);
+  }else{
+    const entry = qWords[qIndex] || null;
+    context.termText = entry && typeof entry.term === 'string' ? entry.term : null;
+    context.termId = normalizeTermId(entry);
+    context.difficulty = deriveQuickDifficulty(entry);
+  }
+  return context;
+}
+
+function getActiveFeedbackMode(){
+  if (screen === 'viewQuickGame') return 'quick';
+  if (screen === 'viewTeamGame') return 'team';
+  return 'home';
+}
+
+function setupFeedbackIntegration(){
+  const api = window.Feedback;
+  if (!api || typeof api.open !== 'function') return;
+  const resolver = () => buildFeedbackContext(getActiveFeedbackMode());
+  if (typeof api.setContextResolver === 'function'){
+    api.setContextResolver(resolver);
+  }
+  const register = typeof api.registerTrigger === 'function'
+    ? (el, fn) => api.registerTrigger(el, fn)
+    : (el, fn) => {
+        if (!el) return;
+        el.addEventListener('click', () => {
+          const ctx = typeof fn === 'function' ? fn() : fn;
+          api.open(ctx);
+        });
+      };
+  if (menuFeedbackBtn){
+    register(menuFeedbackBtn, () => buildFeedbackContext('home'));
+  }
+  if (qUI.feedbackBtn){
+    register(qUI.feedbackBtn, () => buildFeedbackContext('quick'));
+  }
+  if (tUI.feedbackBtn){
+    register(tUI.feedbackBtn, () => buildFeedbackContext('team'));
+  }
+}
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } return a }
 
 // initial
+setupFeedbackIntegration();
+
 function restoreInitialView(){
   const stored = readScreenPref();
   if (stored && VIEWS.includes(stored)){

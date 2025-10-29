@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>CrocoMim</title>
   <meta name="description" content="Праздничная игра «CrocoMim» с быстрым и командным режимами." />
+  <meta name="app-version" content="crocomim-static-v3" />
   <link rel="manifest" href="./manifest.json" />
   <link rel="icon" type="image/svg+xml" href="./icons/icon.svg" />
   <meta name="theme-color" content="#22c55e" />
@@ -144,6 +145,12 @@
           </div>
         </div>
       </div>
+
+      <div class="menu-feedback">
+        <button class="btn ghost btn-full feedback-menu-btn" id="menuFeedbackBtn" type="button" title="Обратная связь" aria-label="Открыть форму обратной связи">
+          <span>Обратная связь</span>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -154,7 +161,9 @@
     </div>
     <div class="word-card word-card-expanded">
       <div class="word-card-main">
-        <div id="qWord" class="word">—</div>
+        <div class="word-header">
+          <div id="qWord" class="word">—</div>
+        </div>
         <div class="word-meta">
           <div id="qDescription" class="word-description muted">Описание появится после начала игры.</div>
           <button class="word-help-btn" id="qHelpBtn" type="button" aria-expanded="false" aria-controls="qHelpBox" title="Помочь">
@@ -186,6 +195,7 @@
       <div class="stack action-extra">
         <button class="btn ghost" id="qRestartTimer" style="display:none">Перезапустить таймер</button>
         <button class="btn ghost" id="qMeaningBtn">Значение слова (Википедия)</button>
+        <button class="btn ghost" id="qFeedbackBtn" type="button" title="Обратная связь" aria-label="Открыть форму обратной связи">Обратная связь</button>
       </div>
     </div>
 
@@ -288,7 +298,9 @@
 
     <div class="word-card word-card-expanded">
       <div class="word-card-main">
-        <div id="tWord" class="word">—</div>
+        <div class="word-header">
+          <div id="tWord" class="word">—</div>
+        </div>
         <div class="word-meta">
           <div id="tDescription" class="word-description muted">Описание появится после начала игры.</div>
           <button class="word-help-btn" id="tHelpBtn" type="button" aria-expanded="false" aria-controls="tHelpBox" title="Помочь">
@@ -326,6 +338,7 @@
       </div>
       <div class="stack action-extra">
         <button class="btn ghost" id="tMeaningBtn">Значение слова (Википедия)</button>
+        <button class="btn ghost" id="tFeedbackBtn" type="button" title="Обратная связь" aria-label="Открыть форму обратной связи">Обратная связь</button>
       </div>
     </div>
 
@@ -383,6 +396,7 @@
 </div>
 
   <script src="./scripts/dicts.js"></script>
+  <script src="./scripts/feedback.js"></script>
   <script src="./scripts/app.js"></script>
 </body>
 </html>
