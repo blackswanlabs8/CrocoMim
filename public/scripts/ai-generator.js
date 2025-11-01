@@ -3,6 +3,13 @@
   const API_ENDPOINT = '/api/generate-dictionary';
   const DIFFICULTY_KEYS = ['easy', 'medium', 'hard'];
 
+  function logDebug(){
+    if (typeof console === 'undefined' || typeof console.log !== 'function') return;
+    const args = Array.prototype.slice.call(arguments);
+    args.unshift('[ai-generator]');
+    console.log.apply(console, args);
+  }
+
   function normalizeEndpoint(value){
     if (!value || typeof value !== 'string') return '';
     const trimmed = value.trim();
@@ -59,6 +66,7 @@
       }
     }
     add('http://localhost:3000/api/generate-dictionary');
+    logDebug('Сформированы кандидаты эндпоинтов', endpoints);
     return endpoints;
   }
 
@@ -142,9 +150,15 @@
 
   async function parseErrorResponse(response){
     const contentType = response.headers?.get('content-type') || '';
+    logDebug('Парсинг ошибки', {
+      status: response.status,
+      contentType,
+      headers: response.headers ? Object.fromEntries(response.headers.entries()) : {}
+    });
     if (contentType.includes('application/json')){
       try{
         const data = await response.json();
+        logDebug('Ответ об ошибке (JSON)', data);
         if (data && typeof data.error === 'string'){
           return data.error;
         }
@@ -157,6 +171,7 @@
     }
     try{
       const text = await response.text();
+      logDebug('Ответ об ошибке (text)', text);
       if (text && text.trim()){
         return text.trim();
       }
@@ -171,6 +186,7 @@
     if (!topic){
       throw new Error('Укажите тему словаря.');
     }
+    logDebug('Запрос генерации словаря', { options, normalizedTopic: topic });
     const payload = { topic };
     if (typeof options.language === 'string' && options.language.trim()){
       payload.language = options.language.trim();
@@ -178,6 +194,7 @@
     if (typeof options.source === 'string' && options.source.trim()){
       payload.source = options.source.trim();
     }
+    logDebug('Payload', payload);
     const baseFetchOptions = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -189,11 +206,18 @@
     let lastNotFoundResponse = null;
     for (let i = 0; i < endpoints.length; i++){
       const endpoint = resolveEndpointUrl(endpoints[i]);
+      logDebug(`Попытка запроса ${i + 1}/${endpoints.length}`, { endpoint, resolved: endpoint });
       if (!endpoint) continue;
       const fetchOptions = { ...baseFetchOptions, body: payloadJson };
       if (options.signal) fetchOptions.signal = options.signal;
       try{
         const currentResponse = await fetch(endpoint, fetchOptions);
+        logDebug('Получен ответ', {
+          endpoint,
+          status: currentResponse.status,
+          ok: currentResponse.ok,
+          headers: currentResponse.headers ? Object.fromEntries(currentResponse.headers.entries()) : {}
+        });
         if (currentResponse.status === 404 && i < endpoints.length - 1){
           lastNotFoundResponse = currentResponse;
           continue;
@@ -201,6 +225,7 @@
         response = currentResponse;
         break;
       }catch(err){
+        logDebug('Ошибка при запросе', { endpoint, error: err });
         if (i === endpoints.length - 1){
           throw new Error('Не удалось выполнить запрос генерации. Проверьте подключение к сети.');
         }
@@ -214,20 +239,29 @@
       }
     }
     if (!response.ok){
+      const cloned = response.clone();
       const message = await parseErrorResponse(response);
+      logDebug('Ошибка сервиса генерации', {
+        status: cloned.status,
+        headers: cloned.headers ? Object.fromEntries(cloned.headers.entries()) : {}
+      });
       throw new Error(message || 'Сервис генерации временно недоступен.');
     }
     let data;
     try{
       data = await response.json();
-    }catch{
+      logDebug('Успешный ответ (JSON)', data);
+    }catch(err){
+      logDebug('Ошибка разбора JSON ответа', err);
       throw new Error('Сервер вернул некорректный ответ.');
     }
     const normalized = normalizeDictionaryPayload(data);
+    logDebug('Нормализованные данные', normalized);
     const total = DIFFICULTY_KEYS.reduce((sum, key) => sum + normalized[key].length, 0);
     if (!total){
       throw new Error('Не удалось получить слова для этой темы.');
     }
+    logDebug('Итоговый словарь', normalized);
     return normalized;
   }
 

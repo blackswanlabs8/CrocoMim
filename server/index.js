@@ -6,6 +6,28 @@ const JSON_CONTENT_TYPE = 'application/json; charset=utf-8';
 const TEXT_CONTENT_TYPE = 'text/plain; charset=utf-8';
 const BODY_LIMIT = 1024 * 100; // 100KB
 
+function maskSecret(value){
+  if (!value || typeof value !== 'string') return '';
+  if (value.length <= 8) return '*'.repeat(value.length);
+  return `${value.slice(0, 4)}***${value.slice(-4)}`;
+}
+
+function normalizeHeaders(headers){
+  try{
+    if (!headers) return {};
+    if (typeof headers.entries === 'function'){
+      return Object.fromEntries([...headers.entries()]);
+    }
+    return Object.keys(headers).reduce((acc, key) => {
+      acc[key] = headers[key];
+      return acc;
+    }, {});
+  }catch(err){
+    console.error('[debug] Не удалось преобразовать заголовки:', err);
+    return {};
+  }
+}
+
 function readRequestBody(req){
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -125,6 +147,7 @@ function normalizeDictionaryStructure(raw){
 async function requestYandexAssistantApi({ apiKey, folderId, model, apiUrl, topic, language, source }){
   const systemPrompt = 'Отвечай только в формате JSON без дополнительных комментариев.';
   const userPrompt = buildPrompt({ topic, language, source });
+  const requestId = randomUUID();
   const body = {
     model: `gpt://${folderId}/${model}`,
     input: [
@@ -143,12 +166,27 @@ async function requestYandexAssistantApi({ apiKey, folderId, model, apiUrl, topi
     headers['x-data-logging-enabled'] = String(process.env.YANDEX_LOGGING_ENABLED).toLowerCase() === 'true' ? 'true' : 'false';
   }
   headers['x-client-request-id'] = randomUUID();
+  console.log(`[yandex-assistant:${requestId}] Запрос`, {
+    apiUrl,
+    model,
+    folderId,
+    loggingEnabled: headers['x-data-logging-enabled'] || 'false',
+    maskedApiKey: maskSecret(apiKey),
+    maskedFolderId: maskSecret(folderId),
+    body
+  });
   const response = await fetch(apiUrl, {
     method: 'POST',
     headers,
     body: JSON.stringify(body)
   });
   const rawText = await response.text();
+  console.log(`[yandex-assistant:${requestId}] Ответ`, {
+    status: response.status,
+    ok: response.ok,
+    headers: normalizeHeaders(response.headers),
+    rawText
+  });
   let payload;
   try{
     payload = rawText ? JSON.parse(rawText) : null;
@@ -161,6 +199,7 @@ async function requestYandexAssistantApi({ apiKey, folderId, model, apiUrl, topi
   }
   if (!response.ok){
     const message = payload?.message || payload?.error?.message || `Ошибка Yandex GPT (${response.status}).`;
+    console.error(`[yandex-assistant:${requestId}] Ошибка ответа`, { message, payload });
     const error = new Error(message);
     error.statusCode = response.status >= 500 ? 502 : 400;
     error.details = payload;
@@ -178,6 +217,7 @@ async function requestYandexAssistantApi({ apiKey, folderId, model, apiUrl, topi
   }
   const combinedText = collected.join('\n');
   if (!combinedText){
+    console.error(`[yandex-assistant:${requestId}] Пустой текст ответа`, { payload });
     const error = new Error('Yandex GPT вернул пустой ответ.');
     error.statusCode = 502;
     error.details = payload;
@@ -188,6 +228,7 @@ async function requestYandexAssistantApi({ apiKey, folderId, model, apiUrl, topi
 }
 
 async function requestYandexCompletionApi({ apiKey, folderId, model, apiUrl, topic, language, source }){
+  const requestId = randomUUID();
   const body = {
     modelUri: `gpt://${folderId}/${model}`,
     completionOptions: {
@@ -208,12 +249,27 @@ async function requestYandexCompletionApi({ apiKey, folderId, model, apiUrl, top
     headers['x-data-logging-enabled'] = String(process.env.YANDEX_LOGGING_ENABLED).toLowerCase() === 'true' ? 'true' : 'false';
   }
   headers['x-client-request-id'] = randomUUID();
+  console.log(`[yandex-completion:${requestId}] Запрос`, {
+    apiUrl,
+    model,
+    folderId,
+    loggingEnabled: headers['x-data-logging-enabled'] || 'false',
+    maskedApiKey: maskSecret(apiKey),
+    maskedFolderId: maskSecret(folderId),
+    body
+  });
   const response = await fetch(apiUrl, {
     method: 'POST',
     headers,
     body: JSON.stringify(body)
   });
   const rawText = await response.text();
+  console.log(`[yandex-completion:${requestId}] Ответ`, {
+    status: response.status,
+    ok: response.ok,
+    headers: normalizeHeaders(response.headers),
+    rawText
+  });
   let payload;
   try{
     payload = rawText ? JSON.parse(rawText) : null;
@@ -226,6 +282,7 @@ async function requestYandexCompletionApi({ apiKey, folderId, model, apiUrl, top
   }
   if (!response.ok){
     const message = payload?.message || payload?.error?.message || `Ошибка Yandex GPT (${response.status}).`;
+    console.error(`[yandex-completion:${requestId}] Ошибка ответа`, { message, payload });
     const error = new Error(message);
     error.statusCode = response.status >= 500 ? 502 : 400;
     error.details = payload;
@@ -236,6 +293,7 @@ async function requestYandexCompletionApi({ apiKey, folderId, model, apiUrl, top
     ? alternatives.map(item => item?.message?.text).find(Boolean)
     : null;
   if (!firstText){
+    console.error(`[yandex-completion:${requestId}] Пустой текст ответа`, { payload });
     const error = new Error('Yandex GPT вернул пустой ответ.');
     error.statusCode = 502;
     error.details = payload;
@@ -255,6 +313,19 @@ async function requestYandexGpt({ topic, language, source }){
   const apiUrlEnv = process.env.YANDEX_GPT_API_URL || '';
   const useAssistant = apiType === 'assistant' || apiType === 'rest-assistant' || apiUrlEnv.includes('rest-assistant.api.cloud.yandex.net');
   const apiUrl = apiUrlEnv || (useAssistant ? defaultAssistantUrl : defaultCompletionUrl);
+  console.log('[yandex-config] Настройка', {
+    apiType,
+    apiUrl,
+    defaultAssistantUrl,
+    defaultCompletionUrl,
+    useAssistant,
+    maskedApiKey: maskSecret(apiKey),
+    folderId,
+    maskedFolderId: maskSecret(folderId),
+    model,
+    language,
+    source
+  });
   if (!apiKey || !folderId){
     const error = new Error('Сервис генерации не настроен. Обратитесь к администратору.');
     error.statusCode = 503;
@@ -268,41 +339,61 @@ async function requestYandexGpt({ topic, language, source }){
 }
 
 async function handleGenerateDictionary(req, res){
+  const requestId = randomUUID();
+  console.log(`[generate-dictionary:${requestId}] Входящий запрос`, {
+    method: req.method,
+    url: req.url,
+    headers: req.headers
+  });
   if (req.method === 'OPTIONS'){
     res.statusCode = 204;
     res.setHeader('Allow', 'POST, OPTIONS');
     res.end();
+    console.log(`[generate-dictionary:${requestId}] Ответ OPTIONS 204`);
     return;
   }
   if (req.method !== 'POST'){
     res.setHeader('Allow', 'POST, OPTIONS');
     sendText(res, 405, 'Method Not Allowed');
+    console.warn(`[generate-dictionary:${requestId}] Метод не поддерживается: ${req.method}`);
     return;
   }
   let data;
+  let rawBody = '';
   try{
-    const rawBody = await readRequestBody(req);
+    rawBody = await readRequestBody(req);
+    console.log(`[generate-dictionary:${requestId}] Сырое тело запроса`, rawBody);
     data = rawBody ? JSON.parse(rawBody) : {};
   }catch(err){
-    console.error('[generate-dictionary] Ошибка чтения тела запроса:', err);
+    console.error(`[generate-dictionary:${requestId}] Ошибка чтения тела запроса:`, err);
     const status = err.statusCode === 413 ? 413 : 400;
     sendJson(res, status, { error: 'Некорректное тело запроса.' });
+    console.warn(`[generate-dictionary:${requestId}] Ответ с ошибкой чтения тела`, { status });
     return;
   }
   const topic = normalizeTopic(data?.topic);
   const language = typeof data?.language === 'string' ? data.language : '';
   const source = typeof data?.source === 'string' ? data.source : '';
+  console.log(`[generate-dictionary:${requestId}] Нормализованный запрос`, { topic, language, source });
   if (!topic){
     sendJson(res, 400, { error: 'Укажите тему словаря в поле "topic".' });
+    console.warn(`[generate-dictionary:${requestId}] Отсутствует тема`);
     return;
   }
   try{
     const dictionary = await requestYandexGpt({ topic, language, source });
+    console.log(`[generate-dictionary:${requestId}] Сгенерирован словарь`, dictionary);
     sendJson(res, 200, dictionary);
+    console.log(`[generate-dictionary:${requestId}] Ответ 200 отправлен`);
   }catch(err){
     const statusCode = err.statusCode && Number.isInteger(err.statusCode) ? err.statusCode : 500;
-    console.error('[generate-dictionary] Ошибка генерации:', err);
+    console.error(`[generate-dictionary:${requestId}] Ошибка генерации:`, err);
     sendJson(res, statusCode, { error: err.message || 'Не удалось сгенерировать словарь.' });
+    console.warn(`[generate-dictionary:${requestId}] Ответ с ошибкой генерации`, {
+      statusCode,
+      message: err.message,
+      details: err.details
+    });
   }
 }
 
@@ -312,6 +403,7 @@ function requestListener(req, res){
     handleGenerateDictionary(req, res);
     return;
   }
+  console.warn('[server] Неизвестный путь', { pathname: url.pathname, method: req.method });
   sendText(res, 404, 'Not Found');
 }
 
@@ -323,6 +415,15 @@ if (require.main === module){
   const port = Number.parseInt(process.env.PORT, 10) || 3000;
   createServer().listen(port, () => {
     console.log(`CrocoMim API server listening on port ${port}`);
+    console.log('[server] Текущие переменные среды', {
+      PORT: port,
+      YANDEX_GPT_API_URL: process.env.YANDEX_GPT_API_URL || null,
+      YANDEX_GPT_API_TYPE: process.env.YANDEX_GPT_API_TYPE || null,
+      YANDEX_GPT_MODEL: process.env.YANDEX_GPT_MODEL || null,
+      YANDEX_GPT_FOLDER_ID: maskSecret(process.env.YANDEX_GPT_FOLDER_ID || process.env.YANDEX_FOLDER_ID || ''),
+      YANDEX_GPT_API_KEY: maskSecret(process.env.YANDEX_GPT_API_KEY || process.env.YANDEX_API_KEY || ''),
+      YANDEX_LOGGING_ENABLED: process.env.YANDEX_LOGGING_ENABLED || null
+    });
   });
 }
 
