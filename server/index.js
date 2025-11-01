@@ -122,16 +122,72 @@ function normalizeDictionaryStructure(raw){
   return result;
 }
 
-async function requestYandexGpt({ topic, language, source }){
-  const apiKey = process.env.YANDEX_GPT_API_KEY || process.env.YANDEX_API_KEY || '';
-  const folderId = process.env.YANDEX_GPT_FOLDER_ID || process.env.YANDEX_FOLDER_ID || '';
-  const model = process.env.YANDEX_GPT_MODEL || 'yandexgpt-lite';
-  const apiUrl = process.env.YANDEX_GPT_API_URL || 'https://llm.api.cloud.yandex.net/foundationModels/v1/completion';
-  if (!apiKey || !folderId){
-    const error = new Error('Сервис генерации не настроен. Обратитесь к администратору.');
-    error.statusCode = 503;
+async function requestYandexAssistantApi({ apiKey, folderId, model, apiUrl, topic, language, source }){
+  const systemPrompt = 'Отвечай только в формате JSON без дополнительных комментариев.';
+  const userPrompt = buildPrompt({ topic, language, source });
+  const body = {
+    model: `gpt://${folderId}/${model}`,
+    input: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt }
+    ],
+    temperature: 0.2,
+    maxTokens: 1500
+  };
+  const headers = {
+    'Content-Type': 'application/json',
+    Authorization: `Api-Key ${apiKey}`,
+    'x-folder-id': folderId
+  };
+  if (process.env.YANDEX_LOGGING_ENABLED){
+    headers['x-data-logging-enabled'] = String(process.env.YANDEX_LOGGING_ENABLED).toLowerCase() === 'true' ? 'true' : 'false';
+  }
+  headers['x-client-request-id'] = randomUUID();
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body)
+  });
+  const rawText = await response.text();
+  let payload;
+  try{
+    payload = rawText ? JSON.parse(rawText) : null;
+  }catch(parseErr){
+    const error = new Error('Не удалось разобрать ответ от Yandex GPT.');
+    error.statusCode = 502;
+    error.details = rawText;
+    error.cause = parseErr;
     throw error;
   }
+  if (!response.ok){
+    const message = payload?.message || payload?.error?.message || `Ошибка Yandex GPT (${response.status}).`;
+    const error = new Error(message);
+    error.statusCode = response.status >= 500 ? 502 : 400;
+    error.details = payload;
+    throw error;
+  }
+  const segments = Array.isArray(payload?.output) ? payload.output : [];
+  const collected = [];
+  for (const segment of segments){
+    const contentItems = Array.isArray(segment?.content) ? segment.content : [];
+    for (const item of contentItems){
+      if (typeof item?.text === 'string' && item.text.trim()){
+        collected.push(item.text.trim());
+      }
+    }
+  }
+  const combinedText = collected.join('\n');
+  if (!combinedText){
+    const error = new Error('Yandex GPT вернул пустой ответ.');
+    error.statusCode = 502;
+    error.details = payload;
+    throw error;
+  }
+  const parsed = extractJsonPayload(combinedText);
+  return normalizeDictionaryStructure(parsed);
+}
+
+async function requestYandexCompletionApi({ apiKey, folderId, model, apiUrl, topic, language, source }){
   const body = {
     modelUri: `gpt://${folderId}/${model}`,
     completionOptions: {
@@ -187,6 +243,28 @@ async function requestYandexGpt({ topic, language, source }){
   }
   const parsed = extractJsonPayload(firstText);
   return normalizeDictionaryStructure(parsed);
+}
+
+async function requestYandexGpt({ topic, language, source }){
+  const apiKey = process.env.YANDEX_GPT_API_KEY || process.env.YANDEX_API_KEY || '';
+  const folderId = process.env.YANDEX_GPT_FOLDER_ID || process.env.YANDEX_FOLDER_ID || '';
+  const model = process.env.YANDEX_GPT_MODEL || 'yandexgpt-lite';
+  const apiType = (process.env.YANDEX_GPT_API_TYPE || '').toLowerCase();
+  const defaultAssistantUrl = 'https://rest-assistant.api.cloud.yandex.net/v1/responses';
+  const defaultCompletionUrl = 'https://llm.api.cloud.yandex.net/foundationModels/v1/completion';
+  const apiUrlEnv = process.env.YANDEX_GPT_API_URL || '';
+  const useAssistant = apiType === 'assistant' || apiType === 'rest-assistant' || apiUrlEnv.includes('rest-assistant.api.cloud.yandex.net');
+  const apiUrl = apiUrlEnv || (useAssistant ? defaultAssistantUrl : defaultCompletionUrl);
+  if (!apiKey || !folderId){
+    const error = new Error('Сервис генерации не настроен. Обратитесь к администратору.');
+    error.statusCode = 503;
+    throw error;
+  }
+  const payload = { apiKey, folderId, model, apiUrl, topic, language, source };
+  if (useAssistant){
+    return requestYandexAssistantApi(payload);
+  }
+  return requestYandexCompletionApi(payload);
 }
 
 async function handleGenerateDictionary(req, res){
@@ -248,4 +326,15 @@ if (require.main === module){
   });
 }
 
-module.exports = { createServer, handleGenerateDictionary, requestYandexGpt, normalizeDictionaryStructure, normalizeWordList, extractJsonPayload, buildPrompt, requestListener };
+module.exports = {
+  createServer,
+  handleGenerateDictionary,
+  requestYandexGpt,
+  normalizeDictionaryStructure,
+  normalizeWordList,
+  extractJsonPayload,
+  buildPrompt,
+  requestListener,
+  requestYandexAssistantApi,
+  requestYandexCompletionApi
+};

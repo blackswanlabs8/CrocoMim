@@ -22,3 +22,21 @@ python -m http.server 8000
 
 ## PWA
 Приложение содержит манифест и service worker с офлайн-кэшем базовых ресурсов. После первого посещения интерфейс будет доступен без подключения к сети.
+
+## Сервер генерации словарей
+
+Для работы кнопки «Сгенерировать словарь» нужно поднять Node.js-сервер из директории `server`:
+
+```bash
+YANDEX_GPT_API_KEY=... \
+YANDEX_GPT_FOLDER_ID=... \
+YANDEX_GPT_API_TYPE=assistant \
+node server/index.js
+```
+
+По умолчанию сервер умеет работать с двумя API Яндекса:
+
+- **`YANDEX_GPT_API_TYPE=assistant`** или `YANDEX_GPT_API_URL=https://rest-assistant.api.cloud.yandex.net/v1/responses` — REST Assistant API (совместимо с Python-примером из документации).
+- **`YANDEX_GPT_API_TYPE=` (пусто)** — старый endpoint `https://llm.api.cloud.yandex.net/foundationModels/v1/completion`.
+
+Не забудьте прокинуть ключ API и идентификатор каталога. Дополнительно можно указать `YANDEX_GPT_MODEL` (например, `yandexgpt-lite`) и `YANDEX_GPT_API_URL`, если требуется нестандартный endpoint.
