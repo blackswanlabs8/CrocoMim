@@ -722,6 +722,13 @@ function normalizeGeneratedWords(raw){
       .filter(Boolean);
   }
   if (typeof raw === 'object'){
+    const difficultyKeys = ['easy','medium','hard'];
+    const hasDifficulty = difficultyKeys.some(key => Array.isArray(raw[key]) || typeof raw[key] === 'string' || (raw[key] && typeof raw[key] === 'object'));
+    if (hasDifficulty){
+      const words = difficultyKeys
+        .flatMap(key => normalizeGeneratedWords(raw[key]));
+      return words.filter((word, idx) => word && words.indexOf(word) === idx);
+    }
     if (Array.isArray(raw.words)) return normalizeGeneratedWords(raw.words);
     if (Array.isArray(raw.items)) return normalizeGeneratedWords(raw.items);
     if (typeof raw.text === 'string') return normalizeGeneratedWords(raw.text);

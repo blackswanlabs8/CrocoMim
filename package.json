@@ -1,0 +1,13 @@
+{
+  "name": "crocomim",
+  "version": "1.0.0",
+  "description": "CrocoMim game with AI dictionary generation",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node server/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT"
+}
