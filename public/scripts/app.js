@@ -28,6 +28,8 @@ const CUSTOM_DICTIONARY_META = {
   icon: 'edit'
 };
 
+const DICT_GENERATE_ENDPOINT = '/api/dict-generate';
+
 const ICON_SANITIZE_RE = /[^A-Za-zА-Яа-яЁё0-9]/g;
 
 function getDictionaryIconText(meta){
@@ -125,6 +127,338 @@ async function loadDictionaryEntries(dictId, difficulty){
 
 // --- Utilities & state ---
 const $ = sel => document.querySelector(sel);
+
+const dictionaryGenerator = (() => {
+  const modal = $('#dictGenModal');
+  if (!modal){
+    return {
+      registerTarget(){ return null; },
+      updateAvailability(){},
+      close(){}
+    };
+  }
+
+  const panel = modal.querySelector('.dict-gen-modal__panel');
+  const form = $('#dictGenForm');
+  const topicInput = $('#dictGenTopic');
+  const statusBox = $('#dictGenStatus');
+  const submitBtn = $('#dictGenSubmit');
+  const offlineNote = $('#dictGenOffline');
+  const closeTriggers = modal.querySelectorAll('[data-dictgen-close]');
+  const targets = new Map();
+  const hintTimers = new Map();
+  const DEFAULT_HINT = 'Требуется интернет';
+  const OFFLINE_HINT = 'Нет подключения';
+  const REQUEST_TIMEOUT = 60000;
+  let currentTarget = null;
+  let loading = false;
+  let abortController = null;
+
+  const isOnline = () => (typeof navigator === 'undefined' ? true : navigator.onLine !== false);
+
+  function clearHintTimer(target){
+    const timerId = hintTimers.get(target);
+    if (timerId){
+      clearTimeout(timerId);
+      hintTimers.delete(target);
+    }
+  }
+
+  function setHint(target, message, mode){
+    if (!target?.hint) return;
+    target.hint.textContent = message;
+    target.hint.classList.remove('custom-actions__hint--success','custom-actions__hint--error');
+    clearHintTimer(target);
+    if (mode === 'success'){
+      target.hint.classList.add('custom-actions__hint--success');
+      const timerId = setTimeout(() => {
+        if (!target?.hint) return;
+        target.hint.classList.remove('custom-actions__hint--success','custom-actions__hint--error');
+        target.hint.textContent = target.defaultHint;
+        hintTimers.delete(target);
+      }, 5000);
+      hintTimers.set(target, timerId);
+    }else if (mode === 'error'){
+      target.hint.classList.add('custom-actions__hint--error');
+    }
+  }
+
+  function setStatus(message, mode){
+    if (!statusBox) return;
+    statusBox.textContent = message || '';
+    statusBox.className = 'dict-gen-modal__status';
+    if (mode){
+      statusBox.classList.add(`dict-gen-modal__status--${mode}`);
+    }
+  }
+
+  function updateAvailability(){
+    const online = isOnline();
+    targets.forEach(target => {
+      if (target.button){
+        target.button.disabled = !online;
+        target.button.setAttribute('aria-disabled', online ? 'false' : 'true');
+      }
+      if (target.hint){
+        if (!online){
+          setHint(target, OFFLINE_HINT, 'error');
+        }else if (!hintTimers.has(target)){
+          target.hint.classList.remove('custom-actions__hint--error');
+          target.hint.textContent = target.defaultHint;
+        }else{
+          target.hint.classList.remove('custom-actions__hint--error');
+        }
+      }
+    });
+    if (submitBtn){
+      submitBtn.disabled = loading || !online;
+    }
+    if (topicInput){
+      topicInput.disabled = loading;
+    }
+    if (offlineNote){
+      offlineNote.hidden = online;
+    }
+  }
+
+  function open(target){
+    currentTarget = target;
+    if (modal.hidden){
+      modal.hidden = false;
+    }
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('dict-gen-modal-open');
+    setStatus('');
+    if (topicInput){
+      const initial = typeof target?.lastTopic === 'string' ? target.lastTopic : '';
+      topicInput.value = initial;
+      requestAnimationFrame(() => {
+        topicInput.focus();
+        topicInput.select();
+      });
+    }else if (panel){
+      requestAnimationFrame(() => panel.focus());
+    }
+    updateAvailability();
+  }
+
+  function close(options = {}){
+    if (abortController){
+      abortController.abort();
+      abortController = null;
+    }
+    loading = false;
+    if (!modal.hidden){
+      modal.hidden = true;
+    }
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('dict-gen-modal-open');
+    setStatus('');
+    const target = currentTarget;
+    currentTarget = null;
+    updateAvailability();
+    if (options.focusReturn !== false && target?.button){
+      target.button.focus();
+    }
+  }
+
+  function normalizeDictionary(payload){
+    const levels = ['easy','medium','hard'];
+    const normalized = {};
+    levels.forEach(level => {
+      const source = Array.isArray(payload?.[level]) ? payload[level] : [];
+      normalized[level] = source
+        .map(item => typeof item === 'string' ? item.trim() : '')
+        .filter(Boolean);
+    });
+    const total = levels.reduce((sum, level) => sum + normalized[level].length, 0);
+    if (total === 0){
+      throw new Error('Пустой ответ генератора.');
+    }
+    return normalized;
+  }
+
+  function applyDictionary(normalized, target, topicValue){
+    if (!target?.textarea) return;
+    const seen = new Set();
+    const ordered = [];
+    ['easy','medium','hard'].forEach(level => {
+      normalized[level].forEach(word => {
+        const key = word.toLocaleLowerCase('ru-RU');
+        if (!seen.has(key)){
+          seen.add(key);
+          ordered.push(word);
+        }
+      });
+    });
+    target.lastTopic = topicValue;
+    target.textarea.value = ordered.join('\n');
+    target.textarea.dispatchEvent(new Event('input', { bubbles:true }));
+    if (typeof target.persist === 'function'){
+      target.persist();
+    }
+    if (typeof target.onApply === 'function'){
+      try{
+        target.onApply({ words: ordered, topic: topicValue, dictionary: normalized });
+      }catch(err){
+        console.error('dict generator apply callback error', err);
+      }
+    }
+    setHint(target, `Добавлено ${ordered.length} слов`, 'success');
+    close({ focusReturn: false });
+    requestAnimationFrame(() => {
+      target.textarea.focus();
+      const len = target.textarea.value.length;
+      target.textarea.setSelectionRange(len, len);
+    });
+  }
+
+  function performRequest(topicValue, target){
+    const targetRef = target;
+    loading = true;
+    setStatus('Генерация словаря…', 'progress');
+    updateAvailability();
+    abortController = new AbortController();
+    const timeoutId = setTimeout(() => {
+      if (abortController){
+        abortController.abort();
+      }
+    }, REQUEST_TIMEOUT);
+    fetch(DICT_GENERATE_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic: topicValue }),
+      signal: abortController.signal
+    })
+      .then(async response => {
+        if (!response.ok){
+          let detail = '';
+          try{
+            const payload = await response.json();
+            if (payload && typeof payload.message === 'string' && payload.message.trim()){
+              detail = payload.message.trim();
+            }
+          }catch{}
+          const message = detail || `Ошибка ${response.status}`;
+          throw new Error(message);
+        }
+        return response.json();
+      })
+      .then(data => {
+        const normalized = normalizeDictionary(data);
+        applyDictionary(normalized, targetRef, topicValue);
+      })
+      .catch(error => {
+        if (modal.hidden){
+          return;
+        }
+        if (error?.name === 'AbortError'){
+          setStatus('Запрос прерван. Попробуйте ещё раз.', 'error');
+          setHint(targetRef, 'Не удалось сгенерировать', 'error');
+          return;
+        }
+        console.error('dict generator request failed', error);
+        const message = typeof error?.message === 'string' && error.message.trim()
+          ? error.message.trim()
+          : 'Не удалось сгенерировать словарь. Попробуйте позже.';
+        setStatus(message, 'error');
+        setHint(targetRef, 'Не удалось сгенерировать', 'error');
+      })
+      .finally(() => {
+        clearTimeout(timeoutId);
+        loading = false;
+        abortController = null;
+        updateAvailability();
+      });
+  }
+
+  if (closeTriggers){
+    closeTriggers.forEach(btn => btn.addEventListener('click', () => close()));
+  }
+  modal.addEventListener('click', event => {
+    if (event.target && event.target.dataset && Object.prototype.hasOwnProperty.call(event.target.dataset, 'dictgenClose')){
+      close();
+    }
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !modal.hidden){
+      event.preventDefault();
+      close();
+    }
+  });
+  if (form){
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      if (loading) return;
+      if (!currentTarget){
+        setStatus('Не выбрано место для словаря.', 'error');
+        return;
+      }
+      if (!isOnline()){
+        setStatus('Нет подключения к интернету.', 'error');
+        setHint(currentTarget, OFFLINE_HINT, 'error');
+        updateAvailability();
+        return;
+      }
+      const topicValue = topicInput ? topicInput.value.trim() : '';
+      if (!topicValue){
+        setStatus('Введите тему.', 'error');
+        if (topicInput){
+          topicInput.focus();
+        }
+        return;
+      }
+      performRequest(topicValue, currentTarget);
+    });
+  }
+  if (typeof window !== 'undefined'){
+    window.addEventListener('online', updateAvailability);
+    window.addEventListener('offline', updateAvailability);
+  }
+  updateAvailability();
+
+  return {
+    registerTarget(options = {}){
+      if (!options || typeof options !== 'object') return null;
+      const target = {
+        id: options.id || `target_${targets.size + 1}`,
+        button: options.button || null,
+        textarea: options.textarea || null,
+        hint: options.hint || null,
+        persist: typeof options.persist === 'function' ? options.persist : null,
+        onApply: typeof options.onApply === 'function' ? options.onApply : null,
+        defaultHint: typeof options.defaultHint === 'string' && options.defaultHint.trim()
+          ? options.defaultHint.trim()
+          : DEFAULT_HINT,
+        lastTopic: typeof options.defaultTopic === 'string' ? options.defaultTopic : ''
+      };
+      targets.set(target.id, target);
+      if (target.hint && !target.hint.textContent.trim()){
+        target.hint.textContent = target.defaultHint;
+      }
+      if (target.button){
+        target.button.addEventListener('click', () => {
+          if (!target.textarea){
+            setHint(target, 'Поле словаря недоступно', 'error');
+            return;
+          }
+          if (!isOnline()){
+            setHint(target, OFFLINE_HINT, 'error');
+            updateAvailability();
+            return;
+          }
+          setHint(target, target.defaultHint, null);
+          open(target);
+        });
+      }
+      updateAvailability();
+      return target;
+    },
+    updateAvailability,
+    close
+  };
+})();
+
 const VIEWS = ['viewMenu','viewQuickGame','viewTeamSetup','viewTeamGame'];
 const menuFeedbackBtn = $('#menuFeedbackBtn');
 let screen = 'viewMenu';
@@ -1133,6 +1467,8 @@ const qs = {
   difficulty: 'easy',
   customBox: $('#quickCustomBox'),
   customText: $('#quickCustomWords'),
+  generateBtn: $('#quickGenerateBtn'),
+  generateHint: $('#quickGenerateHint'),
   timerToggle: $('#quickTimerToggle'),
   time: 60,
   timeMinus: $('#quickTimeMinus'),
@@ -1146,6 +1482,15 @@ const qs = {
   ptsLabel: $('#quickPtsLabel'),
   start: $('#startQuick')
 };
+
+dictionaryGenerator.registerTarget({
+  id: 'quick',
+  button: qs.generateBtn,
+  textarea: qs.customText,
+  hint: qs.generateHint,
+  persist: () => persistQuickSettings(),
+  defaultHint: 'Требуется интернет'
+});
 
 const storedQuickSettingsRaw = readJson(QUICK_SETTINGS_KEY, null);
 if (storedQuickSettingsRaw && typeof storedQuickSettingsRaw === 'object'){
@@ -1881,6 +2226,8 @@ const ts = {
   difficulty: 'easy',
   customBox: $('#teamCustomBox'),
   customText: $('#teamCustomWords'),
+  generateBtn: $('#teamGenerateBtn'),
+  generateHint: $('#teamGenerateHint'),
   timerToggle: $('#teamTimerToggle'),
   time: 60,
   timeMinus: $('#teamTimeMinus'),
@@ -1891,6 +2238,15 @@ const ts = {
   pts: 10, ptsMinus: $('#ptsMinus'), ptsPlus: $('#ptsPlus'), ptsLabel: $('#ptsLabel'),
   start: $('#startTeam')
 };
+
+dictionaryGenerator.registerTarget({
+  id: 'team',
+  button: ts.generateBtn,
+  textarea: ts.customText,
+  hint: ts.generateHint,
+  persist: () => persistTeamSettings(),
+  defaultHint: 'Требуется интернет'
+});
 
 const storedTeamSettingsRaw = readJson(TEAM_SETTINGS_KEY, null);
 if (storedTeamSettingsRaw && typeof storedTeamSettingsRaw === 'object'){

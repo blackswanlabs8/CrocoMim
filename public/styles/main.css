@@ -199,6 +199,20 @@ body{
   cursor:pointer;
   transition:background .2s ease, border .2s ease, color .2s ease, transform .1s ease;
 }
+
+.custom-actions{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:10px;
+}
+.custom-actions__hint{
+  font-size:13px;
+  color:var(--muted);
+  transition:color .2s ease;
+}
+.custom-actions__hint--success{ color:var(--accent-2); }
+.custom-actions__hint--error{ color:var(--danger); }
 .dict-selector{
   display:flex;
   flex-direction:column;
@@ -829,6 +843,106 @@ body{
 .help-overlay__close:active{
   transform:scale(.95);
 }
+
+.dict-gen-modal{
+  position:fixed;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  z-index:2200;
+}
+.dict-gen-modal[hidden]{
+  display:none;
+}
+.dict-gen-modal__backdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(15,23,42,.55);
+  backdrop-filter:blur(6px);
+}
+body.theme-dark .dict-gen-modal__backdrop{
+  background:rgba(8,15,28,.7);
+}
+.dict-gen-modal__panel{
+  position:relative;
+  z-index:1;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+  background:var(--panel);
+  border:1px solid var(--panel-border);
+  border-radius:20px;
+  box-shadow:var(--shadow);
+  width:min(480px, 100%);
+  padding:28px 24px 24px;
+}
+.dict-gen-modal__panel:focus{
+  outline:2px solid var(--accent);
+}
+.dict-gen-modal__close{
+  position:absolute;
+  top:12px;
+  right:12px;
+  width:36px;
+  height:36px;
+  border-radius:12px;
+  border:1px solid var(--panel-border);
+  background:var(--panel-2);
+  color:var(--text);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  transition:background .2s ease, transform .1s ease, border .2s ease;
+}
+.dict-gen-modal__close:hover{ background:var(--panel-hover); }
+.dict-gen-modal__close:active{ transform:scale(.94); }
+.dict-gen-modal__content{
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+.dict-gen-modal__description{
+  margin:0;
+}
+.dict-gen-form{
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+.dict-gen-form__field{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.dict-gen-form__label{
+  font-weight:600;
+  color:var(--text-strong);
+}
+.dict-gen-modal__offline{
+  margin:0;
+  font-size:14px;
+  color:var(--danger);
+}
+.dict-gen-modal__status{
+  min-height:20px;
+  font-size:14px;
+  color:var(--muted);
+}
+.dict-gen-modal__status--progress{ color:var(--text); }
+.dict-gen-modal__status--success{ color:var(--accent-2); }
+.dict-gen-modal__status--error{ color:var(--danger); }
+.dict-gen-modal__actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:12px;
+}
+
+body.dict-gen-modal-open{
+  overflow:hidden;
+}
 .crocomim-help{
   font-family:system-ui, sans-serif;
   line-height:1.5;
@@ -1174,6 +1288,13 @@ body.feedback-modal-open{
     max-height:calc(100% - 16px);
     padding:24px 18px 18px;
   }
+  .dict-gen-modal{
+    padding:16px;
+  }
+  .dict-gen-modal__panel{
+    width:100%;
+    padding:24px 18px 18px;
+  }
   .toast-container{
     left:16px;
     right:16px;
@@ -1264,4 +1385,11 @@ body.feedback-modal-open{
   .menu-hero{ gap:10px; }
   .menu-settings{ gap:10px; }
   .menu-block{ padding:12px; gap:10px; }
+  .dict-gen-modal__actions{
+    flex-direction:column;
+    align-items:stretch;
+  }
+  .dict-gen-modal__actions .btn{
+    width:100%;
+  }
 }
