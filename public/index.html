@@ -396,6 +396,25 @@
   </div>
 </div>
 
+<div id="dictGeneratorOverlay" class="dict-generator" hidden aria-hidden="true">
+  <div class="dict-generator__backdrop" data-generator-dismiss></div>
+  <div class="dict-generator__dialog" role="dialog" aria-modal="true" aria-labelledby="dictGeneratorTitle" tabindex="-1">
+    <button class="dict-generator__close" type="button" aria-label="Закрыть генерацию" data-generator-dismiss>
+      <span aria-hidden="true">✕</span>
+    </button>
+    <div class="dict-generator__content">
+      <h2 id="dictGeneratorTitle" class="dict-generator__title">Создание словаря</h2>
+      <label class="dict-generator__label" for="dictGeneratorTopic">Тема словаря</label>
+      <input class="input dict-generator__input" id="dictGeneratorTopic" type="text" placeholder="Например: космос" />
+      <div class="dict-generator__status" id="dictGeneratorStatus" aria-live="polite"></div>
+      <div class="dict-generator__actions">
+        <button class="btn ghost dict-generator__cancel" id="dictGeneratorCancel" type="button">Отмена</button>
+        <button class="btn dict-generator__start" id="dictGeneratorStart" type="button">Сгенерировать</button>
+      </div>
+    </div>
+  </div>
+</div>
+
   <script src="./scripts/dicts.js"></script>
   <script src="./scripts/feedback.js"></script>
   <script src="./scripts/app.js"></script>

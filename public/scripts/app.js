@@ -28,6 +28,22 @@ const CUSTOM_DICTIONARY_META = {
   icon: 'edit'
 };
 
+const dictionaryGenerator = {
+  overlay: null,
+  dialog: null,
+  topicInput: null,
+  status: null,
+  startBtn: null,
+  cancelBtn: null,
+  closeTargets: [],
+  open: false,
+  busy: false,
+  owner: null,
+  lastFocus: null
+};
+
+const generatorStates = new Set();
+
 const ICON_SANITIZE_RE = /[^A-Za-zА-Яа-яЁё0-9]/g;
 
 function getDictionaryIconText(meta){
@@ -522,7 +538,268 @@ function renderDictionarySummary(state){
 
 function updateCustomBoxVisibility(state){
   if (!state?.customBox) return;
-  state.customBox.style.display = state.customSelected ? 'block' : 'none';
+  const selected = !!state.customSelected;
+  state.customBox.style.display = selected ? 'block' : 'none';
+  ensureGeneratorButton(state);
+  updateGeneratorTriggerState(state);
+}
+
+function ensureGeneratorButton(state){
+  if (!state?.customBox) return null;
+  if (state.generatorButton && state.generatorButtonWrapper && state.generatorButtonWrapper.isConnected){
+    return state.generatorButton;
+  }
+  let wrapper = state.generatorButtonWrapper;
+  if (!wrapper){
+    wrapper = document.createElement('div');
+    wrapper.className = 'dict-generator-control';
+    state.generatorButtonWrapper = wrapper;
+  }
+  let button = state.generatorButton;
+  if (!button){
+    button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'btn ghost dict-generator-btn';
+    button.textContent = 'Сгенерировать';
+    button.addEventListener('click', () => openDictionaryGenerator(state));
+    state.generatorButton = button;
+  }
+  if (!button.isConnected){
+    button.textContent = 'Сгенерировать';
+    wrapper.innerHTML = '';
+    wrapper.appendChild(button);
+  }
+  if (!wrapper.isConnected){
+    state.customBox.appendChild(wrapper);
+  }
+  wrapper.hidden = !state.customSelected;
+  return button;
+}
+
+function updateGeneratorTriggerState(state){
+  if (!state) return;
+  const button = state.generatorButton || ensureGeneratorButton(state);
+  const wrapper = state.generatorButtonWrapper;
+  const selected = !!state.customSelected;
+  if (wrapper){
+    wrapper.hidden = !selected;
+  }
+  if (button){
+    const shouldDisable = dictionaryGenerator.busy || dictionaryGenerator.open || !selected;
+    button.disabled = shouldDisable;
+    button.setAttribute('aria-disabled', shouldDisable ? 'true' : 'false');
+  }
+}
+
+function registerGeneratorState(state){
+  if (!state) return;
+  generatorStates.add(state);
+  updateGeneratorTriggerState(state);
+}
+
+const GENERATOR_STATUS_CLASSES = [
+  'dict-generator__status--error',
+  'dict-generator__status--success',
+  'dict-generator__status--loading'
+];
+
+function clearGeneratorStatus(){
+  if (!dictionaryGenerator.status) return;
+  GENERATOR_STATUS_CLASSES.forEach(cls => dictionaryGenerator.status.classList.remove(cls));
+  dictionaryGenerator.status.textContent = '';
+}
+
+function updateGeneratorStatus(message, variant){
+  if (!dictionaryGenerator.status) return;
+  clearGeneratorStatus();
+  if (message){
+    dictionaryGenerator.status.textContent = message;
+    if (variant){
+      const className = `dict-generator__status--${variant}`;
+      if (GENERATOR_STATUS_CLASSES.includes(className)){
+        dictionaryGenerator.status.classList.add(className);
+      }
+    }
+  }
+}
+
+function getGeneratorTopic(){
+  const value = dictionaryGenerator.topicInput?.value || '';
+  return value.trim();
+}
+
+function updateGeneratorStartEnabled(){
+  if (!dictionaryGenerator.startBtn) return;
+  const hasTopic = getGeneratorTopic().length > 0;
+  dictionaryGenerator.startBtn.disabled = dictionaryGenerator.busy || !hasTopic;
+}
+
+function setGeneratorBusy(isBusy){
+  dictionaryGenerator.busy = !!isBusy;
+  if (dictionaryGenerator.overlay){
+    dictionaryGenerator.overlay.classList.toggle('is-busy', !!isBusy);
+  }
+  if (dictionaryGenerator.cancelBtn){
+    dictionaryGenerator.cancelBtn.disabled = !!isBusy;
+  }
+  updateGeneratorStartEnabled();
+  generatorStates.forEach(state => updateGeneratorTriggerState(state));
+}
+
+function openDictionaryGenerator(state){
+  if (!dictionaryGenerator.overlay || dictionaryGenerator.busy) return;
+  if (dictionaryGenerator.open) return;
+  dictionaryGenerator.owner = state || null;
+  dictionaryGenerator.open = true;
+  dictionaryGenerator.overlay.hidden = false;
+  dictionaryGenerator.overlay.setAttribute('aria-hidden', 'false');
+  if (bodyEl){
+    bodyEl.classList.add('is-modal-open');
+  }
+  clearGeneratorStatus();
+  const topic = typeof state?.generatorTopic === 'string' ? state.generatorTopic : '';
+  if (dictionaryGenerator.topicInput){
+    dictionaryGenerator.topicInput.value = topic;
+    requestAnimationFrame(() => {
+      dictionaryGenerator.topicInput?.focus();
+      dictionaryGenerator.topicInput?.select();
+    });
+  }
+  updateGeneratorStartEnabled();
+  dictionaryGenerator.lastFocus = document.activeElement;
+  generatorStates.forEach(state => updateGeneratorTriggerState(state));
+}
+
+function closeDictionaryGenerator(options = {}){
+  if (!dictionaryGenerator.overlay || !dictionaryGenerator.open) return;
+  if (dictionaryGenerator.busy) return;
+  dictionaryGenerator.open = false;
+  dictionaryGenerator.overlay.hidden = true;
+  dictionaryGenerator.overlay.setAttribute('aria-hidden', 'true');
+  dictionaryGenerator.overlay.classList.remove('is-busy');
+  if (dictionaryGenerator.owner && dictionaryGenerator.topicInput){
+    dictionaryGenerator.owner.generatorTopic = dictionaryGenerator.topicInput.value.trim();
+  }
+  if (bodyEl){
+    bodyEl.classList.remove('is-modal-open');
+  }
+  const focusTarget = options.focusTarget
+    || dictionaryGenerator.owner?.generatorButton
+    || dictionaryGenerator.lastFocus;
+  dictionaryGenerator.owner = null;
+  dictionaryGenerator.lastFocus = null;
+  clearGeneratorStatus();
+  if (dictionaryGenerator.topicInput){
+    dictionaryGenerator.topicInput.value = dictionaryGenerator.topicInput.value.trim();
+  }
+  updateGeneratorStartEnabled();
+  generatorStates.forEach(state => updateGeneratorTriggerState(state));
+  if (options.restoreFocus !== false && focusTarget && typeof focusTarget.focus === 'function'){
+    requestAnimationFrame(() => focusTarget.focus());
+  }
+}
+
+function normalizeGeneratedWords(raw){
+  if (!raw) return [];
+  if (Array.isArray(raw)){
+    return raw
+      .map(item => {
+        if (typeof item === 'string') return item.trim();
+        if (item && typeof item === 'object'){
+          if (typeof item.term === 'string') return item.term.trim();
+          if (typeof item.word === 'string') return item.word.trim();
+          if (typeof item.title === 'string') return item.title.trim();
+        }
+        return '';
+      })
+      .filter(Boolean);
+  }
+  if (typeof raw === 'string'){
+    return raw
+      .split(/[\n,]+/)
+      .map(item => item.trim())
+      .filter(Boolean);
+  }
+  if (typeof raw === 'object'){
+    if (Array.isArray(raw.words)) return normalizeGeneratedWords(raw.words);
+    if (Array.isArray(raw.items)) return normalizeGeneratedWords(raw.items);
+    if (typeof raw.text === 'string') return normalizeGeneratedWords(raw.text);
+  }
+  return [];
+}
+
+function applyGeneratedWordsToState(state, rawWords){
+  if (!state?.customText) return 0;
+  const words = normalizeGeneratedWords(rawWords);
+  if (!words.length) return 0;
+  const existing = typeof state.customText.value === 'string'
+    ? state.customText.value.trim()
+    : '';
+  const generatedText = words.join('\n');
+  const nextValue = existing ? `${existing}\n${generatedText}` : generatedText;
+  state.customText.value = nextValue;
+  try{
+    state.customText.dispatchEvent(new Event('input', { bubbles:true }));
+  }catch{
+    // ignore
+  }
+  if (state === qs){
+    persistQuickSettings();
+  }else if (state === ts){
+    persistTeamSettings();
+  }
+  return words.length;
+}
+
+async function handleDictionaryGeneration(){
+  if (!dictionaryGenerator.startBtn || dictionaryGenerator.startBtn.disabled) return;
+  const owner = dictionaryGenerator.owner;
+  if (!owner){
+    updateGeneratorStatus('Не выбран словарь для генерации.', 'error');
+    return;
+  }
+  const topic = getGeneratorTopic();
+  if (!topic){
+    updateGeneratorStatus('Введите тему словаря.', 'error');
+    if (dictionaryGenerator.topicInput){
+      dictionaryGenerator.topicInput.focus();
+    }
+    return;
+  }
+  owner.generatorTopic = topic;
+  setGeneratorBusy(true);
+  updateGeneratorStatus('Генерация…', 'loading');
+  const generatorFn = dictionaryService && typeof dictionaryService.generateCustomDictionary === 'function'
+    ? dictionaryService.generateCustomDictionary.bind(dictionaryService)
+    : null;
+  if (!generatorFn){
+    setGeneratorBusy(false);
+    updateGeneratorStatus('Сервис генерации недоступен. Попробуйте позже.', 'error');
+    return;
+  }
+  try{
+    let result;
+    try{
+      result = await generatorFn({ topic, language: APP_LANGUAGE, source: owner?.generatorSource || '' });
+    }catch(err){
+      // Fallback for legacy signatures expecting a plain topic string
+      if (err && err.name !== 'TypeError'){
+        throw err;
+      }
+      result = await generatorFn(topic);
+    }
+    const count = applyGeneratedWordsToState(owner, result);
+    if (count > 0){
+      updateGeneratorStatus(`Добавлено слов: ${count}`, 'success');
+    }else{
+      updateGeneratorStatus('Не удалось получить слова для этой темы.', 'error');
+    }
+  }catch(err){
+    console.error('Не удалось сгенерировать словарь:', err);
+    updateGeneratorStatus('Ошибка генерации слов. Попробуйте ещё раз позже.', 'error');
+  }finally{
+    setGeneratorBusy(false);
+  }
 }
 
 function computeDictionaryAvailability(dictIds){
@@ -1144,8 +1421,11 @@ const qs = {
   ptsMinus: $('#quickPtsMinus'),
   ptsPlus: $('#quickPtsPlus'),
   ptsLabel: $('#quickPtsLabel'),
-  start: $('#startQuick')
+  start: $('#startQuick'),
+  generatorSource: 'quick',
+  generatorTopic: ''
 };
+registerGeneratorState(qs);
 
 const storedQuickSettingsRaw = readJson(QUICK_SETTINGS_KEY, null);
 if (storedQuickSettingsRaw && typeof storedQuickSettingsRaw === 'object'){
@@ -1889,8 +2169,50 @@ const ts = {
   ptsToggle: $('#teamPtsToggle'),
   ptsControls: $('#ptsControls'),
   pts: 10, ptsMinus: $('#ptsMinus'), ptsPlus: $('#ptsPlus'), ptsLabel: $('#ptsLabel'),
-  start: $('#startTeam')
+  start: $('#startTeam'),
+  generatorSource: 'team',
+  generatorTopic: ''
 };
+registerGeneratorState(ts);
+
+dictionaryGenerator.overlay = $('#dictGeneratorOverlay');
+dictionaryGenerator.dialog = dictionaryGenerator.overlay?.querySelector('.dict-generator__dialog') || null;
+dictionaryGenerator.topicInput = $('#dictGeneratorTopic');
+dictionaryGenerator.status = $('#dictGeneratorStatus');
+dictionaryGenerator.startBtn = $('#dictGeneratorStart');
+dictionaryGenerator.cancelBtn = $('#dictGeneratorCancel');
+dictionaryGenerator.closeTargets = Array.from(dictionaryGenerator.overlay?.querySelectorAll('[data-generator-dismiss]') || []);
+if (dictionaryGenerator.closeTargets.length){
+  dictionaryGenerator.closeTargets.forEach(el => {
+    el.addEventListener('click', event => {
+      event.preventDefault();
+      if (dictionaryGenerator.busy) return;
+      closeDictionaryGenerator();
+    });
+  });
+}
+if (dictionaryGenerator.cancelBtn){
+  dictionaryGenerator.cancelBtn.addEventListener('click', event => {
+    event.preventDefault();
+    if (dictionaryGenerator.busy) return;
+    closeDictionaryGenerator();
+  });
+}
+if (dictionaryGenerator.startBtn){
+  dictionaryGenerator.startBtn.addEventListener('click', event => {
+    event.preventDefault();
+    handleDictionaryGeneration();
+  });
+  updateGeneratorStartEnabled();
+}
+if (dictionaryGenerator.topicInput){
+  dictionaryGenerator.topicInput.addEventListener('input', () => {
+    updateGeneratorStartEnabled();
+    if (!dictionaryGenerator.busy){
+      clearGeneratorStatus();
+    }
+  });
+}
 
 const storedTeamSettingsRaw = readJson(TEAM_SETTINGS_KEY, null);
 if (storedTeamSettingsRaw && typeof storedTeamSettingsRaw === 'object'){
@@ -2054,6 +2376,15 @@ document.addEventListener('click', (event) => {
     if (state.dictContainer && state.dictContainer.contains(event.target)) return;
     setDictionarySelectorOpen(state, false);
   });
+});
+
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Escape') return;
+  if (!dictionaryGenerator.open) return;
+  if (dictionaryGenerator.busy) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  closeDictionaryGenerator();
 });
 
 document.addEventListener('keydown', (event) => {

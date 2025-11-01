@@ -1135,6 +1135,147 @@ body.theme-dark .feedback-modal__backdrop{
   line-height:1;
 }
 
+.dict-generator{
+  position:fixed;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  z-index:3100;
+}
+.dict-generator[hidden]{
+  display:none;
+}
+.dict-generator__backdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(15,23,42,.55);
+  backdrop-filter:blur(6px);
+}
+body.theme-dark .dict-generator__backdrop{
+  background:rgba(8,15,28,.72);
+}
+.dict-generator__dialog{
+  position:relative;
+  z-index:1;
+  width:min(420px, 94vw);
+  background:var(--panel);
+  border:1px solid var(--panel-border);
+  border-radius:22px;
+  box-shadow:var(--shadow);
+  padding:28px 24px 24px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+.dict-generator__content{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+.dict-generator__title{
+  margin:0;
+  font-size:20px;
+  font-weight:700;
+  color:var(--text-strong);
+}
+.dict-generator__label{
+  font-weight:600;
+  color:var(--muted);
+  font-size:15px;
+}
+.dict-generator__input{
+  width:100%;
+}
+.dict-generator__actions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:12px;
+}
+.dict-generator__actions .btn{
+  min-width:120px;
+}
+.dict-generator__close{
+  position:absolute;
+  top:12px;
+  right:12px;
+  width:36px;
+  height:36px;
+  border-radius:12px;
+  border:1px solid var(--panel-border);
+  background:var(--panel-2);
+  color:var(--text);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  transition:background .2s ease, transform .1s ease, border .2s ease;
+}
+.dict-generator__close:hover{
+  background:var(--panel-hover);
+}
+.dict-generator__close:active{
+  transform:scale(.95);
+}
+.dict-generator__status{
+  min-height:24px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:14px;
+  font-weight:500;
+  color:var(--muted);
+}
+.dict-generator__status:empty{
+  display:none;
+}
+.dict-generator__status--loading{
+  color:var(--muted);
+}
+.dict-generator__status--loading::before{
+  content:"";
+  width:16px;
+  height:16px;
+  border-radius:50%;
+  border:2px solid rgba(148,163,184,.55);
+  border-top-color:var(--accent);
+  animation:dict-generator-spin 1s linear infinite;
+}
+.dict-generator__status--error{
+  color:var(--danger);
+}
+.dict-generator__status--success{
+  color:var(--accent-2);
+}
+.dict-generator.is-busy{
+  cursor:progress;
+}
+.dict-generator.is-busy .dict-generator__dialog{
+  pointer-events:auto;
+}
+.dict-generator-control{
+  display:flex;
+  justify-content:flex-end;
+  margin-top:8px;
+}
+.dict-generator-control[hidden]{
+  display:none;
+}
+.dict-generator-btn{
+  min-width:160px;
+}
+
+@keyframes dict-generator-spin{
+  from{ transform:rotate(0deg); }
+  to{ transform:rotate(360deg); }
+}
+
+body.is-modal-open{
+  overflow:hidden;
+}
+
 body.feedback-modal-open{
   overflow:hidden;
 }
