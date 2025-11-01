@@ -45,6 +45,280 @@ const dictionaryGenerator = {
 
 const generatorStates = new Set();
 
+const CUSTOM_DICTIONARY_LEVELS = ['easy','medium','hard'];
+const CUSTOM_DICTIONARY_WORD_LIMIT = 50;
+const CUSTOM_DICTIONARY_STORAGE_KEY = 'customDictionaryState';
+
+const customDictionaryStore = {
+  levels: {
+    easy: [],
+    medium: [],
+    hard: []
+  },
+  updatedAt: 0
+};
+const customDictionaryStates = new Set();
+let customDictionaryInitialized = false;
+let customTextSyncing = false;
+
+function cloneCustomDictionaryEntry(entry){
+  if (!entry || typeof entry !== 'object') return null;
+  return {
+    dictionaryId: CUSTOM_DICTIONARY_META.id,
+    difficulty: typeof entry.difficulty === 'string' ? entry.difficulty : '',
+    term: typeof entry.term === 'string' ? entry.term : '',
+    description: typeof entry.description === 'string' ? entry.description : '',
+    about: typeof entry.about === 'string' ? entry.about : '',
+    id: typeof entry.id === 'string' ? entry.id : ''
+  };
+}
+
+function sanitizeCustomTerm(value){
+  return String(value ?? '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 120);
+}
+
+function buildCustomEntry(term, difficulty, index){
+  return {
+    id: `custom_${difficulty}_${index + 1}`,
+    dictionaryId: CUSTOM_DICTIONARY_META.id,
+    difficulty,
+    term,
+    description: '',
+    about: ''
+  };
+}
+
+function getCustomDictionaryLevel(level){
+  if (!CUSTOM_DICTIONARY_LEVELS.includes(level)) return [];
+  return customDictionaryStore.levels[level] || [];
+}
+
+function setCustomDictionaryLevel(level, entries, options = {}){
+  if (!CUSTOM_DICTIONARY_LEVELS.includes(level)) return;
+  const normalized = [];
+  const seen = new Set();
+  const globalSeen = new Set();
+  CUSTOM_DICTIONARY_LEVELS.forEach(other => {
+    if (other === level) return;
+    getCustomDictionaryLevel(other).forEach(entry => {
+      const term = sanitizeCustomTerm(entry.term);
+      if (!term) return;
+      globalSeen.add(term.toLocaleLowerCase('ru-RU'));
+    });
+  });
+  (Array.isArray(entries) ? entries : []).forEach(entry => {
+    const cloned = cloneCustomDictionaryEntry(entry);
+    if (!cloned) return;
+    const term = sanitizeCustomTerm(cloned.term);
+    if (!term) return;
+    const key = term.toLocaleLowerCase('ru-RU');
+    if (seen.has(key) || globalSeen.has(key)) return;
+    seen.add(key);
+    normalized.push(buildCustomEntry(term, level, normalized.length));
+    if (normalized.length >= CUSTOM_DICTIONARY_WORD_LIMIT) return;
+  });
+  customDictionaryStore.levels[level] = normalized;
+  if (!options.silent){
+    customDictionaryStore.updatedAt = Date.now();
+    persistCustomDictionaryStore();
+    notifyCustomDictionaryStates();
+  }
+}
+
+function setCustomDictionaryLevels(levels, options = {}){
+  const payload = levels && typeof levels === 'object' ? levels : {};
+  CUSTOM_DICTIONARY_LEVELS.forEach(level => {
+    setCustomDictionaryLevel(level, payload[level], { silent:true });
+  });
+  customDictionaryStore.updatedAt = Date.now();
+  if (!options.silent){
+    persistCustomDictionaryStore();
+    notifyCustomDictionaryStates();
+  }
+}
+
+function collectCustomDictionaryCounts(){
+  const counts = {};
+  CUSTOM_DICTIONARY_LEVELS.forEach(level => {
+    counts[level] = getCustomDictionaryLevel(level).length;
+  });
+  counts.total = CUSTOM_DICTIONARY_LEVELS.reduce((sum, level) => sum + counts[level], 0);
+  return counts;
+}
+
+function ensureCustomDictionaryNotice(state){
+  if (!state?.customBox) return null;
+  if (!state.customNotice){
+    const notice = document.createElement('div');
+    notice.className = 'custom-dict-notice';
+    notice.hidden = true;
+    state.customBox.appendChild(notice);
+    state.customNotice = notice;
+  }
+  return state.customNotice;
+}
+
+function ensureCustomDictionaryPreview(state){
+  if (!state?.customBox) return null;
+  if (!state.customPreview){
+    const preview = document.createElement('div');
+    preview.className = 'custom-dict-preview muted';
+    preview.hidden = true;
+    state.customBox.appendChild(preview);
+    state.customPreview = preview;
+  }
+  return state.customPreview;
+}
+
+function updateCustomDictionaryNotice(state, message, variant){
+  const notice = ensureCustomDictionaryNotice(state);
+  if (!notice) return;
+  notice.textContent = message || '';
+  notice.hidden = !message;
+  notice.classList.remove('is-success', 'is-error');
+  if (message && variant){
+    notice.classList.add(variant === 'error' ? 'is-error' : 'is-success');
+  }
+}
+
+function updateCustomDictionaryPreview(state){
+  const preview = ensureCustomDictionaryPreview(state);
+  if (!preview) return;
+  const counts = collectCustomDictionaryCounts();
+  const parts = CUSTOM_DICTIONARY_LEVELS
+    .map(level => {
+      const count = counts[level];
+      if (!count) return null;
+      const label = DIFFICULTY_LABELS[level] || level;
+      return `${label}: ${count}`;
+    })
+    .filter(Boolean);
+  preview.textContent = parts.length ? `Сгенерировано — ${parts.join(', ')}` : '';
+  preview.hidden = parts.length === 0;
+}
+
+function notifyCustomDictionaryStates(){
+  customDictionaryStates.forEach(state => {
+    updateCustomDictionaryPreview(state);
+    renderDictionarySummary(state);
+    if (!state?.customText || state.customEditing) return;
+    syncCustomTextareaFromStore(state);
+  });
+}
+
+function syncCustomTextareaFromStore(state){
+  if (!state?.customText) return;
+  const targetDifficulty = state.difficulty && state.difficulty !== 'mix'
+    ? state.difficulty
+    : 'easy';
+  const levels = [];
+  if (state.difficulty === 'mix'){
+    CUSTOM_DICTIONARY_LEVELS.forEach(level => {
+      levels.push(...getCustomDictionaryLevel(level));
+    });
+  }else{
+    levels.push(...getCustomDictionaryLevel(targetDifficulty));
+  }
+  const words = levels.map(entry => entry.term).filter(Boolean);
+  const nextValue = words.join('\n');
+  if (state.customText.value !== nextValue){
+    customTextSyncing = true;
+    state.customText.value = nextValue;
+    customTextSyncing = false;
+  }
+  if (state.difficulty === 'mix'){
+    const counts = collectCustomDictionaryCounts();
+    const warningLevel = CUSTOM_DICTIONARY_LEVELS.find(level => counts[level] !== CUSTOM_DICTIONARY_WORD_LIMIT) || null;
+    if (warningLevel){
+      updateCustomDictionaryLevelStatus(state, warningLevel, { preserveSuccess:true });
+    }else if (state.customNotice?.classList.contains('is-error')){
+      updateCustomDictionaryNotice(state, '', null);
+    }
+  }else{
+    updateCustomDictionaryLevelStatus(state, targetDifficulty, { preserveSuccess:true });
+    const counts = collectCustomDictionaryCounts();
+    if (counts[targetDifficulty] === CUSTOM_DICTIONARY_WORD_LIMIT && state.customNotice?.classList.contains('is-error')){
+      updateCustomDictionaryNotice(state, '', null);
+    }
+  }
+}
+
+function extractWordsFromTextarea(text){
+  const seen = new Set();
+  const words = [];
+  String(text || '')
+    .split(/[\n,;]+/)
+    .forEach(part => {
+      const term = sanitizeCustomTerm(part);
+      if (!term) return;
+      const key = term.toLocaleLowerCase('ru-RU');
+      if (seen.has(key)) return;
+      seen.add(key);
+      words.push(term);
+    });
+  return words;
+}
+
+function updateCustomDictionaryLevelStatus(state, level, options = {}){
+  if (!state) return;
+  const counts = collectCustomDictionaryCounts();
+  const count = counts[level] || 0;
+  if (count === CUSTOM_DICTIONARY_WORD_LIMIT){
+    if (!options.preserveSuccess){
+      updateCustomDictionaryNotice(state, '', null);
+    }
+    return;
+  }
+  const label = DIFFICULTY_LABELS[level] || level;
+  const message = count === 0
+    ? `Добавьте ${CUSTOM_DICTIONARY_WORD_LIMIT} слов для уровня «${label}».`
+    : `На уровне «${label}» только ${count} из ${CUSTOM_DICTIONARY_WORD_LIMIT} слов.`;
+  updateCustomDictionaryNotice(state, message, 'error');
+}
+
+function handleCustomTextInput(state){
+  if (!state?.customText || customTextSyncing) return;
+  const difficulty = state.difficulty && state.difficulty !== 'mix'
+    ? state.difficulty
+    : 'easy';
+  const words = extractWordsFromTextarea(state.customText.value)
+    .slice(0, CUSTOM_DICTIONARY_WORD_LIMIT);
+  const entries = words.map((term, idx) => buildCustomEntry(term, difficulty, idx));
+  setCustomDictionaryLevel(difficulty, entries);
+  updateCustomDictionaryLevelStatus(state, difficulty);
+}
+
+function registerCustomDictionaryState(state){
+  if (!state) return;
+  customDictionaryStates.add(state);
+  ensureCustomDictionaryPreview(state);
+  ensureCustomDictionaryNotice(state);
+  if (state.customText && !state.customText.dataset.customBound){
+    state.customText.addEventListener('focus', () => {
+      state.customEditing = true;
+    });
+    state.customText.addEventListener('blur', () => {
+      state.customEditing = false;
+      syncCustomTextareaFromStore(state);
+    });
+    state.customText.addEventListener('input', () => {
+      handleCustomTextInput(state);
+    });
+    state.customText.dataset.customBound = '1';
+  }
+  updateCustomDictionaryPreview(state);
+  syncCustomTextareaFromStore(state);
+  updateCustomDictionaryNotice(state, '', null);
+  renderDictionarySummary(state);
+  const initialLevel = state.difficulty && state.difficulty !== 'mix' ? state.difficulty : 'easy';
+  if (state.customSelected){
+    updateCustomDictionaryLevelStatus(state, initialLevel, { preserveSuccess:true });
+  }
+}
+
 const ICON_SANITIZE_RE = /[^A-Za-zА-Яа-яЁё0-9]/g;
 
 function getDictionaryIconText(meta){
@@ -523,6 +797,7 @@ function renderDictionarySummary(state){
   }
   const chips = document.createElement('div');
   chips.className = 'dict-chips';
+  const customCounts = collectCustomDictionaryCounts();
   selectedMeta.forEach(meta => {
     const chip = document.createElement('div');
     chip.className = 'dict-chip';
@@ -532,6 +807,17 @@ function renderDictionarySummary(state){
     label.className = 'dict-chip-label';
     label.textContent = meta.title || meta.id;
     chip.appendChild(label);
+    if (meta.id === CUSTOM_DICTIONARY_META.id){
+      const parts = CUSTOM_DICTIONARY_LEVELS
+        .map(level => customCounts[level] ? `${DIFFICULTY_LABELS[level] || level}: ${customCounts[level]}` : null)
+        .filter(Boolean);
+      if (parts.length){
+        const extra = document.createElement('span');
+        extra.className = 'dict-chip-extra';
+        extra.textContent = parts.join(', ');
+        chip.appendChild(extra);
+      }
+    }
     chips.appendChild(chip);
   });
   body.appendChild(chips);
@@ -701,7 +987,6 @@ function closeDictionaryGenerator(options = {}){
 }
 
 function normalizeGeneratedWords(raw){
-  if (!raw) return [];
   if (Array.isArray(raw)){
     return raw
       .map(item => {
@@ -717,18 +1002,11 @@ function normalizeGeneratedWords(raw){
   }
   if (typeof raw === 'string'){
     return raw
-      .split(/[\n,]+/)
+      .split(/[\n,;]+/)
       .map(item => item.trim())
       .filter(Boolean);
   }
-  if (typeof raw === 'object'){
-    const difficultyKeys = ['easy','medium','hard'];
-    const hasDifficulty = difficultyKeys.some(key => Array.isArray(raw[key]) || typeof raw[key] === 'string' || (raw[key] && typeof raw[key] === 'object'));
-    if (hasDifficulty){
-      const words = difficultyKeys
-        .flatMap(key => normalizeGeneratedWords(raw[key]));
-      return words.filter((word, idx) => word && words.indexOf(word) === idx);
-    }
+  if (raw && typeof raw === 'object'){
     if (Array.isArray(raw.words)) return normalizeGeneratedWords(raw.words);
     if (Array.isArray(raw.items)) return normalizeGeneratedWords(raw.items);
     if (typeof raw.text === 'string') return normalizeGeneratedWords(raw.text);
@@ -736,27 +1014,79 @@ function normalizeGeneratedWords(raw){
   return [];
 }
 
-function applyGeneratedWordsToState(state, rawWords){
-  if (!state?.customText) return 0;
-  const words = normalizeGeneratedWords(rawWords);
-  if (!words.length) return 0;
-  const existing = typeof state.customText.value === 'string'
-    ? state.customText.value.trim()
-    : '';
-  const generatedText = words.join('\n');
-  const nextValue = existing ? `${existing}\n${generatedText}` : generatedText;
-  state.customText.value = nextValue;
-  try{
-    state.customText.dispatchEvent(new Event('input', { bubbles:true }));
-  }catch{
-    // ignore
+function normalizeGeneratedDictionaryResult(raw){
+  const normalized = { easy: [], medium: [], hard: [] };
+  if (!raw) return normalized;
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)){
+    let hasLevels = false;
+    CUSTOM_DICTIONARY_LEVELS.forEach(level => {
+      if (raw[level] !== undefined){
+        normalized[level] = normalizeGeneratedWords(raw[level]);
+        if (normalized[level].length) hasLevels = true;
+      }
+    });
+    if (hasLevels) return normalized;
   }
+  const fallback = normalizeGeneratedWords(raw);
+  if (fallback.length){
+    normalized.easy = fallback.slice(0, CUSTOM_DICTIONARY_WORD_LIMIT);
+    normalized.medium = fallback.slice(CUSTOM_DICTIONARY_WORD_LIMIT, CUSTOM_DICTIONARY_WORD_LIMIT * 2);
+    normalized.hard = fallback.slice(CUSTOM_DICTIONARY_WORD_LIMIT * 2, CUSTOM_DICTIONARY_WORD_LIMIT * 3);
+  }
+  return normalized;
+}
+
+function prepareGeneratedDictionary(raw){
+  const normalized = normalizeGeneratedDictionaryResult(raw);
+  const levels = {};
+  const counts = {};
+  const seen = new Set();
+  const errors = [];
+  CUSTOM_DICTIONARY_LEVELS.forEach(level => {
+    const words = Array.isArray(normalized[level]) ? normalized[level] : [];
+    const deduped = [];
+    for (let i = 0; i < words.length && deduped.length < CUSTOM_DICTIONARY_WORD_LIMIT; i++){
+      const term = sanitizeCustomTerm(words[i]);
+      if (!term) continue;
+      const key = term.toLocaleLowerCase('ru-RU');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      deduped.push(term);
+    }
+    if (deduped.length !== CUSTOM_DICTIONARY_WORD_LIMIT){
+      const label = DIFFICULTY_LABELS[level] || level;
+      errors.push(`Уровень «${label}» содержит ${deduped.length} из ${CUSTOM_DICTIONARY_WORD_LIMIT} слов.`);
+    }
+    levels[level] = deduped.map((term, idx) => buildCustomEntry(term, level, idx));
+    counts[level] = levels[level].length;
+  });
+  const total = CUSTOM_DICTIONARY_LEVELS.reduce((sum, level) => sum + counts[level], 0);
+  if (!total){
+    throw new Error('Не удалось получить слова для этой темы.');
+  }
+  if (errors.length){
+    const err = new Error(errors.join(' '));
+    err.levelErrors = errors;
+    throw err;
+  }
+  return { levels, counts, total };
+}
+
+function applyGeneratedWordsToState(state, rawWords){
+  const prepared = prepareGeneratedDictionary(rawWords);
+  setCustomDictionaryLevels(prepared.levels);
   if (state === qs){
     persistQuickSettings();
   }else if (state === ts){
     persistTeamSettings();
   }
-  return words.length;
+  if (state){
+    const parts = CUSTOM_DICTIONARY_LEVELS
+      .map(level => prepared.counts[level] ? `${DIFFICULTY_LABELS[level] || level}: ${prepared.counts[level]}` : null)
+      .filter(Boolean);
+    updateCustomDictionaryNotice(state, parts.length ? `Словарь обновлён — ${parts.join(', ')}` : 'Словарь обновлён', 'success');
+  }
+  return prepared;
 }
 
 async function handleDictionaryGeneration(){
@@ -777,9 +1107,14 @@ async function handleDictionaryGeneration(){
   owner.generatorTopic = topic;
   setGeneratorBusy(true);
   updateGeneratorStatus('Генерация…', 'loading');
-  const generatorFn = dictionaryService && typeof dictionaryService.generateCustomDictionary === 'function'
+  updateCustomDictionaryNotice(owner, '', null);
+  const structuredGenerator = dictionaryService && typeof dictionaryService.generateDictionaryByTopic === 'function'
+    ? dictionaryService.generateDictionaryByTopic.bind(dictionaryService)
+    : null;
+  const legacyGenerator = dictionaryService && typeof dictionaryService.generateCustomDictionary === 'function'
     ? dictionaryService.generateCustomDictionary.bind(dictionaryService)
     : null;
+  const generatorFn = structuredGenerator || legacyGenerator;
   if (!generatorFn){
     setGeneratorBusy(false);
     updateGeneratorStatus('Сервис генерации недоступен. Попробуйте позже.', 'error');
@@ -788,23 +1123,28 @@ async function handleDictionaryGeneration(){
   try{
     let result;
     try{
-      result = await generatorFn({ topic, language: APP_LANGUAGE, source: owner?.generatorSource || '' });
+      const payload = { topic, language: APP_LANGUAGE, source: owner?.generatorSource || '' };
+      result = await generatorFn(payload);
     }catch(err){
       // Fallback for legacy signatures expecting a plain topic string
-      if (err && err.name !== 'TypeError'){
+      if (!err || err.name !== 'TypeError'){
         throw err;
       }
       result = await generatorFn(topic);
     }
-    const count = applyGeneratedWordsToState(owner, result);
-    if (count > 0){
-      updateGeneratorStatus(`Добавлено слов: ${count}`, 'success');
-    }else{
-      updateGeneratorStatus('Не удалось получить слова для этой темы.', 'error');
-    }
+    const prepared = applyGeneratedWordsToState(owner, result);
+    const parts = CUSTOM_DICTIONARY_LEVELS
+      .map(level => prepared.counts[level] ? `${DIFFICULTY_LABELS[level] || level}: ${prepared.counts[level]}` : null)
+      .filter(Boolean);
+    const statusText = parts.length ? `Словарь обновлён — ${parts.join(', ')}` : 'Словарь обновлён';
+    updateGeneratorStatus(statusText, 'success');
   }catch(err){
     console.error('Не удалось сгенерировать словарь:', err);
-    updateGeneratorStatus('Ошибка генерации слов. Попробуйте ещё раз позже.', 'error');
+    const message = err && typeof err.message === 'string' && err.message.trim()
+      ? err.message.trim()
+      : 'Ошибка генерации слов. Попробуйте ещё раз позже.';
+    updateGeneratorStatus(message, 'error');
+    updateCustomDictionaryNotice(owner, message, 'error');
   }finally{
     setGeneratorBusy(false);
   }
@@ -1173,6 +1513,47 @@ const removeStorageItem = key => {
   catch{}
 };
 
+function persistCustomDictionaryStore(){
+  const payload = {
+    levels: {},
+    updatedAt: customDictionaryStore.updatedAt
+  };
+  CUSTOM_DICTIONARY_LEVELS.forEach(level => {
+    payload.levels[level] = getCustomDictionaryLevel(level).map(entry => ({
+      term: entry.term,
+      description: entry.description || '',
+      about: entry.about || ''
+    }));
+  });
+  writeJson(CUSTOM_DICTIONARY_STORAGE_KEY, payload);
+}
+
+function initializeCustomDictionaryStore(){
+  if (customDictionaryInitialized) return;
+  customDictionaryInitialized = true;
+  const stored = readJson(CUSTOM_DICTIONARY_STORAGE_KEY, null);
+  if (!stored || typeof stored !== 'object') return;
+  const levels = {};
+  CUSTOM_DICTIONARY_LEVELS.forEach(level => {
+    const list = Array.isArray(stored?.levels?.[level]) ? stored.levels[level] : [];
+    levels[level] = list
+      .map(item => sanitizeCustomTerm(item?.term))
+      .filter(Boolean)
+      .slice(0, CUSTOM_DICTIONARY_WORD_LIMIT)
+      .map((term, idx) => buildCustomEntry(term, level, idx));
+  });
+  setCustomDictionaryLevels(levels, { silent:true });
+  customDictionaryStore.updatedAt = Number(stored.updatedAt) || customDictionaryStore.updatedAt;
+}
+
+function seedCustomDictionaryFromLegacyText(text){
+  if (!text || collectCustomDictionaryCounts().total) return;
+  const words = extractWordsFromTextarea(text).slice(0, CUSTOM_DICTIONARY_WORD_LIMIT);
+  if (!words.length) return;
+  const entries = words.map((term, idx) => buildCustomEntry(term, 'easy', idx));
+  setCustomDictionaryLevel('easy', entries);
+}
+
 function collectQuickSettings(){
   if (!qs) return null;
   const selected = Array.from(qs.selectedDictionaries || [])
@@ -1435,6 +1816,8 @@ const qs = {
 };
 registerGeneratorState(qs);
 
+initializeCustomDictionaryStore();
+
 const storedQuickSettingsRaw = readJson(QUICK_SETTINGS_KEY, null);
 if (storedQuickSettingsRaw && typeof storedQuickSettingsRaw === 'object'){
   const selected = Array.isArray(storedQuickSettingsRaw.selectedDictionaries)
@@ -1472,6 +1855,9 @@ if (storedQuickSettingsRaw && typeof storedQuickSettingsRaw === 'object'){
   if (qs.customText && typeof storedQuickSettingsRaw.customText === 'string'){
     qs.customText.value = storedQuickSettingsRaw.customText;
   }
+  if (typeof storedQuickSettingsRaw.customText === 'string'){
+    seedCustomDictionaryFromLegacyText(storedQuickSettingsRaw.customText);
+  }
   quickSavedProfile = {
     selectedDictionaries: [...selected],
     customSelected: quickInitialCustomSelected,
@@ -1491,10 +1877,12 @@ if (storedQuickSettingsRaw && typeof storedQuickSettingsRaw === 'object'){
   quickInitialTimerEnabled = !!(qs.timerToggle && qs.timerToggle.checked);
   quickInitialPtsEnabled = !!(qs.ptsToggle && qs.ptsToggle.checked);
 }
+registerCustomDictionaryState(qs);
 quickPendingSession = sanitizeQuickSession(readJson(QUICK_SESSION_KEY, null));
 initDifficultyControls(qs);
 qs.onDifficultyChange = level => {
   qs.difficulty = level;
+  syncCustomTextareaFromStore(qs);
   persistQuickSettings();
 };
 const upQuickTime = () => qs.timeLabel.textContent = qs.time+' с';
@@ -1779,26 +2167,50 @@ const formatWordList = list => {
   return items.length ? items.join(', ') : '—';
 };
 const parseCustomWords = (raw, options = {}) => {
-  const input = typeof raw === 'string' ? raw : '';
   const rawDifficulty = typeof options.difficulty === 'string' ? options.difficulty.trim().toLowerCase() : '';
   const normalizedDifficulty = ALL_DIFFICULTIES.includes(rawDifficulty) ? rawDifficulty : '';
-  return input
-    .split(/[,\n\r]+/)
-    .map(s=>s.trim())
-    .filter(Boolean)
-    .map((term, idx) => {
-      const entry = {
-        id: `custom_${idx+1}`,
+  const result = [];
+  const appendLevelEntries = level => {
+    getCustomDictionaryLevel(level).forEach((entry, idx) => {
+      const term = sanitizeCustomTerm(entry.term);
+      if (!term) return;
+      result.push({
+        id: entry.id || `custom_${level}_${idx+1}`,
         dictionaryId: CUSTOM_DICTIONARY_META.id,
         term,
-        description: '',
-        about: ''
-      };
-      if (normalizedDifficulty && normalizedDifficulty !== 'mix'){
-        entry.difficulty = normalizedDifficulty;
-      }
-      return entry;
+        description: entry.description || '',
+        about: entry.about || '',
+        difficulty: level
+      });
     });
+  };
+
+  if (normalizedDifficulty === 'mix'){
+    CUSTOM_DICTIONARY_LEVELS.forEach(level => appendLevelEntries(level));
+  }else if (CUSTOM_DICTIONARY_LEVELS.includes(normalizedDifficulty)){
+    appendLevelEntries(normalizedDifficulty);
+  }else{
+    CUSTOM_DICTIONARY_LEVELS.forEach(level => appendLevelEntries(level));
+  }
+
+  if (result.length){
+    return result;
+  }
+
+  const input = typeof raw === 'string' ? raw : '';
+  return extractWordsFromTextarea(input).map((term, idx) => {
+    const entry = {
+      id: `custom_${idx+1}`,
+      dictionaryId: CUSTOM_DICTIONARY_META.id,
+      term,
+      description: '',
+      about: ''
+    };
+    if (normalizedDifficulty && normalizedDifficulty !== 'mix'){
+      entry.difficulty = normalizedDifficulty;
+    }
+    return entry;
+  });
 };
 
 function updateQuickTimerButton(){
@@ -2259,6 +2671,9 @@ if (storedTeamSettingsRaw && typeof storedTeamSettingsRaw === 'object'){
   if (ts.customText && typeof storedTeamSettingsRaw.customText === 'string'){
     ts.customText.value = storedTeamSettingsRaw.customText;
   }
+  if (typeof storedTeamSettingsRaw.customText === 'string'){
+    seedCustomDictionaryFromLegacyText(storedTeamSettingsRaw.customText);
+  }
   teamSavedProfile = {
     selectedDictionaries: [...selected],
     customSelected: teamInitialCustomSelected,
@@ -2278,10 +2693,12 @@ if (storedTeamSettingsRaw && typeof storedTeamSettingsRaw === 'object'){
   teamInitialTimerEnabled = !!(ts.timerToggle && ts.timerToggle.checked);
   teamInitialPtsEnabled = !!(ts.ptsToggle && ts.ptsToggle.checked);
 }
+registerCustomDictionaryState(ts);
 teamPendingSession = sanitizeTeamSession(readJson(TEAM_SESSION_KEY, null));
 initDifficultyControls(ts);
 ts.onDifficultyChange = level => {
   ts.difficulty = level;
+  syncCustomTextareaFromStore(ts);
   persistTeamSettings();
 };
 const upTeamTime = () => ts.timeLabel.textContent = ts.time+' с';
