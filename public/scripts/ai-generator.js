@@ -3,6 +3,94 @@
   const API_ENDPOINT = '/api/generate-dictionary';
   const DIFFICULTY_KEYS = ['easy', 'medium', 'hard'];
 
+  function normalizeEndpoint(value){
+    if (!value || typeof value !== 'string') return '';
+    const trimmed = value.trim();
+    if (!trimmed) return '';
+    if (/^https?:\/\//i.test(trimmed) || trimmed.startsWith('//')){
+      return trimmed;
+    }
+    if (trimmed.startsWith('/')){
+      return trimmed;
+    }
+    try{
+      if (typeof window !== 'undefined' && window.location){
+        return new URL(trimmed, window.location.href).toString();
+      }
+    }catch{
+      // ignore resolution issues
+    }
+    return trimmed;
+  }
+
+  function getMetaEndpoint(){
+    if (typeof document === 'undefined') return '';
+    try{
+      const meta = document.querySelector('meta[name="ai-generator-endpoint"]');
+      return meta && typeof meta.content === 'string' ? meta.content : '';
+    }catch{
+      return '';
+    }
+  }
+
+  function collectEndpointCandidates(){
+    const seen = new Set();
+    const endpoints = [];
+    const add = endpoint => {
+      const normalized = normalizeEndpoint(endpoint);
+      if (!normalized || seen.has(normalized)) return;
+      seen.add(normalized);
+      endpoints.push(normalized);
+    };
+    const config = target?.AIGeneratorConfig;
+    if (config){
+      if (typeof config.endpoint === 'string') add(config.endpoint);
+      if (Array.isArray(config.endpoints)){
+        config.endpoints.forEach(add);
+      }
+    }
+    add(getMetaEndpoint());
+    add(API_ENDPOINT);
+    if (typeof window !== 'undefined' && window.location){
+      try{
+        add(new URL(API_ENDPOINT, window.location.origin).toString());
+      }catch{
+        // ignore
+      }
+    }
+    add('http://localhost:3000/api/generate-dictionary');
+    return endpoints;
+  }
+
+  function resolveEndpointUrl(endpoint){
+    if (!endpoint || typeof endpoint !== 'string') return '';
+    if (/^https?:\/\//i.test(endpoint)) return endpoint;
+    if (endpoint.startsWith('//')){
+      if (typeof window !== 'undefined' && window.location){
+        return `${window.location.protocol}${endpoint}`;
+      }
+      return `https:${endpoint}`;
+    }
+    if (endpoint.startsWith('/')){
+      if (typeof window !== 'undefined' && window.location){
+        try{
+          return new URL(endpoint, window.location.origin).toString();
+        }catch{
+          return endpoint;
+        }
+      }
+      return endpoint;
+    }
+    try{
+      if (typeof window !== 'undefined' && window.location){
+        return new URL(endpoint, window.location.href).toString();
+      }
+    }catch{
+      // ignore resolution issues
+    }
+    return endpoint;
+  }
+
   function normalizeTopic(topic){
     if (typeof topic !== 'string') return '';
     return topic.replace(/\s+/g, ' ').trim().slice(0, 200);
@@ -90,18 +178,40 @@
     if (typeof options.source === 'string' && options.source.trim()){
       payload.source = options.source.trim();
     }
-    const fetchOptions = {
+    const baseFetchOptions = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin',
-      body: JSON.stringify(payload)
+      credentials: 'same-origin'
     };
-    if (options.signal) fetchOptions.signal = options.signal;
-    let response;
-    try{
-      response = await fetch(API_ENDPOINT, fetchOptions);
-    }catch(err){
-      throw new Error('Не удалось выполнить запрос генерации. Проверьте подключение к сети.');
+    const payloadJson = JSON.stringify(payload);
+    const endpoints = collectEndpointCandidates();
+    let response = null;
+    let lastNotFoundResponse = null;
+    for (let i = 0; i < endpoints.length; i++){
+      const endpoint = resolveEndpointUrl(endpoints[i]);
+      if (!endpoint) continue;
+      const fetchOptions = { ...baseFetchOptions, body: payloadJson };
+      if (options.signal) fetchOptions.signal = options.signal;
+      try{
+        const currentResponse = await fetch(endpoint, fetchOptions);
+        if (currentResponse.status === 404 && i < endpoints.length - 1){
+          lastNotFoundResponse = currentResponse;
+          continue;
+        }
+        response = currentResponse;
+        break;
+      }catch(err){
+        if (i === endpoints.length - 1){
+          throw new Error('Не удалось выполнить запрос генерации. Проверьте подключение к сети.');
+        }
+      }
+    }
+    if (!response){
+      if (lastNotFoundResponse){
+        response = lastNotFoundResponse;
+      }else{
+        throw new Error('Не удалось выполнить запрос генерации. Проверьте подключение к сети.');
+      }
     }
     if (!response.ok){
       const message = await parseErrorResponse(response);

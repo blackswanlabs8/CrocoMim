@@ -248,6 +248,7 @@ body{
 .dict-summary-body[hidden]{ display:none; }
 .dict-chips{ display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-start; }
 .dict-chip{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:var(--panel); border:1px solid var(--panel-border); font-size:13px; color:var(--text-strong); font-weight:500; }
+.dict-chip-extra{ margin-left:4px; font-size:12px; color:var(--muted); }
 .dict-chip-icon,
 .dict-card-icon{
   border:1px solid var(--panel-border);
@@ -270,6 +271,10 @@ body{
 .dict-chip-icon.dict-icon--text{ font-size:12px; letter-spacing:.3px; }
 .dict-card-icon.dict-icon--text{ font-size:14px; letter-spacing:.4px; }
 .dict-chip-label{ white-space:nowrap; }
+.custom-dict-preview{ font-size:13px; color:var(--muted); margin-top:4px; }
+.custom-dict-notice{ font-size:13px; margin-top:4px; border-radius:12px; padding:8px 10px; background:var(--panel-2); border:1px solid var(--panel-border); color:var(--muted); }
+.custom-dict-notice.is-success{ border-color:var(--accent); color:var(--accent-2); }
+.custom-dict-notice.is-error{ border-color:var(--danger); color:var(--danger); }
 .dict-dropdown-panel{
   position:absolute;
   top:calc(100% + 8px);
