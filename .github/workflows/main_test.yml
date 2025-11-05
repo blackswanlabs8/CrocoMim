@@ -1,0 +1,45 @@
+name: Deploy /public to crocomim.ru/test (branch: test)
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [ test ]
+    paths: ['public/**']   # деплой только при изменениях в /public
+
+concurrency:
+  group: deploy-test
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify /public exists
+        run: |
+          test -d public || { echo "public/ not found in repo root"; exit 1; }
+
+      - name: Ensure remote directory (crocomim.ru/public_html/test)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host:     ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key:      ${{ secrets.SSH_KEY }}
+          script: |
+            REMOTE_ROOT="/home/${{ secrets.SSH_USER }}/domains/${{ secrets.DOMAIN }}/public_html/test"
+            mkdir -p "$REMOTE_ROOT"
+            chmod 755 "$REMOTE_ROOT"
+            echo "REMOTE_ROOT ensured: $REMOTE_ROOT"
+
+      - name: Deploy with rsync over SSH
+        uses: burnett01/rsync-deployments@7.1.0
+        with:
+          switches: -az --delete                    # синхронизация с очисткой внутри /test
+          path: ./public/                           # отправляем ТОЛЬКО содержимое public/
+          remote_path: /home/${{ secrets.SSH_USER }}/domains/${{ secrets.DOMAIN }}/public_html/test
+          remote_host: ${{ secrets.SSH_HOST }}
+          remote_user: ${{ secrets.SSH_USER }}
+          remote_key:  ${{ secrets.SSH_KEY }}
