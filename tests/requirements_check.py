@@ -13,7 +13,6 @@ def main():
         "points_header": '>Очки до победы<' in html,
         "no_team_name_label": 'Имя команды' not in html,
         "team_delete_icon": 'class="team-delete"' in html,
-        "rename_button_bottom": 'id="teamRename"' in html,
     }
     failed = [name for name, ok in checks.items() if not ok]
     if failed:

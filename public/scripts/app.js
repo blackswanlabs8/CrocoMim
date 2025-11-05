@@ -1756,105 +1756,25 @@ function renderTeams(){
     card.className='section team-card';
     card.innerHTML = `
       <div class="team-card-top">
-        <button class="team-avatar-btn" type="button" style="background:${iconDef.bg};color:${iconDef.color}" data-index="${index}">
+        <div class="team-avatar" style="background:${iconDef.bg};color:${iconDef.color}">
           <span>${iconDef.emoji}</span>
-        </button>
+        </div>
       </div>
       <div class="team-body">
         <div class="team-name"></div>
-        <form class="team-edit" data-team-form>
-          <label class="visually-hidden" for="teamName-${index}">Название команды</label>
-          <input class="input team-edit-input" id="teamName-${index}" name="teamName" type="text" maxlength="40" autocomplete="off">
-          <div class="team-edit-actions">
-            <button class="btn btn-small" type="submit">Сохранить</button>
-            <button class="btn ghost btn-small" type="button" data-cancel>Отмена</button>
-          </div>
-        </form>
         <button class="team-delete" type="button" title="Удалить команду" data-index="${index}">🗑️</button>
       </div>`;
     const nameLabel = card.querySelector('.team-name');
-    const editForm = card.querySelector('[data-team-form]');
-    const input = card.querySelector('.team-edit-input');
-    const avatarBtn = card.querySelector('.team-avatar-btn');
     const getCurrentName = () => teams[index]?.name || defaultTeamName(index);
-    const syncDisplayName = () => {
-      const currentName = getCurrentName();
-      if (nameLabel){
-        nameLabel.textContent = currentName;
-        nameLabel.dataset.editable = 'true';
-        nameLabel.setAttribute('role', 'button');
-        nameLabel.setAttribute('tabindex', '0');
-        nameLabel.setAttribute('title', `Редактировать название команды «${currentName}»`);
-      }
-      if (avatarBtn){
-        avatarBtn.setAttribute('aria-label', `Редактировать название команды «${currentName}»`);
-      }
-    };
-    const exitEditMode = focusTarget => {
-      card.classList.remove('is-editing');
-      if (input) input.value = getCurrentName();
-      syncDisplayName();
-      if (focusTarget === 'name' && nameLabel){
-        requestAnimationFrame(()=> nameLabel.focus());
-      }
-    };
-    const enterEditMode = () => {
-      if (input) input.value = getCurrentName();
-      card.classList.add('is-editing');
-      requestAnimationFrame(()=>{
-        if (input){
-          input.focus();
-          input.select();
-        }
-      });
-    };
-    const toggleEditMode = source => {
-      if (card.classList.contains('is-editing')){
-        exitEditMode(source === 'name' ? 'name' : undefined);
-      } else {
-        enterEditMode();
-      }
-    };
-    syncDisplayName();
-    if (input) input.value = getCurrentName();
-    if (avatarBtn){
-      avatarBtn.onclick = () => toggleEditMode('avatar');
-    }
+    const currentName = getCurrentName();
     if (nameLabel){
-      nameLabel.addEventListener('click', () => toggleEditMode('name'));
-      nameLabel.addEventListener('keydown', evt => {
-        if (evt.key === 'Enter' || evt.key === ' ' || evt.key === 'Spacebar'){
-          evt.preventDefault();
-          toggleEditMode('name');
-        }
-      });
-    }
-    if (editForm && input){
-      editForm.onsubmit = evt => {
-        evt.preventDefault();
-        const next = input.value.trim();
-        teams[index].name = next || defaultTeamName(index);
-        renderTeams();
-        persistTeams();
-      };
-      input.addEventListener('keydown', evt => {
-        if (evt.key === 'Escape'){
-          evt.preventDefault();
-          exitEditMode('name');
-        }
-      });
-      const cancelBtn = editForm.querySelector('[data-cancel]');
-      if (cancelBtn){
-        cancelBtn.onclick = () => {
-          exitEditMode('name');
-        };
-      }
+      nameLabel.textContent = currentName;
     }
     const deleteBtn = card.querySelector('.team-delete');
     if (deleteBtn){
-      deleteBtn.setAttribute('aria-label', `Удалить команду «${team.name || defaultTeamName(index)}»`);
+      deleteBtn.setAttribute('aria-label', `Удалить команду «${currentName}»`);
       deleteBtn.onclick = () => {
-        if (!confirm(`Удалить команду «${team.name || defaultTeamName(index)}»?`)) return;
+        if (!confirm(`Удалить команду «${getCurrentName()}»?`)) return;
         teams.splice(index, 1);
         renderTeams();
         persistTeams();
