@@ -1,3 +1,4 @@
+// тест
 (function(global){
   const target = typeof global !== 'undefined' ? global : (typeof window !== 'undefined' ? window : {});
   const INDEX_PATH = './dicts/index.json';

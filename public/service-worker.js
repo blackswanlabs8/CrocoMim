@@ -1,3 +1,4 @@
+// тест
 const CACHE_NAME = 'crocomim-static-v3';
 const DICTS_CACHE = 'crocomim-dicts-runtime';
 const ASSETS = [
