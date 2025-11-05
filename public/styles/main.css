@@ -323,6 +323,13 @@ body{
 .dict-actions{ display:flex; justify-content:flex-end; gap:8px; }
 .btn.dict-ok-btn{ min-width:60px; padding:8px 14px; font-size:14px; border-radius:12px; }
 
+.custom-dict-box{ gap:10px; }
+.custom-dict-header{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.custom-dict-header label{ flex:1 1 auto; }
+.custom-dict-generate-btn{ flex-shrink:0; white-space:nowrap; }
+.custom-dict-hint{ font-size:13px; line-height:1.4; margin:0; }
+
+
 @media (max-width: 480px){
   .dict-dropdown-panel{
     padding:10px;
@@ -906,6 +913,131 @@ body.theme-dark .feedback-modal__backdrop{
   display:flex;
   flex-direction:column;
   gap:18px;
+}
+
+.dict-generator-modal{
+  position:fixed;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  z-index:2600;
+}
+
+.dict-generator-modal[aria-hidden="false"]{ display:flex; }
+
+.dict-generator-modal__backdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(15,23,42,.5);
+  backdrop-filter:blur(4px);
+}
+
+body.theme-dark .dict-generator-modal__backdrop{ background:rgba(8,15,28,.68); }
+
+.dict-generator-modal__panel{
+  position:relative;
+  z-index:1;
+  width:min(480px, 100%);
+  background:var(--panel);
+  border:1px solid var(--panel-border);
+  border-radius:20px;
+  box-shadow:var(--shadow);
+  padding:28px 24px 24px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+
+.dict-generator-modal__close{
+  position:absolute;
+  top:12px;
+  right:12px;
+  width:34px;
+  height:34px;
+  border-radius:12px;
+  border:1px solid var(--panel-border);
+  background:var(--panel-2);
+  color:var(--text);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  transition:background .2s ease, transform .1s ease;
+}
+
+.dict-generator-modal__close:hover{ background:var(--panel-hover); }
+.dict-generator-modal__close:active{ transform:scale(.95); }
+
+.dict-generator-form{ display:flex; flex-direction:column; gap:14px; }
+.dict-generator-title{ margin:0; font-size:20px; font-weight:700; color:var(--text-strong); }
+.dict-generator-description{ margin:0; color:var(--muted); font-size:14px; line-height:1.5; }
+.dict-generator-label{ font-weight:600; color:var(--text-strong); }
+.dict-generator-hint{ font-size:13px; margin:0; line-height:1.4; }
+
+.dict-generator-status{
+  font-size:14px;
+  border-radius:12px;
+  padding:10px 12px;
+  background:var(--panel-2);
+  border:1px solid transparent;
+  color:var(--text-strong);
+}
+
+.dict-generator-status[aria-hidden="true"]{ display:none; }
+.dict-generator-status--info{ border-color:var(--panel-border); }
+.dict-generator-status--error{
+  border-color:rgba(239,68,68,.45);
+  background:rgba(239,68,68,.16);
+  color:#b91c1c;
+}
+.dict-generator-status--success{
+  border-color:rgba(34,197,94,.45);
+  background:rgba(34,197,94,.15);
+  color:#047857;
+}
+
+.dict-generator-modal--loading .dict-generator-status::before{
+  content:"";
+  display:inline-block;
+  width:16px;
+  height:16px;
+  margin-right:8px;
+  border-radius:50%;
+  border:2px solid rgba(34,197,94,.3);
+  border-top-color:var(--accent);
+  animation:dict-generator-spin .8s linear infinite;
+  vertical-align:middle;
+}
+
+.dict-generator-modal--loading .dict-generator-status{ display:flex; align-items:center; }
+
+.dict-generator-modal__panel button[data-role="submit"]{ min-width:140px; }
+
+.dict-generator-actions{ display:flex; gap:10px; justify-content:flex-end; }
+
+.dict-generator-preview{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  padding:14px 16px;
+  border-radius:16px;
+  background:var(--panel-2);
+  border:1px solid var(--panel-border);
+}
+
+.dict-generator-preview[hidden]{ display:none; }
+
+.dict-generator-preview__section{ display:flex; flex-direction:column; gap:6px; }
+.dict-generator-preview__title{ margin:0; font-size:15px; font-weight:600; color:var(--text-strong); }
+.dict-generator-preview__list{ margin:0; font-size:14px; line-height:1.5; color:var(--text); }
+
+body.dict-generator-open{ overflow:hidden; }
+
+@keyframes dict-generator-spin{
+  from{ transform:rotate(0deg); }
+  to{ transform:rotate(360deg); }
 }
 
 .feedback-modal__close{

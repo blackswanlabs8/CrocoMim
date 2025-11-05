@@ -30,7 +30,247 @@ const CUSTOM_DICTIONARY_META = {
   icon: 'edit'
 };
 
+const DICT_GENERATOR_ENDPOINT = '/api/dict-generate';
+const DICT_GENERATOR_LEVELS = [
+  { key: 'easy', label: 'Лёгкий' },
+  { key: 'medium', label: 'Средний' },
+  { key: 'hard', label: 'Сложный' }
+];
+const DEFAULT_GENERATOR_TARGET_PER_LEVEL = 50;
+
 const ICON_SANITIZE_RE = /[^A-Za-zА-Яа-яЁё0-9]/g;
+
+const GENERATOR_STATUS_CLASSES = [
+  'dict-generator-status--info',
+  'dict-generator-status--error',
+  'dict-generator-status--success'
+];
+
+function normalizeGeneratorWords(input){
+  if (!Array.isArray(input)) return [];
+  return input
+    .map(item => typeof item === 'string' ? item.trim() : '')
+    .filter(Boolean);
+}
+
+function mapGeneratorLevels(raw){
+  const result = {};
+  DICT_GENERATOR_LEVELS.forEach(({ key }) => {
+    result[key] = normalizeGeneratorWords(raw?.[key]);
+  });
+  return result;
+}
+
+function flattenGeneratorWords(levelMap){
+  const seen = new Set();
+  const words = [];
+  DICT_GENERATOR_LEVELS.forEach(({ key }) => {
+    const list = Array.isArray(levelMap?.[key]) ? levelMap[key] : [];
+    list.forEach(word => {
+      const lower = word.toLocaleLowerCase('ru-RU');
+      if (seen.has(lower)) return;
+      seen.add(lower);
+      words.push(word);
+    });
+  });
+  return words;
+}
+
+function createDictionaryGenerator(){
+  const modal = document.getElementById('dictGeneratorModal');
+  const form = document.getElementById('dictGeneratorForm');
+  if (!modal || !form){
+    return null;
+  }
+  const topicInput = document.getElementById('dictGeneratorTopic');
+  const statusNode = document.getElementById('dictGeneratorStatus');
+  const previewNode = document.getElementById('dictGeneratorPreview');
+  const submitBtn = form.querySelector('button[data-role="submit"]');
+  const cancelBtn = form.querySelector('button[data-action="cancel"]');
+  const closeBtn = modal.querySelector('.dict-generator-modal__close');
+  const backdrop = modal.querySelector('.dict-generator-modal__backdrop');
+  let currentTarget = null;
+  let abortController = null;
+  let lastActiveElement = null;
+
+  function clearPreview(){
+    if (!previewNode) return;
+    previewNode.innerHTML = '';
+    previewNode.hidden = true;
+    previewNode.setAttribute('aria-hidden', 'true');
+  }
+
+  function setStatus(message, type = 'info'){
+    if (!statusNode) return;
+    statusNode.textContent = message;
+    GENERATOR_STATUS_CLASSES.forEach(cls => statusNode.classList.remove(cls));
+    if (message){
+      statusNode.classList.add(`dict-generator-status--${type}`);
+    }
+    const hidden = !message;
+    statusNode.hidden = hidden;
+    statusNode.setAttribute('aria-hidden', hidden ? 'true' : 'false');
+  }
+
+  function renderPreview(levelMap){
+    if (!previewNode) return;
+    clearPreview();
+    let hasContent = false;
+    DICT_GENERATOR_LEVELS.forEach(({ key, label }) => {
+      const words = Array.isArray(levelMap?.[key]) ? levelMap[key] : [];
+      if (!words.length) return;
+      hasContent = true;
+      const section = document.createElement('div');
+      section.className = 'dict-generator-preview__section';
+      const title = document.createElement('h3');
+      title.className = 'dict-generator-preview__title';
+      title.textContent = label;
+      const list = document.createElement('p');
+      list.className = 'dict-generator-preview__list';
+      list.textContent = words.join(', ');
+      section.appendChild(title);
+      section.appendChild(list);
+      previewNode.appendChild(section);
+    });
+    previewNode.hidden = !hasContent;
+    previewNode.setAttribute('aria-hidden', hasContent ? 'false' : 'true');
+  }
+
+  function setLoading(loading){
+    modal.classList.toggle('dict-generator-modal--loading', !!loading);
+    if (topicInput) topicInput.disabled = !!loading;
+    if (submitBtn) submitBtn.disabled = !!loading;
+  }
+
+  function resetForm(){
+    form.reset();
+    clearPreview();
+    setStatus('', 'info');
+    modal.classList.remove('dict-generator-modal--success');
+    setLoading(false);
+  }
+
+  function open(target){
+    currentTarget = target || null;
+    lastActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    resetForm();
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('dict-generator-open');
+    if (!navigator.onLine){
+      setStatus('Похоже, нет подключения к сети. Генерация может быть недоступна.', 'error');
+    }
+    requestAnimationFrame(() => {
+      if (topicInput){
+        topicInput.focus();
+        topicInput.select();
+      }
+    });
+  }
+
+  function close(){
+    if (abortController){
+      abortController.abort();
+      abortController = null;
+    }
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('dict-generator-open');
+    modal.classList.remove('dict-generator-modal--loading');
+    modal.classList.remove('dict-generator-modal--success');
+    clearPreview();
+    setStatus('', 'info');
+    const returnFocus = lastActiveElement;
+    currentTarget = null;
+    lastActiveElement = null;
+    if (returnFocus && typeof returnFocus.focus === 'function'){
+      requestAnimationFrame(() => returnFocus.focus());
+    }
+  }
+
+  async function handleSubmit(event){
+    event.preventDefault();
+    if (!currentTarget){
+      close();
+      return;
+    }
+    const topic = typeof topicInput?.value === 'string' ? topicInput.value.trim() : '';
+    if (!topic){
+      setStatus('Введите тему словаря.', 'error');
+      if (topicInput) topicInput.focus();
+      return;
+    }
+    if (topic.length > 120){
+      setStatus('Тема слишком длинная. Попробуйте сформулировать короче.', 'error');
+      if (topicInput) topicInput.focus();
+      return;
+    }
+    if (typeof fetch !== 'function'){
+      setStatus('Генерация недоступна в этом браузере.', 'error');
+      return;
+    }
+    if (!navigator.onLine){
+      setStatus('Нет подключения к сети. Попробуйте позже.', 'error');
+      return;
+    }
+    abortController?.abort();
+    abortController = new AbortController();
+    modal.classList.remove('dict-generator-modal--success');
+    setStatus('Генерируем словарь…', 'info');
+    setLoading(true);
+    clearPreview();
+    try{
+      const response = await fetch(DICT_GENERATOR_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic,
+          targetPerLevel: currentTarget?.targetPerLevel || DEFAULT_GENERATOR_TARGET_PER_LEVEL
+        }),
+        signal: abortController.signal
+      });
+      if (!response.ok){
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const raw = await response.json();
+      const levelMap = mapGeneratorLevels(raw || {});
+      const allWords = flattenGeneratorWords(levelMap);
+      if (!allWords.length){
+        throw new Error('empty');
+      }
+      if (typeof currentTarget.onApply === 'function'){
+        try{ currentTarget.onApply(allWords, levelMap); }
+        catch(err){ console.error('Не удалось применить сгенерированный словарь:', err); }
+      }
+      renderPreview(levelMap);
+      modal.classList.add('dict-generator-modal--success');
+      const successLabel = typeof currentTarget.successLabel === 'string'
+        ? currentTarget.successLabel
+        : 'выбранного режима';
+      setStatus(`Добавили ${allWords.length} слов для ${successLabel}.`, 'success');
+    }catch(err){
+      if (err?.name === 'AbortError'){
+        return;
+      }
+      console.error('Не удалось сгенерировать словарь:', err);
+      setStatus('Не удалось сгенерировать словарь. Попробуйте ещё раз позже.', 'error');
+    }finally{
+      setLoading(false);
+      abortController = null;
+    }
+  }
+
+  form.addEventListener('submit', handleSubmit);
+  cancelBtn?.addEventListener('click', () => { close(); });
+  closeBtn?.addEventListener('click', () => { close(); });
+  backdrop?.addEventListener('click', () => { close(); });
+  modal.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && modal.getAttribute('aria-hidden') === 'false'){
+      event.preventDefault();
+      close();
+    }
+  });
+
+  return { open };
+}
 
 function getDictionaryIconText(meta){
   if (!meta) return '';
@@ -1135,6 +1375,7 @@ const qs = {
   difficulty: 'easy',
   customBox: $('#quickCustomBox'),
   customText: $('#quickCustomWords'),
+  customGenerateBtn: $('#quickDictGenerateBtn'),
   timerToggle: $('#quickTimerToggle'),
   time: 60,
   timeMinus: $('#quickTimeMinus'),
@@ -1883,6 +2124,7 @@ const ts = {
   difficulty: 'easy',
   customBox: $('#teamCustomBox'),
   customText: $('#teamCustomWords'),
+  customGenerateBtn: $('#teamDictGenerateBtn'),
   timerToggle: $('#teamTimerToggle'),
   time: 60,
   timeMinus: $('#teamTimeMinus'),
@@ -2019,6 +2261,46 @@ if (ts.customText){
   ts.customText.addEventListener('input', () => {
     persistTeamSettings();
   });
+}
+
+const dictionaryGenerator = createDictionaryGenerator();
+if (dictionaryGenerator){
+  if (qs?.customGenerateBtn){
+    qs.customGenerateBtn.addEventListener('click', () => {
+      dictionaryGenerator.open({
+        targetPerLevel: DEFAULT_GENERATOR_TARGET_PER_LEVEL,
+        successLabel: 'быстрого режима',
+        onApply(words){
+          if (!Array.isArray(words) || !words.length) return;
+          if (!qs.customSelected){
+            setCustomSelection(qs, true, { skipPersist:true });
+          }
+          if (qs.customText){
+            qs.customText.value = words.join('\n');
+          }
+          persistQuickSettings();
+        }
+      });
+    });
+  }
+  if (ts?.customGenerateBtn){
+    ts.customGenerateBtn.addEventListener('click', () => {
+      dictionaryGenerator.open({
+        targetPerLevel: DEFAULT_GENERATOR_TARGET_PER_LEVEL,
+        successLabel: 'командного режима',
+        onApply(words){
+          if (!Array.isArray(words) || !words.length) return;
+          if (!ts.customSelected){
+            setCustomSelection(ts, true, { skipPersist:true });
+          }
+          if (ts.customText){
+            ts.customText.value = words.join('\n');
+          }
+          persistTeamSettings();
+        }
+      });
+    });
+  }
 }
 
 ensureDictionaryIndex().then(() => {
