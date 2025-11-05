@@ -1,3 +1,4 @@
+// тест
 /* global analytics */
 (function(global){
   'use strict';
