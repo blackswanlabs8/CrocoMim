@@ -1,3 +1,4 @@
+// Этот файл содержит основную логику приложения CrocoMim.
 // test
 // тест
 const dictionaryService = (typeof globalThis !== 'undefined' && globalThis.DictionaryService)
