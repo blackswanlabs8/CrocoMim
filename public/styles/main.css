@@ -113,6 +113,11 @@ body{
   transition:transform .1s ease, background .2s ease, border .2s ease;
   user-select:none;
 }
+.icon-btn-symbol{
+  font-weight:800;
+  font-size:20px;
+  line-height:1;
+}
 .icon-btn:hover{ background:var(--panel-hover); }
 .icon-btn:active{ transform:scale(.96) }
 .title{
