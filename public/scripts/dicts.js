@@ -6,6 +6,23 @@
   let indexPromise = null;
   const dictionaryCache = new Map();
 
+  function sanitizeDictionaryPath(path){
+    if (typeof path !== 'string' || !path.trim()) return '';
+    return path
+      .split('/')
+      .map(segment => {
+        const clean = segment.trim();
+        if (!clean) return '';
+        try{
+          return encodeURIComponent(decodeURIComponent(clean));
+        }catch(err){
+          return encodeURIComponent(clean);
+        }
+      })
+      .filter(Boolean)
+      .join('/');
+  }
+
   function normalizeDictionary(raw){
     if (!raw || typeof raw !== 'object') return null;
     const id = typeof raw.id === 'string' ? raw.id.trim() : '';
@@ -19,10 +36,11 @@
     Object.keys(rawDiffs).forEach(key => {
       const info = rawDiffs[key];
       if (!info || typeof info !== 'object') return;
-      const path = typeof info.path === 'string' ? info.path.trim() : '';
+      const rawPath = typeof info.path === 'string' ? info.path.trim() : '';
+      const path = sanitizeDictionaryPath(rawPath);
       if (!path) return;
       const label = typeof info.label === 'string' && info.label.trim() ? info.label.trim() : (DIFF_LABELS[key] || key);
-      difficulties[key] = { path, label };
+      difficulties[key] = { path, label, originalPath: rawPath };
     });
     if (!Object.keys(difficulties).length) return null;
     return { id, title, description, icon, iconText, difficulties };
@@ -126,10 +144,15 @@
     if (!def) throw new Error(`Уровень сложности «${diff}» не найден для словаря «${dict?.id ?? 'unknown'}».`);
     const key = cacheKey(dict.id, diff);
     if (!dictionaryCache.has(key)){
+      const fetchPath = def.path;
+      if (!fetchPath){
+        throw new Error(`Путь к словарю ${dict.id}/${diff} не указан.`);
+      }
+      const sourcePath = def.originalPath || def.path;
       dictionaryCache.set(key,
-        fetch(`./dicts/${def.path}`, { cache:'no-cache' })
+        fetch(`./dicts/${fetchPath}`, { cache:'no-cache' })
           .then(resp => {
-            if (!resp.ok) throw new Error(`Не удалось загрузить словарь ${def.path} (${resp.status})`);
+            if (!resp.ok) throw new Error(`Не удалось загрузить словарь ${sourcePath} (${resp.status})`);
             return resp.text();
           })
           .then(text => {
