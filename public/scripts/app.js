@@ -1,3 +1,4 @@
+// Добавлен комментарий в начале файла
 // test
 // тест
 const dictionaryService = (typeof globalThis !== 'undefined' && globalThis.DictionaryService)
