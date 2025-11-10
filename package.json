@@ -8,8 +8,7 @@
   },
   "scripts": {
     "start": "node backend/index.js",
-    "test": "echo \"No automated tests configured\"",
-    "check-server": "node backend/check-server.js"
+    "test": "echo \"No automated tests configured\""
   },
   "keywords": [],
   "author": "",
