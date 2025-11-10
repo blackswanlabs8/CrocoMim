@@ -396,6 +396,41 @@
   </div>
 </div>
 
+  <script>
+    (function(global){
+      const target = typeof global !== 'undefined' ? global : {};
+      const runtime = (target.RUNTIME_CONFIG && typeof target.RUNTIME_CONFIG === 'object')
+        ? target.RUNTIME_CONFIG
+        : {};
+      if (typeof runtime.publicApiBaseUrl !== 'string'){ runtime.publicApiBaseUrl = ''; }
+      if (typeof runtime.backendBaseUrl !== 'string'){ runtime.backendBaseUrl = ''; }
+      const CONFIG_PATH = './config/runtime.json';
+      const readyPromise = fetch(CONFIG_PATH, { cache: 'no-cache' })
+        .then(response => {
+          if (!response.ok){
+            throw new Error(`HTTP ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(config => {
+          if (config && typeof config === 'object'){
+            if (typeof config.publicApiBaseUrl === 'string'){
+              runtime.publicApiBaseUrl = config.publicApiBaseUrl.trim();
+            }
+            if (typeof config.backendBaseUrl === 'string'){
+              runtime.backendBaseUrl = config.backendBaseUrl.trim();
+            }
+          }
+          return runtime;
+        })
+        .catch(err => {
+          console.error('Не удалось загрузить runtime-конфигурацию', err);
+          return runtime;
+        });
+      target.RUNTIME_CONFIG = runtime;
+      target.RUNTIME_CONFIG_READY = readyPromise;
+    })(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : undefined));
+  </script>
   <script src="./scripts/dicts.js"></script>
   <script src="./scripts/feedback.js"></script>
   <script src="./scripts/app.js"></script>

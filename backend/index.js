@@ -3,6 +3,12 @@ const express = require('express');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const cors = require('cors');
+const { URL } = require('url');
+
+const {
+  getRuntimeConfig,
+  getBackendBaseUrl
+} = require('./lib/runtimeConfig');
 
 const FeedbackStore = require('./lib/feedbackStore');
 
@@ -12,14 +18,35 @@ const FEEDBACK_FILE = process.env.FEEDBACK_FILE || path.join(DATA_DIR, 'feedback
 
 const app = express();
 const feedbackStore = new FeedbackStore(FEEDBACK_FILE);
+const runtimeConfig = getRuntimeConfig();
+app.locals.runtimeConfig = runtimeConfig;
 
 // Register global middleware stack used by the feedback API and the static site.
 app.use(helmet({
   contentSecurityPolicy: false
 }));
 app.use(morgan('combined'));
+const corsOrigin = (() => {
+  const envOrigin = process.env.CORS_ORIGIN?.split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+  if (envOrigin && envOrigin.length){
+    return envOrigin;
+  }
+  const backendBase = getBackendBaseUrl();
+  if (backendBase){
+    try {
+      return [new URL(backendBase).origin];
+    } catch (err){
+      console.warn('Некорректный backendBaseUrl в runtime-конфигурации:', err.message);
+      return [backendBase];
+    }
+  }
+  return true;
+})();
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN?.split(',').map(s => s.trim()).filter(Boolean) || true
+  origin: corsOrigin
 }));
 app.use(express.json({ limit: '256kb' }));
 
@@ -58,6 +85,8 @@ app.get('/healthz', (req, res) => {
 });
 
 const publicDir = path.join(__dirname, '..', 'public');
+const configDir = path.join(__dirname, '..', 'config');
+app.use('/config', express.static(configDir));
 app.use(express.static(publicDir));
 app.get(/^\/(?!api).*/, (req, res) => {
   res.sendFile(path.join(publicDir, 'index.html'));
