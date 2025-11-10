@@ -1,0 +1,23 @@
+{
+  "name": "crocomim",
+  "version": "1.0.0",
+  "description": "Интерактивная игра «CrocoMim» теперь разнесена на отдельные файлы для удобства разработки и подготовки к публикации как PWA.",
+  "main": "backend/index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "start": "node backend/index.js",
+    "test": "echo \"No automated tests configured\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "morgan": "^1.10.1"
+  }
+}
