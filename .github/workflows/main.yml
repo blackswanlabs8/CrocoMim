@@ -35,12 +35,8 @@ jobs:
       - name: Deploy with rsync over SSH
         uses: burnett01/rsync-deployments@7.1.0
         with:
-          switches: >
-            -az --delete
-            --exclude 'test/'
-            --exclude 'api/'
-            --exclude 'api.test/'
-          path: ./public/
+          switches: -az --delete --exclude 'test/'   # не трогаем public_html/test
+          path: ./public/                            # отправляем ТОЛЬКО содержимое public/
           remote_path: /home/${{ secrets.SSH_USER }}/domains/${{ secrets.DOMAIN }}/public_html
           remote_host: ${{ secrets.SSH_HOST }}
           remote_user: ${{ secrets.SSH_USER }}
