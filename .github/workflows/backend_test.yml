@@ -21,9 +21,10 @@ jobs:
       - name: Verify /backend exists
         shell: bash
         run: |
-          set -euo pipefail
+          set -e
           test -d backend || { echo "backend/ not found in repo root"; exit 1; }
-          echo "Found backend/; size:" && du -sh backend || true
+          echo "Found backend/:"
+          du -sh backend || true
 
       - name: Ensure remote directory (crocomim.ru/public_html/api.test)
         uses: appleboy/ssh-action@v1.2.0
