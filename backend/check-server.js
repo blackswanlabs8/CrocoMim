@@ -1,9 +1,17 @@
 #!/usr/bin/env node
 
 const { checkHealth, sendTestFeedback } = require('./lib/serverChecks');
+const {
+  getBackendApiBaseUrl,
+  getPublicApiBaseUrl
+} = require('./lib/runtimeConfig');
+
+function resolveDefaultBaseUrl(){
+  return getBackendApiBaseUrl() || getPublicApiBaseUrl() || 'http://localhost:3000';
+}
 
 async function main(){
-  const baseUrl = process.argv[2] || process.env.CROCOMIM_BASE_URL || 'http://localhost:3000';
+  const baseUrl = process.argv[2] || process.env.CROCOMIM_BASE_URL || resolveDefaultBaseUrl();
   try {
     const healthOk = await checkHealth(baseUrl);
     console.log(`Health check (${baseUrl}/healthz): ${healthOk ? 'OK' : 'FAILED'}`);

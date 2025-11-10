@@ -56,6 +56,38 @@
     toastContainer: null
   };
 
+  function ensureRuntimeConfig(){
+    const ready = global.RUNTIME_CONFIG_READY;
+    if (ready && typeof ready.then === 'function'){
+      return ready
+        .catch(err => {
+          console.warn('Runtime-конфигурация недоступна', err);
+          return global.RUNTIME_CONFIG;
+        })
+        .then(() => {
+          const cfg = global.RUNTIME_CONFIG;
+          return cfg && typeof cfg === 'object' ? cfg : {};
+        });
+    }
+    const cfg = global.RUNTIME_CONFIG;
+    return Promise.resolve(cfg && typeof cfg === 'object' ? cfg : {});
+  }
+
+  function resolveApiUrl(path, config){
+    if (!config || typeof config !== 'object') return path;
+    const base = typeof config.backendApiBaseUrl === 'string'
+      ? config.backendApiBaseUrl.trim()
+      : (typeof config.publicApiBaseUrl === 'string' ? config.publicApiBaseUrl.trim() : '');
+    if (!base) return path;
+    try{
+      const url = new URL(path, base);
+      return url.toString();
+    }catch(err){
+      console.warn('Некорректный backendApiBaseUrl в runtime-конфигурации', err);
+      return path;
+    }
+  }
+
   function init(){
     if (state.initialized) return;
     state.initialized = true;
@@ -587,7 +619,7 @@
     return `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
   }
 
-  function sendDraft(draft){
+  async function sendDraft(draft){
     const payload = {
       category: draft.category,
       message: draft.message,
@@ -596,7 +628,9 @@
       context: draft.context,
       client: draft.client
     };
-    return fetch('/api/feedback', {
+    const config = await ensureRuntimeConfig();
+    const endpoint = resolveApiUrl('/api/feedback', config);
+    return fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
