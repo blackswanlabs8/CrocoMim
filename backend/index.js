@@ -13,6 +13,7 @@ const FEEDBACK_FILE = process.env.FEEDBACK_FILE || path.join(DATA_DIR, 'feedback
 const app = express();
 const feedbackStore = new FeedbackStore(FEEDBACK_FILE);
 
+// Register global middleware stack used by the feedback API and the static site.
 app.use(helmet({
   contentSecurityPolicy: false
 }));
