@@ -742,9 +742,19 @@ const modeQuickBtn = $('#modeQuick');
 const themeSlider = $('#themeSlider');
 const themeSunBtn = $('#themeSun');
 const themeMoonBtn = $('#themeMoon');
+const themeHeartBtn = $('#themeHeart');
 const themeContainer = $('#themeContainer');
 const headerTitle = $('.title');
 const bodyEl = document.body;
+const themeMetaTag = document.querySelector('meta[name="theme-color"]');
+const AVAILABLE_THEMES = ['light','pink','dark'];
+const THEME_META_COLORS = {
+  light:'#22c55e',
+  pink:'#ec4899',
+  dark:'#0f172a'
+};
+const DEFAULT_THEME = 'light';
+const sanitizeTheme = value => AVAILABLE_THEMES.includes(value) ? value : DEFAULT_THEME;
 const helpOverlay = $('#helpOverlay');
 const helpDialog = helpOverlay ? helpOverlay.querySelector('.help-overlay__dialog') : null;
 const HELP_FALLBACK_TEXT = [
@@ -766,7 +776,7 @@ const HELP_FALLBACK_TEXT = [
   '⚙ Настройки',
   '• ⏱ Таймер: 30/60/90… сек.',
   '• 🎯 Очки до победы.',
-  '• 🌗 Тема: светлая / тёмная.',
+  '• 🌗 Тема: светлая / розовая / тёмная.',
   '',
   '❓ Справка',
   'Нажми «?» в шапке — инструкция всегда рядом!',
@@ -842,22 +852,33 @@ let quickPendingSession = null;
 let teamPendingSession = null;
 
 const syncThemeControls = mode => {
-  if (themeSlider) themeSlider.value = mode === 'dark' ? '1' : '0';
-  const isDark = mode === 'dark';
+  const index = AVAILABLE_THEMES.indexOf(mode);
+  if (themeSlider) themeSlider.value = index >= 0 ? String(index) : '0';
   if (themeSunBtn){
-    themeSunBtn.classList.toggle('is-active', !isDark);
-    themeSunBtn.setAttribute('aria-pressed', (!isDark).toString());
+    const isLight = mode === 'light';
+    themeSunBtn.classList.toggle('is-active', isLight);
+    themeSunBtn.setAttribute('aria-pressed', isLight.toString());
+  }
+  if (themeHeartBtn){
+    const isPink = mode === 'pink';
+    themeHeartBtn.classList.toggle('is-active', isPink);
+    themeHeartBtn.setAttribute('aria-pressed', isPink.toString());
   }
   if (themeMoonBtn){
+    const isDark = mode === 'dark';
     themeMoonBtn.classList.toggle('is-active', isDark);
     themeMoonBtn.setAttribute('aria-pressed', isDark.toString());
   }
 };
-const applyTheme = mode => {
-  const themeClass = mode === 'dark' ? 'theme-dark' : 'theme-light';
-  bodyEl.classList.remove('theme-light','theme-dark');
-  bodyEl.classList.add(themeClass);
+const applyTheme = requestedMode => {
+  const mode = sanitizeTheme(requestedMode);
+  bodyEl.classList.remove('theme-light','theme-pink','theme-dark');
+  bodyEl.classList.add(`theme-${mode}`);
+  if (themeMetaTag && THEME_META_COLORS[mode]){
+    themeMetaTag.setAttribute('content', THEME_META_COLORS[mode]);
+  }
   syncThemeControls(mode);
+  return mode;
 };
 const readThemePref = () => {
   try{ return localStorage.getItem(THEME_KEY); }
@@ -949,25 +970,32 @@ function persistTeamSettings(){
   teamSavedProfile = { ...profile };
   writeJson(TEAM_SETTINGS_KEY, profile);
 }
-const initialTheme = readThemePref();
-applyTheme(initialTheme === 'dark' ? 'dark' : 'light');
+const initialTheme = sanitizeTheme(readThemePref());
+applyTheme(initialTheme);
 if (themeSlider){
   themeSlider.addEventListener('input', e => {
-    const mode = e.target.value === '1' ? 'dark' : 'light';
-    applyTheme(mode);
-    writeThemePref(mode);
+    const index = Number(e.target.value);
+    const mode = AVAILABLE_THEMES[index] ?? DEFAULT_THEME;
+    const applied = applyTheme(mode);
+    writeThemePref(applied);
   });
 }
 if (themeSunBtn){
   themeSunBtn.addEventListener('click', ()=>{
-    applyTheme('light');
-    writeThemePref('light');
+    const applied = applyTheme('light');
+    writeThemePref(applied);
+  });
+}
+if (themeHeartBtn){
+  themeHeartBtn.addEventListener('click', ()=>{
+    const applied = applyTheme('pink');
+    writeThemePref(applied);
   });
 }
 if (themeMoonBtn){
   themeMoonBtn.addEventListener('click', ()=>{
-    applyTheme('dark');
-    writeThemePref('dark');
+    const applied = applyTheme('dark');
+    writeThemePref(applied);
   });
 }
 
