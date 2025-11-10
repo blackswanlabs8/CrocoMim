@@ -1,23 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 
-const DEFAULT_CONFIG_PATH = path.join(__dirname, '..', 'runtime-config.json');
+const DEFAULT_CONFIG_PATH = path.join(__dirname, '..', '..', 'config', 'runtime.json');
 let cachedConfig = null;
 let cachedPath = null;
-
-function readString(config, keys){
-  if (!config || typeof config !== 'object'){ return ''; }
-  for (const key of keys){
-    const raw = config[key];
-    if (typeof raw === 'string'){
-      const trimmed = raw.trim();
-      if (trimmed){
-        return trimmed;
-      }
-    }
-  }
-  return '';
-}
 
 function resolveConfigPath(){
   const explicit = process.env.RUNTIME_CONFIG_PATH;
@@ -54,23 +40,15 @@ function reloadRuntimeConfig(){
   return getRuntimeConfig();
 }
 
-function getBackendApiBaseUrl(){
+function getPublicApiBaseUrl(){
   const config = getRuntimeConfig();
-  const raw = readString(config, ['backendApiBaseUrl', 'publicApiBaseUrl']);
+  const raw = typeof config.publicApiBaseUrl === 'string' ? config.publicApiBaseUrl.trim() : '';
   return raw || null;
 }
 
-function getPublicApiBaseUrl(){
-  return getBackendApiBaseUrl();
-}
-
 function getBackendBaseUrl(){
-  return getBackendApiBaseUrl();
-}
-
-function getFrontendBaseUrl(){
   const config = getRuntimeConfig();
-  const raw = readString(config, ['frontendBaseUrl', 'publicSiteBaseUrl', 'siteBaseUrl', 'backendBaseUrl']);
+  const raw = typeof config.backendBaseUrl === 'string' ? config.backendBaseUrl.trim() : '';
   return raw || null;
 }
 
@@ -79,7 +57,5 @@ module.exports = {
   reloadRuntimeConfig,
   getPublicApiBaseUrl,
   getBackendBaseUrl,
-  getBackendApiBaseUrl,
-  getFrontendBaseUrl,
   resolveConfigPath
 };

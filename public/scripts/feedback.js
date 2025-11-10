@@ -75,15 +75,13 @@
 
   function resolveApiUrl(path, config){
     if (!config || typeof config !== 'object') return path;
-    const base = typeof config.backendApiBaseUrl === 'string'
-      ? config.backendApiBaseUrl.trim()
-      : (typeof config.publicApiBaseUrl === 'string' ? config.publicApiBaseUrl.trim() : '');
+    const base = typeof config.publicApiBaseUrl === 'string' ? config.publicApiBaseUrl.trim() : '';
     if (!base) return path;
     try{
       const url = new URL(path, base);
       return url.toString();
     }catch(err){
-      console.warn('Некорректный backendApiBaseUrl в runtime-конфигурации', err);
+      console.warn('Некорректный publicApiBaseUrl в runtime-конфигурации', err);
       return path;
     }
   }

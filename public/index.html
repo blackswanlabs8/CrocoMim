@@ -402,10 +402,9 @@
       const runtime = (target.RUNTIME_CONFIG && typeof target.RUNTIME_CONFIG === 'object')
         ? target.RUNTIME_CONFIG
         : {};
-      if (typeof runtime.backendApiBaseUrl !== 'string'){ runtime.backendApiBaseUrl = ''; }
-      if (typeof runtime.frontendBaseUrl !== 'string'){ runtime.frontendBaseUrl = ''; }
-      if (typeof runtime.publicApiBaseUrl !== 'string'){ runtime.publicApiBaseUrl = runtime.backendApiBaseUrl || ''; }
-      const CONFIG_PATH = './runtime-config.json';
+      if (typeof runtime.publicApiBaseUrl !== 'string'){ runtime.publicApiBaseUrl = ''; }
+      if (typeof runtime.backendBaseUrl !== 'string'){ runtime.backendBaseUrl = ''; }
+      const CONFIG_PATH = './config/runtime.json';
       const readyPromise = fetch(CONFIG_PATH, { cache: 'no-cache' })
         .then(response => {
           if (!response.ok){
@@ -415,22 +414,13 @@
         })
         .then(config => {
           if (config && typeof config === 'object'){
-            if (typeof config.backendApiBaseUrl === 'string'){
-              runtime.backendApiBaseUrl = config.backendApiBaseUrl.trim();
-            } else if (typeof config.publicApiBaseUrl === 'string'){
-              runtime.backendApiBaseUrl = config.publicApiBaseUrl.trim();
+            if (typeof config.publicApiBaseUrl === 'string'){
+              runtime.publicApiBaseUrl = config.publicApiBaseUrl.trim();
             }
-            if (typeof config.frontendBaseUrl === 'string'){
-              runtime.frontendBaseUrl = config.frontendBaseUrl.trim();
-            } else if (typeof config.publicSiteBaseUrl === 'string'){
-              runtime.frontendBaseUrl = config.publicSiteBaseUrl.trim();
-            } else if (typeof config.siteBaseUrl === 'string'){
-              runtime.frontendBaseUrl = config.siteBaseUrl.trim();
-            } else if (!runtime.frontendBaseUrl && typeof config.backendBaseUrl === 'string'){
-              runtime.frontendBaseUrl = config.backendBaseUrl.trim();
+            if (typeof config.backendBaseUrl === 'string'){
+              runtime.backendBaseUrl = config.backendBaseUrl.trim();
             }
           }
-          runtime.publicApiBaseUrl = runtime.backendApiBaseUrl || runtime.publicApiBaseUrl || '';
           return runtime;
         })
         .catch(err => {

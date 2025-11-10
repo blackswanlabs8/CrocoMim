@@ -7,7 +7,7 @@ const { URL } = require('url');
 
 const {
   getRuntimeConfig,
-  getFrontendBaseUrl
+  getBackendBaseUrl
 } = require('./lib/runtimeConfig');
 
 const FeedbackStore = require('./lib/feedbackStore');
@@ -33,13 +33,13 @@ const corsOrigin = (() => {
   if (envOrigin && envOrigin.length){
     return envOrigin;
   }
-  const frontendBase = getFrontendBaseUrl();
-  if (frontendBase){
+  const backendBase = getBackendBaseUrl();
+  if (backendBase){
     try {
-      return [new URL(frontendBase).origin];
+      return [new URL(backendBase).origin];
     } catch (err){
-      console.warn('Некорректный frontendBaseUrl в runtime-конфигурации:', err.message);
-      return [frontendBase];
+      console.warn('Некорректный backendBaseUrl в runtime-конфигурации:', err.message);
+      return [backendBase];
     }
   }
   return true;
@@ -85,6 +85,8 @@ app.get('/healthz', (req, res) => {
 });
 
 const publicDir = path.join(__dirname, '..', 'public');
+const configDir = path.join(__dirname, '..', 'config');
+app.use('/config', express.static(configDir));
 app.use(express.static(publicDir));
 app.get(/^\/(?!api).*/, (req, res) => {
   res.sendFile(path.join(publicDir, 'index.html'));

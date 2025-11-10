@@ -2,12 +2,12 @@
 
 const { checkHealth, sendTestFeedback } = require('./lib/serverChecks');
 const {
-  getBackendApiBaseUrl,
-  getPublicApiBaseUrl
+  getPublicApiBaseUrl,
+  getBackendBaseUrl
 } = require('./lib/runtimeConfig');
 
 function resolveDefaultBaseUrl(){
-  return getBackendApiBaseUrl() || getPublicApiBaseUrl() || 'http://localhost:3000';
+  return getPublicApiBaseUrl() || getBackendBaseUrl() || 'http://localhost:3000';
 }
 
 async function main(){

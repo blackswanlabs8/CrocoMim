@@ -1,15 +1,15 @@
 const { URL } = require('url');
 
 const {
-  getBackendApiBaseUrl,
-  getPublicApiBaseUrl
+  getPublicApiBaseUrl,
+  getBackendBaseUrl
 } = require('./runtimeConfig');
 
 function resolveDefaultBaseUrl(){
-  const backendApi = getBackendApiBaseUrl();
-  if (backendApi) return backendApi;
   const publicApi = getPublicApiBaseUrl();
   if (publicApi) return publicApi;
+  const backendBase = getBackendBaseUrl();
+  if (backendBase) return backendBase;
   return 'http://localhost:3000';
 }
 
