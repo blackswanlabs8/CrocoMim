@@ -1,12 +1,25 @@
 const { URL } = require('url');
 
-async function checkHealth(baseUrl = 'http://localhost:3000'){
+const {
+  getPublicApiBaseUrl,
+  getBackendBaseUrl
+} = require('./runtimeConfig');
+
+function resolveDefaultBaseUrl(){
+  const publicApi = getPublicApiBaseUrl();
+  if (publicApi) return publicApi;
+  const backendBase = getBackendBaseUrl();
+  if (backendBase) return backendBase;
+  return 'http://localhost:3000';
+}
+
+async function checkHealth(baseUrl = resolveDefaultBaseUrl()){
   const endpoint = new URL('/healthz', baseUrl);
   const response = await fetchJson(endpoint, { method: 'GET' });
   return response.ok === true;
 }
 
-async function sendTestFeedback(baseUrl = 'http://localhost:3000', overrides = {}){
+async function sendTestFeedback(baseUrl = resolveDefaultBaseUrl(), overrides = {}){
   const endpoint = new URL('/api/feedback', baseUrl);
   const payload = buildFeedbackPayload(overrides);
   const response = await fetchJson(endpoint, {
