@@ -46,6 +46,7 @@ jobs:
           switches: >-
             -az --delete
             --chmod=F644,D755
+            --exclude='venv/'
           path: ./backend/   # отправляем ТОЛЬКО содержимое backend/
           remote_path: /home/${{ secrets.SSH_USER }}/domains/${{ secrets.DOMAIN }}/public_html/api.test
           remote_host: ${{ secrets.SSH_HOST }}
