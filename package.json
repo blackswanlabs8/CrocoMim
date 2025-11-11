@@ -2,12 +2,13 @@
   "name": "crocomim",
   "version": "1.0.0",
   "description": "Интерактивная игра «CrocoMim» теперь разнесена на отдельные файлы для удобства разработки и подготовки к публикации как PWA.",
-  "main": "backend/index.js",
+  "main": "backend/__main__.py",
   "directories": {
     "test": "tests"
   },
   "scripts": {
-    "start": "node backend/index.js",
+    "start": "python3 -m backend",
+    "check-server": "python3 -m backend.check_server",
     "test": "echo \"No automated tests configured\""
   },
   "keywords": [],
