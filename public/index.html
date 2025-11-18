@@ -94,8 +94,21 @@
             </div>
           </div>
           <div id="quickCustomBox" class="stack" style="display:none; margin-top:10px">
-            <label class="muted">Вставьте слова через запятую или перенос строки</label>
-            <textarea class="input" id="quickCustomWords" rows="4" placeholder="яблоко, корабль, радуга..."></textarea>
+            <div class="custom-dict-box" data-custom-mode="quick">
+              <div class="stack" style="gap:8px">
+                <label class="muted" for="quickCustomWords">Вставьте слова через запятую или перенос строки</label>
+                <textarea class="input" id="quickCustomWords" rows="4" placeholder="яблоко, корабль, радуга..." data-custom-target="words"></textarea>
+              </div>
+              <div class="stack" style="gap:8px">
+                <label class="muted" for="quickCustomTopicInput">Опишите тему, чтобы сгенерировать подходящие слова (необязательно)</label>
+                <input class="input" id="quickCustomTopicInput" type="text" placeholder="Например, космос или новый год" data-custom-target="topic" aria-describedby="quickCustomStatus" aria-label="Тема для генерации слов">
+                <div class="row" style="gap:8px; flex-wrap:wrap">
+                  <button class="btn ghost" id="quickCustomGenerateBtn" type="button" data-custom-action="generate" data-mode="quick" aria-controls="quickCustomStatus" title="Сгенерировать список слов по теме">Сгенерировать</button>
+                  <button class="btn" id="quickCustomApplyBtn" type="button" data-custom-action="apply" data-mode="quick" aria-label="Применить сгенерированные слова" title="Применить сгенерированные слова">Применить</button>
+                </div>
+                <div class="custom-dict-status muted" id="quickCustomStatus" role="status" aria-live="polite" hidden data-custom-target="status">Генератор готов к работе.</div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -250,8 +263,21 @@
         </div>
       </div>
       <div id="teamCustomBox" class="stack" style="display:none; margin-top:10px">
-        <label class="muted">Вставьте слова через запятую или перенос строки</label>
-        <textarea class="input" id="teamCustomWords" rows="4" placeholder="яблоко, корабль, радуга..."></textarea>
+        <div class="custom-dict-box" data-custom-mode="team">
+          <div class="stack" style="gap:8px">
+            <label class="muted" for="teamCustomWords">Вставьте слова через запятую или перенос строки</label>
+            <textarea class="input" id="teamCustomWords" rows="4" placeholder="яблоко, корабль, радуга..." data-custom-target="words"></textarea>
+          </div>
+          <div class="stack" style="gap:8px">
+            <label class="muted" for="teamCustomTopicInput">Опишите тему, чтобы сгенерировать подходящие слова (необязательно)</label>
+            <input class="input" id="teamCustomTopicInput" type="text" placeholder="Например, животные или путешествия" data-custom-target="topic" aria-describedby="teamCustomStatus" aria-label="Тема для генерации слов">
+            <div class="row" style="gap:8px; flex-wrap:wrap">
+              <button class="btn ghost" id="teamCustomGenerateBtn" type="button" data-custom-action="generate" data-mode="team" aria-controls="teamCustomStatus" title="Сгенерировать список слов по теме">Сгенерировать</button>
+              <button class="btn" id="teamCustomApplyBtn" type="button" data-custom-action="apply" data-mode="team" aria-label="Применить сгенерированные слова" title="Применить сгенерированные слова">Применить</button>
+            </div>
+            <div class="custom-dict-status muted" id="teamCustomStatus" role="status" aria-live="polite" hidden data-custom-target="status">Генератор готов к работе.</div>
+          </div>
+        </div>
       </div>
     </div>
 
