@@ -16,6 +16,9 @@ DEFAULT_FEEDBACK_FILE = "feedback.log"
 app = Flask(__name__)
 
 
+APP_VERSION = "0.5.1"
+
+
 def _resolve_storage_path() -> Path:
     data_dir = Path(os.environ.get("DATA_DIR", DEFAULT_DATA_DIR)).expanduser().resolve()
     file_name = os.environ.get("FEEDBACK_FILE", DEFAULT_FEEDBACK_FILE).strip() or DEFAULT_FEEDBACK_FILE
@@ -73,6 +76,11 @@ def index():
 @app.route("/healthz")
 def healthz():
     return jsonify({"ok": True})
+
+
+@app.route("/version")
+def version() -> Any:
+    return jsonify({"version": APP_VERSION})
 
 
 @app.route("/api/feedback", methods=["POST"])
