@@ -9,7 +9,7 @@
 - `public/manifest.json` — манифест PWA.
 - `public/service-worker.js` — кэширование статических ресурсов.
 - `public/icons/icon.svg` — базовая иконка приложения.
-- `backend/index.js` — минимальный Express-сервер для обработки обратной связи.
+- `backend/app.py` — минимальный Flask-сервер для обработки обратной связи.
 
 ## Запуск локально
 
@@ -28,11 +28,13 @@ python -m http.server 8000
 Форма обратной связи отправляет данные на эндпоинт `POST /api/feedback`. Для локального тестирования выполните:
 
 ```bash
-npm install
-npm start
+python -m venv .venv
+source .venv/bin/activate
+pip install -r backend/requirements.txt
+python backend/app.py
 ```
 
-По умолчанию сервер поднимается на <http://localhost:3000>, обслуживает содержимое каталога `public/` и сохраняет все сообщения в файл `data/feedback.log` (по одному JSON в строке). Путь можно изменить через переменные окружения `DATA_DIR` и `FEEDBACK_FILE`.
+По умолчанию сервер поднимается на <http://localhost:3000> и сохраняет все сообщения в файл `data/feedback.log` (по одному JSON в строке). Путь можно изменить через переменные окружения `DATA_DIR` и `FEEDBACK_FILE`.
 
 Для проверки работоспособности можно отправить запрос:
 
