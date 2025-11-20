@@ -75,6 +75,7 @@
 
   function resolveApiUrl(path, config){
     if (!config || typeof config !== 'object') return path;
+    const normalizedPath = typeof path === 'string' ? path.trim() : '';
     const base = typeof config.publicApiBaseUrl === 'string' ? config.publicApiBaseUrl.trim() : '';
     if (!base) return path;
 
