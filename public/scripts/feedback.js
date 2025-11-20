@@ -628,20 +628,40 @@
     };
     const config = await ensureRuntimeConfig();
     const endpoint = resolveApiUrl('/api/feedback', config);
+    let responseMeta = null;
     return fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     }).then(response => {
+      responseMeta = { status: response.status, ok: response.ok };
       if (!response.ok){
-        throw new Error(`HTTP ${response.status}`);
+        return response.text()
+          .catch(() => '')
+          .then(body => {
+            const err = new Error(`HTTP ${response.status}`);
+            err.responseBody = body;
+            throw err;
+          });
       }
       return response.json().catch(() => ({}));
     }).then(data => {
       if (data && data.ok === false){
-        throw new Error('Server returned error');
+        const err = new Error('Server returned error');
+        err.responseData = data;
+        throw err;
       }
+      console.info('Feedback API response', { endpoint, status: responseMeta?.status, data });
       return data;
+    }).catch(err => {
+      console.error('Feedback API request failed', {
+        endpoint,
+        status: responseMeta?.status,
+        error: err?.message,
+        responseBody: err?.responseBody,
+        responseData: err?.responseData
+      });
+      throw err;
     });
   }
 
