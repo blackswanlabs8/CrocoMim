@@ -77,13 +77,31 @@
     if (!config || typeof config !== 'object') return path;
     const base = typeof config.publicApiBaseUrl === 'string' ? config.publicApiBaseUrl.trim() : '';
     if (!base) return path;
-    try{
-      const url = new URL(path, base);
-      return url.toString();
-    }catch(err){
-      console.warn('Некорректный publicApiBaseUrl в runtime-конфигурации', err);
-      return path;
+
+    const origin = global.location?.origin;
+    const candidates = [base];
+
+    // Если указан относительный путь (/api или api), попробуем построить абсолютный
+    if (origin){
+      if (base.startsWith('/')){
+        candidates.push(`${origin}${base}`);
+      }else{
+        candidates.push(`${origin}/${base}`);
+      }
     }
+
+    let lastError = null;
+    for (const candidate of candidates){
+      try{
+        const url = new URL(path, candidate);
+        return url.toString();
+      }catch(err){
+        lastError = err;
+      }
+    }
+
+    console.warn('Некорректный publicApiBaseUrl в runtime-конфигурации', lastError);
+    return path;
   }
 
   function init(){
