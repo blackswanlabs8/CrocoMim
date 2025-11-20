@@ -77,49 +77,31 @@
     if (!config || typeof config !== 'object') return path;
     const normalizedPath = typeof path === 'string' ? path.trim() : '';
     const base = typeof config.publicApiBaseUrl === 'string' ? config.publicApiBaseUrl.trim() : '';
-    const origin = global.location?.origin || '';
-    const pathname = global.location?.pathname || '';
-    const scope = pathname.replace(/[^/]*$/, '');
+    if (!base) return path;
 
-    /** @type {Array<{ base: string, stripLeadingSlash?: boolean }>} */
-    const candidates = [];
+    const origin = global.location?.origin;
+    const candidates = [base];
 
-    if (base){
-      candidates.push({ base });
-      if (origin){
-        if (base.startsWith('/')){
-          candidates.push({ base: `${origin}${base}` });
-        }else{
-          candidates.push({ base: `${origin}/${base}` });
-        }
+    // Если указан относительный путь (/api или api), попробуем построить абсолютный
+    if (origin){
+      if (base.startsWith('/')){
+        candidates.push(`${origin}${base}`);
+      }else{
+        candidates.push(`${origin}/${base}`);
       }
-    }else if (origin){
-      const scopedBase = scope ? `${origin}${scope}` : origin;
-      candidates.push({ base: scopedBase, stripLeadingSlash: true });
     }
 
     let lastError = null;
     for (const candidate of candidates){
       try{
-        const effectivePath = candidate.stripLeadingSlash ? normalizedPath.replace(/^\//, '') : normalizedPath;
-        const url = new URL(effectivePath, candidate.base);
+        const url = new URL(path, candidate);
         return url.toString();
       }catch(err){
         lastError = err;
       }
     }
 
-    if (!base && origin && normalizedPath){
-      try{
-        return new URL(normalizedPath, origin).toString();
-      }catch(err){
-        lastError = err;
-      }
-    }
-
-    if (lastError){
-      console.warn('Некорректный publicApiBaseUrl в runtime-конфигурации', lastError);
-    }
+    console.warn('Некорректный publicApiBaseUrl в runtime-конфигурации', lastError);
     return path;
   }
 
