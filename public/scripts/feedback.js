@@ -75,15 +75,52 @@
 
   function resolveApiUrl(path, config){
     if (!config || typeof config !== 'object') return path;
+    const normalizedPath = typeof path === 'string' ? path.trim() : '';
     const base = typeof config.publicApiBaseUrl === 'string' ? config.publicApiBaseUrl.trim() : '';
-    if (!base) return path;
-    try{
-      const url = new URL(path, base);
-      return url.toString();
-    }catch(err){
-      console.warn('Некорректный publicApiBaseUrl в runtime-конфигурации', err);
-      return path;
+    const origin = global.location?.origin || '';
+    const pathname = global.location?.pathname || '';
+    const scope = pathname.replace(/[^/]*$/, '');
+
+    /** @type {Array<{ base: string, stripLeadingSlash?: boolean }>} */
+    const candidates = [];
+
+    if (base){
+      candidates.push({ base });
+      if (origin){
+        if (base.startsWith('/')){
+          candidates.push({ base: `${origin}${base}` });
+        }else{
+          candidates.push({ base: `${origin}/${base}` });
+        }
+      }
+    }else if (origin){
+      const scopedBase = scope ? `${origin}${scope}` : origin;
+      candidates.push({ base: scopedBase, stripLeadingSlash: true });
     }
+
+    let lastError = null;
+    for (const candidate of candidates){
+      try{
+        const effectivePath = candidate.stripLeadingSlash ? normalizedPath.replace(/^\//, '') : normalizedPath;
+        const url = new URL(effectivePath, candidate.base);
+        return url.toString();
+      }catch(err){
+        lastError = err;
+      }
+    }
+
+    if (!base && origin && normalizedPath){
+      try{
+        return new URL(normalizedPath, origin).toString();
+      }catch(err){
+        lastError = err;
+      }
+    }
+
+    if (lastError){
+      console.warn('Некорректный publicApiBaseUrl в runtime-конфигурации', lastError);
+    }
+    return path;
   }
 
   function init(){
