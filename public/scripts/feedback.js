@@ -75,26 +75,32 @@
 
   function resolveApiUrl(path, config){
     if (!config || typeof config !== 'object') return path;
+
     const normalizedPath = typeof path === 'string' ? path.trim() : '';
-    const base = typeof config.publicApiBaseUrl === 'string' ? config.publicApiBaseUrl.trim() : '';
-    if (!base) return path;
+    if (/^[a-z][a-z0-9+.-]*:/i.test(normalizedPath)) return normalizedPath;
+
+    const baseRaw = typeof config.publicApiBaseUrl === 'string' ? config.publicApiBaseUrl.trim() : '';
+    if (!baseRaw) return path;
+
+    const cleanPath = normalizedPath.replace(/^\/+/g, '');
+    const withTrailingSlash = value => value.endsWith('/') ? value : `${value}/`;
 
     const origin = global.location?.origin;
-    const candidates = [base];
+    const candidates = [baseRaw];
 
     // Если указан относительный путь (/api или api), попробуем построить абсолютный
     if (origin){
-      if (base.startsWith('/')){
-        candidates.push(`${origin}${base}`);
-      }else{
-        candidates.push(`${origin}/${base}`);
+      if (baseRaw.startsWith('/')){
+        candidates.push(`${origin}${baseRaw}`);
+      }else if (!/^[a-z][a-z0-9+.-]*:/i.test(baseRaw)){
+        candidates.push(`${origin}/${baseRaw}`);
       }
     }
 
     let lastError = null;
     for (const candidate of candidates){
       try{
-        const url = new URL(path, candidate);
+        const url = new URL(cleanPath, withTrailingSlash(candidate));
         return url.toString();
       }catch(err){
         lastError = err;
@@ -646,7 +652,8 @@
       client: draft.client
     };
     const config = await ensureRuntimeConfig();
-    const endpoint = resolveApiUrl('/api/feedback', config);
+    const hasApiBase = config && typeof config.publicApiBaseUrl === 'string' && config.publicApiBaseUrl.trim();
+    const endpoint = hasApiBase ? resolveApiUrl('feedback', config) : '/api/feedback';
     let responseMeta = null;
     return fetch(endpoint, {
       method: 'POST',
