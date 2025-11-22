@@ -215,8 +215,31 @@
     <div class="section">
       <h2>Команды</h2>
       <div id="teamList" class="team-grid"></div>
+      <template id="teamCardTemplate">
+        <div class="section team-card" data-team-card>
+          <div class="team-card-top">
+            <button class="team-avatar-btn" type="button" data-team-avatar>
+              <span aria-hidden="true">🐊</span>
+              <span class="visually-hidden">Редактировать команду</span>
+            </button>
+          </div>
+          <div class="team-body">
+            <div class="team-name" data-team-name>Команда</div>
+            <form class="team-edit" data-team-form>
+              <label class="visually-hidden" data-team-label>Название команды</label>
+              <input class="input team-edit-input" data-team-input type="text" maxlength="40" autocomplete="off" />
+              <div class="team-edit-actions">
+                <button class="btn btn-small" type="submit">Сохранить</button>
+                <button class="btn ghost btn-small" type="button" data-cancel>Отмена</button>
+              </div>
+            </form>
+            <button class="team-delete" type="button" title="Удалить команду" data-team-delete>🗑️</button>
+          </div>
+        </div>
+      </template>
       <div class="row team-actions">
         <button class="btn ghost" id="teamAdd">+ Добавить команду</button>
+        <button class="btn ghost" id="teamRename" type="button">Переименовать</button>
       </div>
     </div>
 
