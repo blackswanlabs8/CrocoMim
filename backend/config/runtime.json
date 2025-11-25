@@ -1,4 +1,4 @@
 {
-  "backendBaseUrl": "/test/api",
-  "publicApiBaseUrl": "/test/api"
+  "backendBaseUrl": "https://test.crocomim.ru",
+  "publicApiBaseUrl": "https://api.test.crocomim.ru"
 }
