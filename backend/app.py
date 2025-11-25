@@ -41,17 +41,17 @@ def _resolve_storage_path() -> Path:
 
 
 def _load_smtp_config() -> SMTPConfig:
-    host = (os.environ.get("SMTP_HOST") or "").strip()
-    recipient = (os.environ.get("FEEDBACK_RECIPIENT") or "").strip()
+    host = os.environ.get("SMTP_HOST")
+    recipient = os.environ.get("FEEDBACK_RECIPIENT")
     if not host:
         raise RuntimeError("SMTP_HOST is not configured")
     if not recipient:
         raise RuntimeError("FEEDBACK_RECIPIENT is not configured")
 
     port = int(os.environ.get("SMTP_PORT", "587"))
-    username = (os.environ.get("SMTP_USERNAME") or "").strip() or None
-    password = (os.environ.get("SMTP_PASSWORD") or "").strip() or None
-    sender = (os.environ.get("FEEDBACK_SENDER") or "").strip() or username or recipient
+    username = os.environ.get("SMTP_USERNAME") or None
+    password = os.environ.get("SMTP_PASSWORD") or None
+    sender = os.environ.get("FEEDBACK_SENDER") or username or recipient
     use_starttls = os.environ.get("SMTP_STARTTLS", "true").lower() not in {"0", "false", "no"}
 
     return SMTPConfig(
@@ -169,6 +169,12 @@ def submit_feedback():
         **normalized,
         "receivedAt": datetime.now(timezone.utc).isoformat(),
     }
+
+    try:
+        smtp_config = _load_smtp_config()
+        _send_email(record, smtp_config)
+    except Exception as exc:  # pragma: no cover - unexpected SMTP errors
+        return jsonify({"ok": False, "error": f"Failed to deliver feedback: {exc}"}), 500
 
     try:
         storage_path = _resolve_storage_path()
