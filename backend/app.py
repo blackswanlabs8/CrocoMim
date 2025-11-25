@@ -23,38 +23,6 @@ app = Flask(__name__)
 APP_VERSION = "0.5.1"
 
 
-def _load_local_env_file(path: Path = DEFAULT_ENV_FILE) -> None:
-    """Load key/value pairs from a local env file if present.
-
-    Existing environment variables are left untouched so external configuration
-    still takes precedence. Lines that are empty or start with ``#`` are
-    ignored. Only the first ``KEY=VALUE`` pair per line is respected.
-    """
-
-    if not path.exists():
-        return
-
-    try:
-        for line in path.read_text(encoding="utf-8").splitlines():
-            stripped = line.strip()
-            if not stripped or stripped.startswith("#"):
-                continue
-
-            if "=" not in stripped:
-                continue
-
-            key, value = stripped.split("=", 1)
-            if key and key not in os.environ:
-                os.environ[key] = value
-    except OSError:
-        # Failing to read the local env file should not prevent startup; fall
-        # back to normal environment-only configuration.
-        pass
-
-
-_load_local_env_file()
-
-
 @dataclass(frozen=True)
 class SMTPConfig:
     host: str
@@ -74,17 +42,17 @@ def _resolve_storage_path() -> Path:
 
 
 def _load_smtp_config() -> SMTPConfig:
-    host = (os.environ.get("SMTP_HOST") or "").strip()
-    recipient = (os.environ.get("FEEDBACK_RECIPIENT") or "").strip()
+    host = os.environ.get("SMTP_HOST")
+    recipient = os.environ.get("FEEDBACK_RECIPIENT")
     if not host:
         raise RuntimeError("SMTP_HOST is not configured")
     if not recipient:
         raise RuntimeError("FEEDBACK_RECIPIENT is not configured")
 
     port = int(os.environ.get("SMTP_PORT", "587"))
-    username = (os.environ.get("SMTP_USERNAME") or "").strip() or None
-    password = (os.environ.get("SMTP_PASSWORD") or "").strip() or None
-    sender = (os.environ.get("FEEDBACK_SENDER") or "").strip() or username or recipient
+    username = os.environ.get("SMTP_USERNAME") or None
+    password = os.environ.get("SMTP_PASSWORD") or None
+    sender = os.environ.get("FEEDBACK_SENDER") or username or recipient
     use_starttls = os.environ.get("SMTP_STARTTLS", "true").lower() not in {"0", "false", "no"}
 
     return SMTPConfig(
@@ -202,6 +170,12 @@ def submit_feedback():
         **normalized,
         "receivedAt": datetime.now(timezone.utc).isoformat(),
     }
+
+    try:
+        smtp_config = _load_smtp_config()
+        _send_email(record, smtp_config)
+    except Exception as exc:  # pragma: no cover - unexpected SMTP errors
+        return jsonify({"ok": False, "error": f"Failed to deliver feedback: {exc}"}), 500
 
     try:
         storage_path = _resolve_storage_path()
