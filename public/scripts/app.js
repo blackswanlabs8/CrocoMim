@@ -142,6 +142,38 @@ const WORD_DESCRIPTION_HIDDEN = 'Слово скрыто';
 const WORD_HELP_FALLBACK = 'Подсказка недоступна';
 const APP_VERSION = document.querySelector('meta[name="app-version"]')?.content || 'unknown';
 const APP_LANGUAGE = document.documentElement?.lang || 'ru';
+const versionBadgeEl = document.getElementById('versionBadge');
+const BACKEND_VERSION_URL = 'https://crocomim.ru/test/api/version';
+
+function updateVersionBadge(text, options = {}){
+  if (!versionBadgeEl) return;
+  const safeText = typeof text === 'string' && text.trim() ? text.trim() : '';
+  versionBadgeEl.textContent = safeText || 'Версия недоступна';
+  if (options.title){
+    versionBadgeEl.title = options.title;
+  }
+}
+
+async function fetchBackendVersion(){
+  if (!versionBadgeEl) return;
+  try{
+    updateVersionBadge('Версия загружается…');
+    const response = await fetch(BACKEND_VERSION_URL, { cache: 'no-store' });
+    if (!response.ok){
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const payload = await response.json();
+    const version = typeof payload?.version === 'string' ? payload.version.trim() : '';
+    if (version){
+      updateVersionBadge(`v${version}`, { title: `Версия: ${version}` });
+    }else{
+      updateVersionBadge('Версия недоступна');
+    }
+  }catch(err){
+    console.error('Не удалось получить версию бэкенда', err);
+    updateVersionBadge('Версия недоступна');
+  }
+}
 
 function updateWordView(view, { entry, hidden, helpState }){
   const hasEntry = !!entry && typeof entry.term === 'string' && entry.term.trim().length;
@@ -2942,6 +2974,7 @@ function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.rand
 
 // initial
 setupFeedbackIntegration();
+fetchBackendVersion();
 
 function restoreInitialView(){
   const stored = readScreenPref();
