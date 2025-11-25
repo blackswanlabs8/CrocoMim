@@ -184,6 +184,12 @@ def submit_feedback():
     except OSError as exc:  # pragma: no cover - filesystem errors are unexpected
         return jsonify({"ok": False, "error": f"Failed to persist feedback: {exc}"}), 500
 
+    try:
+        smtp_config = _load_smtp_config()
+        _send_email(record, smtp_config)
+    except Exception as exc:  # pragma: no cover - unexpected SMTP errors
+        return jsonify({"ok": False, "error": f"Failed to deliver feedback (logged locally): {exc}"}), 500
+
     return jsonify({"ok": True})
 
 
