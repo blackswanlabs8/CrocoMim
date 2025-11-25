@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import json
 import os
+import smtplib
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from email.message import EmailMessage
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -19,11 +22,77 @@ app = Flask(__name__)
 APP_VERSION = "0.5.1"
 
 
+@dataclass(frozen=True)
+class SMTPConfig:
+    host: str
+    port: int
+    username: str | None
+    password: str | None
+    sender: str
+    recipient: str
+    use_starttls: bool
+
+
 def _resolve_storage_path() -> Path:
     data_dir = Path(os.environ.get("DATA_DIR", DEFAULT_DATA_DIR)).expanduser().resolve()
     file_name = os.environ.get("FEEDBACK_FILE", DEFAULT_FEEDBACK_FILE).strip() or DEFAULT_FEEDBACK_FILE
     data_dir.mkdir(parents=True, exist_ok=True)
     return data_dir / file_name
+
+
+def _load_smtp_config() -> SMTPConfig:
+    host = (os.environ.get("SMTP_HOST") or "").strip()
+    recipient = (os.environ.get("FEEDBACK_RECIPIENT") or "").strip()
+    if not host:
+        raise RuntimeError("SMTP_HOST is not configured")
+    if not recipient:
+        raise RuntimeError("FEEDBACK_RECIPIENT is not configured")
+
+    port = int(os.environ.get("SMTP_PORT", "587"))
+    username = (os.environ.get("SMTP_USERNAME") or "").strip() or None
+    password = (os.environ.get("SMTP_PASSWORD") or "").strip() or None
+    sender = (os.environ.get("FEEDBACK_SENDER") or "").strip() or username or recipient
+    use_starttls = os.environ.get("SMTP_STARTTLS", "true").lower() not in {"0", "false", "no"}
+
+    return SMTPConfig(
+        host=host,
+        port=port,
+        username=username,
+        password=password,
+        sender=sender,
+        recipient=recipient,
+        use_starttls=use_starttls,
+    )
+
+
+def _send_email(record: Dict[str, Any], config: SMTPConfig) -> None:
+    message = EmailMessage()
+    subject_parts = ["CrocoMim feedback", record.get("category")]
+    message["Subject"] = " - ".join(filter(None, subject_parts))
+    message["From"] = config.sender
+    message["To"] = config.recipient
+
+    lines = [
+        f"Received at: {record.get('receivedAt')}",
+        f"Category: {record.get('category')}",
+        f"Email: {record.get('email') or '—'}",
+        "Message:",
+        record.get("message", ""),
+        "",
+        "Context:",
+        json.dumps(record.get("context", {}), ensure_ascii=False, indent=2),
+        "",
+        "Client:",
+        json.dumps(record.get("client", {}), ensure_ascii=False, indent=2),
+    ]
+    message.set_content("\n".join(lines))
+
+    with smtplib.SMTP(config.host, config.port, timeout=10) as smtp:
+        if config.use_starttls:
+            smtp.starttls()
+        if config.username and config.password:
+            smtp.login(config.username, config.password)
+        smtp.send_message(message)
 
 
 def _validate_feedback(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
@@ -108,6 +177,12 @@ def submit_feedback():
             fh.write("\n")
     except OSError as exc:  # pragma: no cover - filesystem errors are unexpected
         return jsonify({"ok": False, "error": f"Failed to persist feedback: {exc}"}), 500
+
+    try:
+        smtp_config = _load_smtp_config()
+        _send_email(record, smtp_config)
+    except Exception as exc:  # pragma: no cover - unexpected SMTP errors
+        return jsonify({"ok": False, "error": f"Failed to deliver feedback (logged locally): {exc}"}), 500
 
     return jsonify({"ok": True})
 
