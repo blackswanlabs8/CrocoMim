@@ -37,10 +37,3 @@
 - `_resolve_storage_path()` — возвращает путь к файлу для сохранения отзывов с учётом `DATA_DIR` и `FEEDBACK_FILE`, создаёт каталог при необходимости.
 - `_validate_feedback(payload)` — проверяет входные данные, возвращает объект с полем `ok` и списком ошибок (если есть).
 
-### `backend/runtime_config.py`
-- `_resolve_config_path()` — определяет путь к `runtime.json` или файлу из переменной `RUNTIME_CONFIG_PATH`.
-- `_read_runtime_config(file_path)` — читает и парсит JSON-конфигурацию, возвращает словарь или `{}` при ошибках.
-- `get_runtime_config()` — потокобезопасно кеширует и возвращает runtime-конфигурацию.
-- `reload_runtime_config()` — сбрасывает кеш и перечитывает конфигурацию.
-- `_extract_url(key)` — достаёт валидный URL из конфигурации по ключу.
-- `get_public_api_base_url()` / `get_backend_base_url()` — возвращают соответствующие URL из конфигурации или `None`.
