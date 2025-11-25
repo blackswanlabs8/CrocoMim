@@ -15,6 +15,7 @@ from flask import Flask, jsonify, request
 ALLOWED_CATEGORIES = {"typo", "difficulty", "other"}
 DEFAULT_DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 DEFAULT_FEEDBACK_FILE = "feedback.log"
+DEFAULT_ENV_FILE = Path(__file__).resolve().parent.parent / "config" / "smtp.env"
 
 app = Flask(__name__)
 
