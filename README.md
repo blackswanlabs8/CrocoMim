@@ -25,7 +25,7 @@ python -m http.server 8000
 
 ### C минимальным бэкендом
 
-Форма обратной связи отправляет данные на эндпоинт `POST /api/feedback`. Для локального тестирования выполните:
+Форма обратной связи отправляет данные на эндпоинт `POST /feedback`. Для локального тестирования выполните:
 
 ```bash
 python -m venv .venv
@@ -34,12 +34,12 @@ pip install -r backend/requirements.txt
 python backend/app.py
 ```
 
-По умолчанию сервер поднимается на <http://localhost:3000> и сохраняет все сообщения в файл `data/feedback.log` (по одному JSON в строке). Путь можно изменить через переменные окружения `DATA_DIR` и `FEEDBACK_FILE`.
+По умолчанию сервер поднимается на <http://localhost:3000>, принимает отправки на `/feedback`, отправляет их на указанный SMTP (`SMTP_HOST`, `FEEDBACK_RECIPIENT`) и параллельно сохраняет в файл `data/feedback.log` (по одному JSON в строке). Путь можно изменить через переменные окружения `DATA_DIR` и `FEEDBACK_FILE`. Если переменные для SMTP не заданы, приложение сначала подхватит значения из `config/smtp.env` (если файл есть), а потом — встроенные дефолты для `smtp.crocomim.ru`, так что отправка не падает даже при чистом запуске.
 
 Для проверки работоспособности можно отправить запрос:
 
 ```bash
-curl -X POST http://localhost:3000/api/feedback \
+curl -X POST http://localhost:3000/feedback \
   -H "Content-Type: application/json" \
   -d '{"category":"typo","message":"Сообщение об ошибке...","consent":true,"context":{},"client":{}}'
 ```
