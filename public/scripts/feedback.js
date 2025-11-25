@@ -653,7 +653,7 @@
     };
     const config = await ensureRuntimeConfig();
     const hasApiBase = config && typeof config.publicApiBaseUrl === 'string' && config.publicApiBaseUrl.trim();
-    const endpoint = hasApiBase ? resolveApiUrl('feedback', config) : '/api/feedback';
+    const endpoint = hasApiBase ? resolveApiUrl('feedback', config) : '/feedback';
     let responseMeta = null;
     return fetch(endpoint, {
       method: 'POST',
