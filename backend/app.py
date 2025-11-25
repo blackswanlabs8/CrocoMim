@@ -83,7 +83,7 @@ def version() -> Any:
     return jsonify({"version": APP_VERSION})
 
 
-@app.route("/api/feedback", methods=["POST"])
+@app.route("/feedback", methods=["POST"])
 def submit_feedback():
     if not request.is_json:
         return jsonify({"ok": False, "error": "Expected JSON body"}), 400
