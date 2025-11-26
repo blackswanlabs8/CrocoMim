@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from datetime import datetime, timezone
 from pathlib import Path
@@ -13,11 +14,36 @@ from smtp_send import send_email
 ALLOWED_CATEGORIES = {"typo", "difficulty", "other"}
 DEFAULT_DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 DEFAULT_FEEDBACK_FILE = "feedback.log"
+DEFAULT_LOG_FILE = "backend.log"
 
 app = Flask(__name__)
 
 
 APP_VERSION = "0.5.1"
+
+LOGGER = logging.getLogger(__name__)
+
+
+def _configure_logging() -> Path:
+    data_dir = Path(os.environ.get("DATA_DIR", DEFAULT_DATA_DIR)).expanduser().resolve()
+    log_file = os.environ.get("BACKEND_LOG_FILE", DEFAULT_LOG_FILE).strip() or DEFAULT_LOG_FILE
+    data_dir.mkdir(parents=True, exist_ok=True)
+    log_path = data_dir / log_file
+
+    handlers = [logging.StreamHandler(), logging.FileHandler(log_path, encoding="utf-8")]
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+        handlers=handlers,
+        force=True,
+    )
+    logging.getLogger("smtp").setLevel(logging.WARNING)
+    LOGGER.info("Logging configured. Writing to %s", log_path)
+    return log_path
+
+
+# Configure logging as early as possible so that all modules share the same setup
+LOG_PATH = _configure_logging()
 
 
 def _resolve_storage_path() -> Path:
@@ -47,10 +73,12 @@ def _send_email(record: Dict[str, Any]) -> None:
 
     body = "\n".join(body_lines)
 
+    LOGGER.info("Sending feedback notification email")
     send_email(subject, body)
 
     user_email = record.get("email")
     if user_email:
+        LOGGER.info("Sending feedback copy to user %s", user_email)
         send_email(subject, body, user_email)
 
 
@@ -98,30 +126,38 @@ def _validate_feedback(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], List[st
 
 @app.route("/")
 def index():
+    LOGGER.info("Health check root endpoint called")
     return jsonify({"message": "Flask backend is alive"})
 
 
 @app.route("/healthz")
 def healthz():
+    LOGGER.info("/healthz endpoint called")
     return jsonify({"ok": True})
 
 
 @app.route("/version")
 def version() -> Any:
+    LOGGER.info("/version endpoint called")
     return jsonify({"version": APP_VERSION})
 
 
 @app.route("/feedback", methods=["POST"])
 def submit_feedback():
+    LOGGER.info("Received /feedback request")
+
     if not request.is_json:
+        LOGGER.warning("Request rejected: body is not JSON")
         return jsonify({"ok": False, "error": "Expected JSON body"}), 400
 
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):
+        LOGGER.warning("Request rejected: malformed JSON body")
         return jsonify({"ok": False, "error": "Malformed JSON"}), 400
 
     normalized, errors = _validate_feedback(payload)
     if errors:
+        LOGGER.info("Validation failed with errors: %s", errors)
         return jsonify({"ok": False, "errors": errors}), 400
 
     record = {
@@ -129,23 +165,35 @@ def submit_feedback():
         "receivedAt": datetime.now(timezone.utc).isoformat(),
     }
 
+    LOGGER.info(
+        "Persisting feedback. Category=%s, Email=%s, Consent=%s",
+        record.get("category"),
+        record.get("email") or "—",
+        record.get("consent"),
+    )
+
     try:
         _send_email(record)
     except Exception as exc:  # pragma: no cover - unexpected SMTP errors
+        LOGGER.exception("Failed to send feedback emails")
         return jsonify({"ok": False, "error": f"Failed to deliver feedback: {exc}"}), 500
 
     try:
         storage_path = _resolve_storage_path()
+        LOGGER.info("Appending feedback to %s", storage_path)
         with storage_path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(record, ensure_ascii=False))
             fh.write("\n")
     except OSError as exc:  # pragma: no cover - filesystem errors are unexpected
+        LOGGER.exception("Failed to persist feedback to file")
         return jsonify({"ok": False, "error": f"Failed to persist feedback: {exc}"}), 500
 
+    LOGGER.info("Feedback stored successfully")
     return jsonify({"ok": True})
 
 
 if __name__ == "__main__":
+    LOGGER.info("Starting Flask app. Version=%s", APP_VERSION)
     host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT", "3000"))
     app.run(host=host, port=port)
