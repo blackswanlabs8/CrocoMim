@@ -165,7 +165,7 @@ async function fetchBackendVersion(){
     const payload = await response.json();
     const version = typeof payload?.version === 'string' ? payload.version.trim() : '';
     if (version){
-      updateVersionBadge(`Бэкенд v${version}`, { title: `Версия бэкенда: ${version}` });
+      updateVersionBadge(`v${version}`, { title: `Версия: ${version}` });
     }else{
       updateVersionBadge('Версия недоступна');
     }

@@ -2,36 +2,22 @@ from __future__ import annotations
 
 import json
 import os
-import smtplib
-from dataclasses import dataclass
 from datetime import datetime, timezone
-from email.message import EmailMessage
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 from flask import Flask, jsonify, request
 
+from smtp_send import send_email
 
 ALLOWED_CATEGORIES = {"typo", "difficulty", "other"}
 DEFAULT_DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 DEFAULT_FEEDBACK_FILE = "feedback.log"
-DEFAULT_ENV_FILE = Path(__file__).resolve().parent.parent / "config" / "smtp.env"
 
 app = Flask(__name__)
 
 
-APP_VERSION = "0.5.1"
-
-
-@dataclass(frozen=True)
-class SMTPConfig:
-    host: str
-    port: int
-    username: str | None
-    password: str | None
-    sender: str
-    recipient: str
-    use_starttls: bool
+APP_VERSION = "0.5.2"
 
 
 def _resolve_storage_path() -> Path:
@@ -41,39 +27,11 @@ def _resolve_storage_path() -> Path:
     return data_dir / file_name
 
 
-def _load_smtp_config() -> SMTPConfig:
-    host = os.environ.get("SMTP_HOST")
-    recipient = os.environ.get("FEEDBACK_RECIPIENT")
-    if not host:
-        raise RuntimeError("SMTP_HOST is not configured")
-    if not recipient:
-        raise RuntimeError("FEEDBACK_RECIPIENT is not configured")
-
-    port = int(os.environ.get("SMTP_PORT", "587"))
-    username = os.environ.get("SMTP_USERNAME") or None
-    password = os.environ.get("SMTP_PASSWORD") or None
-    sender = os.environ.get("FEEDBACK_SENDER") or username or recipient
-    use_starttls = os.environ.get("SMTP_STARTTLS", "true").lower() not in {"0", "false", "no"}
-
-    return SMTPConfig(
-        host=host,
-        port=port,
-        username=username,
-        password=password,
-        sender=sender,
-        recipient=recipient,
-        use_starttls=use_starttls,
-    )
-
-
-def _send_email(record: Dict[str, Any], config: SMTPConfig) -> None:
-    message = EmailMessage()
+def _send_email(record: Dict[str, Any]) -> List[str]:
     subject_parts = ["CrocoMim feedback", record.get("category")]
-    message["Subject"] = " - ".join(filter(None, subject_parts))
-    message["From"] = config.sender
-    message["To"] = config.recipient
+    subject = " - ".join(filter(None, subject_parts))
 
-    lines = [
+    body_lines = [
         f"Received at: {record.get('receivedAt')}",
         f"Category: {record.get('category')}",
         f"Email: {record.get('email') or '—'}",
@@ -86,14 +44,24 @@ def _send_email(record: Dict[str, Any], config: SMTPConfig) -> None:
         "Client:",
         json.dumps(record.get("client", {}), ensure_ascii=False, indent=2),
     ]
-    message.set_content("\n".join(lines))
 
-    with smtplib.SMTP(config.host, config.port, timeout=10) as smtp:
-        if config.use_starttls:
-            smtp.starttls()
-        if config.username and config.password:
-            smtp.login(config.username, config.password)
-        smtp.send_message(message)
+    body = "\n".join(body_lines)
+
+    errors: List[str] = []
+    recipients = [None]
+
+    user_email = record.get("email")
+    if user_email:
+        recipients.append(user_email)
+
+    for recipient in recipients:
+        try:
+            send_email(subject, body, recipient)
+        except Exception as exc:  # pragma: no cover - defensive logging
+            app.logger.error("Failed to send feedback email", exc_info=exc)
+            errors.append(str(exc))
+
+    return errors
 
 
 def _validate_feedback(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
@@ -171,11 +139,9 @@ def submit_feedback():
         "receivedAt": datetime.now(timezone.utc).isoformat(),
     }
 
-    try:
-        smtp_config = _load_smtp_config()
-        _send_email(record, smtp_config)
-    except Exception as exc:  # pragma: no cover - unexpected SMTP errors
-        return jsonify({"ok": False, "error": f"Failed to deliver feedback: {exc}"}), 500
+    email_errors = _send_email(record)
+    if email_errors:
+        record["emailErrors"] = email_errors
 
     try:
         storage_path = _resolve_storage_path()
@@ -185,13 +151,11 @@ def submit_feedback():
     except OSError as exc:  # pragma: no cover - filesystem errors are unexpected
         return jsonify({"ok": False, "error": f"Failed to persist feedback: {exc}"}), 500
 
-    try:
-        smtp_config = _load_smtp_config()
-        _send_email(record, smtp_config)
-    except Exception as exc:  # pragma: no cover - unexpected SMTP errors
-        return jsonify({"ok": False, "error": f"Failed to deliver feedback (logged locally): {exc}"}), 500
+    response_payload: Dict[str, Any] = {"ok": True}
+    if email_errors:
+        response_payload["emailWarnings"] = email_errors
 
-    return jsonify({"ok": True})
+    return jsonify(response_payload)
 
 
 if __name__ == "__main__":
