@@ -406,7 +406,7 @@
         : {};
       if (typeof runtime.publicApiBaseUrl !== 'string'){ runtime.publicApiBaseUrl = ''; }
       if (typeof runtime.backendBaseUrl !== 'string'){ runtime.backendBaseUrl = ''; }
-      const CONFIG_PATH = '/config/runtime.json';
+      const CONFIG_PATH = './test/config/runtime.json';
       const readyPromise = fetch(CONFIG_PATH, { cache: 'no-cache' })
         .then(response => {
           if (!response.ok){
