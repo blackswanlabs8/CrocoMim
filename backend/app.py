@@ -54,16 +54,20 @@ def _resolve_storage_path() -> Path:
 
 
 def _send_email(record: Dict[str, Any]) -> None:
-    subject_parts = ["CrocoMim feedback", record.get("category")]
-    subject = " - ".join(filter(None, subject_parts))
+    category_subjects = {
+        "typo": "Ошибка в тексте",
+        "difficulty": "Не соответствует уровню сложности",
+        "other": "Другая проблема/предложение",
+    }
+
+    subject = category_subjects.get(record.get("category"), "Обратная связь")
 
     body_lines = [
-        f"Received at: {record.get('receivedAt')}",
-        f"Category: {record.get('category')}",
-        f"Email: {record.get('email') or '—'}",
-        "Message:",
         record.get("message", ""),
         "",
+        f"Email: {record.get('email') or '—'}",
+        "",
+        f"Received at: {record.get('receivedAt')}",
         "Context:",
         json.dumps(record.get("context", {}), ensure_ascii=False, indent=2),
         "",
@@ -75,11 +79,6 @@ def _send_email(record: Dict[str, Any]) -> None:
 
     LOGGER.info("Sending feedback notification email")
     send_email(subject, body)
-
-    user_email = record.get("email")
-    if user_email:
-        LOGGER.info("Sending feedback copy to user %s", user_email)
-        send_email(subject, body, user_email)
 
 
 def _validate_feedback(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
