@@ -3,6 +3,7 @@ import os
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -47,3 +48,4 @@ def send_email(subject: str, body: str, to_email: str | None = None) -> None:
         server.sendmail(from_email, recipient, msg.as_string())
 
     LOGGER.info("Письмо успешно отправлено на %s", recipient)
+
