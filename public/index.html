@@ -401,12 +401,43 @@
   <script>
     (function(global){
       const target = typeof global !== 'undefined' ? global : {};
+      const loc = target.location;
+      const inTestPath = !!(loc && /\/test(\/|$)/.test(loc.pathname));
+      const queryEnv = (() => {
+        if (!loc || !loc.search) return null;
+        const param = new URLSearchParams(loc.search).get('env');
+        if (!param) return null;
+        const value = param.trim().toLowerCase();
+        if (value === 'test' || value === 'prod' || value === 'production'){
+          return value;
+        }
+        return null;
+      })();
+
+      const env = queryEnv
+        ? (queryEnv === 'test' ? 'test' : 'prod')
+        : (inTestPath ? 'test' : 'prod');
+      const runtimeFlags = {
+        env,
+        testMode: env === 'test',
+        debug: env === 'test'
+      };
+      target.RUNTIME_FLAGS = runtimeFlags;
+
+      const debugLog = (...args) => {
+        if (runtimeFlags.debug && target.console && typeof target.console.debug === 'function'){
+          target.console.debug('[CrocoMim]', ...args);
+        }
+      };
       const runtime = (target.RUNTIME_CONFIG && typeof target.RUNTIME_CONFIG === 'object')
         ? target.RUNTIME_CONFIG
         : {};
       if (typeof runtime.publicApiBaseUrl !== 'string'){ runtime.publicApiBaseUrl = ''; }
       if (typeof runtime.backendBaseUrl !== 'string'){ runtime.backendBaseUrl = ''; }
-      const CONFIG_PATH = '/config/runtime.json';
+      const CONFIG_PATH = runtimeFlags.testMode && !inTestPath
+        ? '/test/config/runtime.json'
+        : './config/runtime.json';
+      debugLog('Определена среда', runtimeFlags.env, 'Путь к конфигурации', CONFIG_PATH);
       const readyPromise = fetch(CONFIG_PATH, { cache: 'no-cache' })
         .then(response => {
           if (!response.ok){
