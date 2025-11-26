@@ -1,3 +1,4 @@
+import logging
 import os
 import smtplib
 from email.mime.multipart import MIMEMultipart
@@ -5,6 +6,8 @@ from email.mime.text import MIMEText
 
 from dotenv import load_dotenv
 
+
+LOGGER = logging.getLogger(__name__)
 
 load_dotenv()  # грузим переменные из .env
 
@@ -23,6 +26,9 @@ def send_email(subject: str, body: str, to_email: str | None = None) -> None:
     from_email = smtp_user
     recipient = to_email if to_email is not None else default_to_email
 
+    LOGGER.info(
+        "Preparing email. Host=%s:%s, From=%s, To=%s", smtp_host, smtp_port, from_email, recipient
+    )
     # формируем письмо
     msg = MIMEMultipart()
     msg["From"] = from_email
@@ -32,8 +38,10 @@ def send_email(subject: str, body: str, to_email: str | None = None) -> None:
 
     # отправка
     with smtplib.SMTP(smtp_host, smtp_port) as server:
+        LOGGER.debug("Starting TLS with SMTP server")
         server.starttls()
+        LOGGER.debug("Logging in as %s", smtp_user)
         server.login(smtp_user, smtp_password)
         server.sendmail(from_email, recipient, msg.as_string())
 
-    print(f"Письмо успешно отправлено на {recipient}")
+    LOGGER.info("Письмо успешно отправлено на %s", recipient)
