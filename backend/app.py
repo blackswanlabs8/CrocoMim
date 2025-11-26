@@ -17,7 +17,7 @@ DEFAULT_FEEDBACK_FILE = "feedback.log"
 app = Flask(__name__)
 
 
-APP_VERSION = "0.5.2"
+APP_VERSION = "0.5.1"
 
 
 def _resolve_storage_path() -> Path:
@@ -27,7 +27,7 @@ def _resolve_storage_path() -> Path:
     return data_dir / file_name
 
 
-def _send_email(record: Dict[str, Any]) -> List[str]:
+def _send_email(record: Dict[str, Any]) -> None:
     subject_parts = ["CrocoMim feedback", record.get("category")]
     subject = " - ".join(filter(None, subject_parts))
 
@@ -47,21 +47,11 @@ def _send_email(record: Dict[str, Any]) -> List[str]:
 
     body = "\n".join(body_lines)
 
-    errors: List[str] = []
-    recipients = [None]
+    send_email(subject, body)
 
     user_email = record.get("email")
     if user_email:
-        recipients.append(user_email)
-
-    for recipient in recipients:
-        try:
-            send_email(subject, body, recipient)
-        except Exception as exc:  # pragma: no cover - defensive logging
-            app.logger.error("Failed to send feedback email", exc_info=exc)
-            errors.append(str(exc))
-
-    return errors
+        send_email(subject, body, user_email)
 
 
 def _validate_feedback(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
@@ -139,9 +129,10 @@ def submit_feedback():
         "receivedAt": datetime.now(timezone.utc).isoformat(),
     }
 
-    email_errors = _send_email(record)
-    if email_errors:
-        record["emailErrors"] = email_errors
+    try:
+        _send_email(record)
+    except Exception as exc:  # pragma: no cover - unexpected SMTP errors
+        return jsonify({"ok": False, "error": f"Failed to deliver feedback: {exc}"}), 500
 
     try:
         storage_path = _resolve_storage_path()
@@ -151,11 +142,7 @@ def submit_feedback():
     except OSError as exc:  # pragma: no cover - filesystem errors are unexpected
         return jsonify({"ok": False, "error": f"Failed to persist feedback: {exc}"}), 500
 
-    response_payload: Dict[str, Any] = {"ok": True}
-    if email_errors:
-        response_payload["emailWarnings"] = email_errors
-
-    return jsonify(response_payload)
+    return jsonify({"ok": True})
 
 
 if __name__ == "__main__":
