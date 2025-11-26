@@ -9,7 +9,8 @@ from dotenv import load_dotenv
 
 LOGGER = logging.getLogger(__name__)
 
-load_dotenv()  # грузим переменные из .env
+BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / ".env")
 
 
 def send_email(subject: str, body: str, to_email: str | None = None) -> None:
@@ -37,6 +38,7 @@ def send_email(subject: str, body: str, to_email: str | None = None) -> None:
     msg.attach(MIMEText(body, "plain"))
 
     # отправка
+
     with smtplib.SMTP(smtp_host, smtp_port) as server:
         LOGGER.debug("Starting TLS with SMTP server")
         server.starttls()
