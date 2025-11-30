@@ -96,6 +96,10 @@
           <div id="quickCustomBox" class="stack" style="display:none; margin-top:10px">
             <label class="muted">Вставьте слова через запятую или перенос строки</label>
             <textarea class="input" id="quickCustomWords" rows="4" placeholder="яблоко, корабль, радуга..."></textarea>
+            <div class="custom-actions">
+              <button class="btn ghost" type="button" id="quickGenerateBtn">Сгенерировать словарь</button>
+              <span class="custom-actions__hint muted" id="quickGenerateHint">Требуется интернет</span>
+            </div>
           </div>
         </div>
 
@@ -252,6 +256,10 @@
       <div id="teamCustomBox" class="stack" style="display:none; margin-top:10px">
         <label class="muted">Вставьте слова через запятую или перенос строки</label>
         <textarea class="input" id="teamCustomWords" rows="4" placeholder="яблоко, корабль, радуга..."></textarea>
+        <div class="custom-actions">
+          <button class="btn ghost" type="button" id="teamGenerateBtn">Сгенерировать словарь</button>
+          <span class="custom-actions__hint muted" id="teamGenerateHint">Требуется интернет</span>
+        </div>
       </div>
     </div>
 
@@ -392,6 +400,31 @@
       <p>Нажми <strong>«?»</strong> в шапке — инструкция всегда рядом!</p>
 
       <p>🎭 Жестикулируй! Угадывай! Получай удовольствие!</p>
+    </div>
+  </div>
+</div>
+
+<div id="dictGenModal" class="dict-gen-modal" hidden aria-hidden="true">
+  <div class="dict-gen-modal__backdrop" data-dictgen-close></div>
+  <div class="dict-gen-modal__panel" role="dialog" aria-modal="true" aria-labelledby="dictGenTitle" tabindex="-1">
+    <button class="dict-gen-modal__close" type="button" aria-label="Закрыть" data-dictgen-close>
+      <span aria-hidden="true">✕</span>
+    </button>
+    <div class="dict-gen-modal__content">
+      <h2 id="dictGenTitle">Генератор словаря</h2>
+      <p class="dict-gen-modal__description muted">Опишите тему, и мы попробуем подобрать слова для игры. На каждый уровень сложности будет сгенерировано одинаковое количество слов.</p>
+      <form id="dictGenForm" class="dict-gen-form">
+        <label class="dict-gen-form__field">
+          <span class="dict-gen-form__label">Тема</span>
+          <input class="input" type="text" id="dictGenTopic" name="topic" required maxlength="80" placeholder="Например: космос, зима, школа" autocomplete="off">
+        </label>
+        <p class="dict-gen-modal__offline" id="dictGenOffline" hidden>Нет подключения к интернету. Попробуйте позже.</p>
+        <div class="dict-gen-modal__status" id="dictGenStatus" role="status" aria-live="polite"></div>
+        <div class="dict-gen-modal__actions">
+          <button class="btn ghost" type="button" data-dictgen-close>Отмена</button>
+          <button class="btn btn-full" type="submit" id="dictGenSubmit">Сгенерировать</button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
