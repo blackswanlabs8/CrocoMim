@@ -1,7 +1,12 @@
-name: Force sync main from test
+name: Force sync - test → main
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      info:
+        description: "Направление: test → main. Этот запуск ПОЛНОСТЬЮ перезапишет main содержимым test."
+        required: false
+        default: "test → main"
 
 permissions:
   contents: write
@@ -25,8 +30,9 @@ jobs:
         run: |
           git fetch origin
 
-      - name: Reset main to origin/test
+      - name: Reset main to origin/test (direction - test → main)
         run: |
+          echo "ВАЖНО: направление синхронизации: origin/test → main"
           git show-ref --verify --quiet "refs/remotes/origin/test" || {
             echo "Ветка origin/test не найдена"
             exit 1
