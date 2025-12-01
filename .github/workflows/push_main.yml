@@ -1,10 +1,20 @@
 name: Deploy /public to crocomim.ru
 
 on:
+  # запуск по кнопке
   workflow_dispatch: {}
+
+  # автозапуск после завершения Force sync
+  workflow_run:
+    workflows: ["Force sync - test → main"]
+    types:
+      - completed
+
+  # старое поведение: деплой при обычном push в main
   push:
     branches: [ main ]
     paths: ['public/**']   # деплой только при изменениях в /public
+
 
 concurrency:
   group: deploy-prod
@@ -12,6 +22,10 @@ concurrency:
 
 jobs:
   deploy:
+    # если workflow запущен по workflow_run → только при успешном Force sync
+    # если по push или workflow_dispatch → запускаем всегда
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+
     runs-on: ubuntu-latest
 
     steps:
