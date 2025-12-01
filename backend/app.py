@@ -52,6 +52,7 @@ def _resolve_storage_path() -> Path:
     file_name = os.environ.get("FEEDBACK_FILE", DEFAULT_FEEDBACK_FILE).strip() or DEFAULT_FEEDBACK_FILE
     # Ensure the storage directory exists even when a custom DATA_DIR is provided.
     data_dir.mkdir(parents=True, exist_ok=True)
+    # Храним данные рядом с приложением, чтобы записи не терялись между перезапусками контейнера.
     return data_dir / file_name
 
 
