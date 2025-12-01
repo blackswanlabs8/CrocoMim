@@ -1,5 +1,6 @@
 // test
 // тест
+// Проверяем, что глобальный сервис словарей доступен до дальнейшей инициализации.
 const dictionaryService = (typeof globalThis !== 'undefined' && globalThis.DictionaryService)
   ? globalThis.DictionaryService
   : null;

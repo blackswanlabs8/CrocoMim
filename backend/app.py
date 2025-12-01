@@ -19,6 +19,7 @@ DEFAULT_LOG_FILE = "backend.log"
 app = Flask(__name__)
 
 
+# Версия приложения фиксируется здесь, чтобы проще отслеживать сборки.
 APP_VERSION = "0.5.4"
 
 LOGGER = logging.getLogger(__name__)
