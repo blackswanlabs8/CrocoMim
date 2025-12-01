@@ -50,6 +50,7 @@ LOG_PATH = _configure_logging()
 def _resolve_storage_path() -> Path:
     data_dir = Path(os.environ.get("DATA_DIR", DEFAULT_DATA_DIR)).expanduser().resolve()
     file_name = os.environ.get("FEEDBACK_FILE", DEFAULT_FEEDBACK_FILE).strip() or DEFAULT_FEEDBACK_FILE
+    # Ensure the storage directory exists even when a custom DATA_DIR is provided.
     data_dir.mkdir(parents=True, exist_ok=True)
     return data_dir / file_name
 
