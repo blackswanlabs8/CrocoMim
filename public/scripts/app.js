@@ -141,7 +141,7 @@ const WORD_SECRET_PLACEHOLDER = '•••';
 const WORD_DESCRIPTION_FALLBACK = 'Описание недоступно';
 const WORD_DESCRIPTION_HIDDEN = 'Слово скрыто';
 const WORD_HELP_FALLBACK = 'Подсказка недоступна';
-// Версия приложения обновлена до 0.5.4, синхронизирована с бекендом.
+// Версия приложения обновлена до 0.5.5, синхронизирована с бекендом.
 const APP_VERSION = document.querySelector('meta[name="app-version"]')?.content || 'unknown';
 const APP_LANGUAGE = document.documentElement?.lang || 'ru';
 const versionBadgeEl = document.getElementById('versionBadge');
@@ -220,12 +220,14 @@ async function fetchBackendVersion(){
     const payload = await response.json();
     const version = typeof payload?.version === 'string' ? payload.version.trim() : '';
     if (version){
+      console.info(`[CrocoMim] Backend version resolved: ${version}`);
       updateVersionBadge(`v${version}`, { title: `Версия: ${version}` });
     }else{
+      console.warn('[CrocoMim] Backend version response did not include a version string');
       updateVersionBadge('Версия недоступна');
     }
   }catch(err){
-    console.error('Не удалось получить версию бэкенда', err);
+    console.error('[CrocoMim] Не удалось получить версию бэкенда', err);
     updateVersionBadge('Версия недоступна');
   }
 }
