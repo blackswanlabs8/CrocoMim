@@ -233,8 +233,30 @@ async function fetchBackendVersion(){
     }
     const payload = await response.json();
     const version = typeof payload?.version === 'string' ? payload.version.trim() : '';
+    const backendLabel = (() => {
+      const backendBase = typeof runtimeConfig?.backendBaseUrl === 'string'
+        ? runtimeConfig.backendBaseUrl.trim()
+        : '';
+      if (!backendBase) return 'unknown';
+
+      const parsePathname = candidate => {
+        if (!candidate) return '';
+        try{
+          const asUrl = new URL(candidate, window.location?.origin || undefined);
+          return asUrl.pathname || '';
+        }catch{
+          return candidate;
+        }
+      };
+
+      const pathname = parsePathname(backendBase);
+      if (/\/test\/api\/?$/i.test(pathname)) return 'test/api';
+      if (/\/api\/?$/i.test(pathname)) return 'api';
+      return pathname.replace(/^\/+/, '') || backendBase;
+    })();
+
     if (version){
-      console.info(`[CrocoMim] Backend version resolved: ${version}`);
+      console.info(`[CrocoMim] Backend version resolved: ${version} (backend: ${backendLabel})`);
       updateVersionBadge(`v${version}`, { title: `Версия: ${version}` });
     }else{
       console.warn('[CrocoMim] Backend version response did not include a version string');
