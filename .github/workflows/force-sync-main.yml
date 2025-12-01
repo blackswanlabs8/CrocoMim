@@ -8,7 +8,7 @@ on:
         required: true
         default: 'test'
       confirm_text:
-        description: 'Напиши: Я ОЧЕНЬ ХОЧУ ПЕРЕЗАПИСАТЬ MAIN'
+        description: 'Напиши: Я ХОЧУ ПОЛНОСТЬЮ ПЕРЕЗАПИСАТЬ MAIN'
         required: true
         default: ''
 
@@ -37,7 +37,7 @@ jobs:
       - name: Validate confirmation text
         run: |
           CONFIRM="${{ github.event.inputs.confirm_text }}"
-          REQUIRED="Я ОЧЕНЬ ХОЧУ ПЕРЕЗАПИСАТЬ MAIN"
+          REQUIRED="Я ХОЧУ ПОЛНОСТЬЮ ПЕРЕЗАПИСАТЬ MAIN"
 
           echo "Проверяем подтверждение..."
           if [ "$CONFIRM" != "$REQUIRED" ]; then
