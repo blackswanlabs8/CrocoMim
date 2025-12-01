@@ -1,0 +1,50 @@
+name: Force sync - main → test
+
+on:
+  workflow_dispatch:
+    inputs:
+      info:
+        description: "Направление: main → test. Этот запуск ПОЛНОСТЬЮ перезапишет test содержимым main."
+        required: false
+        default: "main → test"
+
+permissions:
+  contents: write
+
+jobs:
+  force-sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git user
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch all branches
+        run: |
+          git fetch origin
+
+      - name: Reset test to origin/main (direction - main → test)
+        run: |
+          echo "ВАЖНО: направление синхронизации: origin/main → test"
+
+          # убеждаемся, что origin/main существует
+          git show-ref --verify --quiet "refs/remotes/origin/main" || {
+            echo "Ветка origin/main не найдена"
+            exit 1
+          }
+
+          echo "Переключаемся на test (или создаём её заново на основе origin/main)"
+          git checkout -B test origin/main
+
+          echo "Локальная ветка test теперь равна origin/main"
+
+      - name: Force push test
+        run: |
+          git push origin test --force
