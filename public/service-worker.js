@@ -9,7 +9,6 @@ const ASSETS = [
   './scripts/feedback.js',
   './scripts/dicts.js',
   './manifest.json',
-  './config/runtime.json',
   './icons/icon.svg'
 ];
 
