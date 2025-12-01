@@ -7,6 +7,10 @@ on:
         description: 'Из какой ветки сделать main'
         required: true
         default: 'test'
+      confirm_text:
+        description: 'Напиши: Я ОЧЕНЬ ХОЧУ ПЕРЕЗАПИСАТЬ MAIN'
+        required: true
+        default: ''
 
 permissions:
   contents: write   # нужно, чтобы пушить в репозиторий
@@ -19,7 +23,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # важно: нужны ВСЕ коммиты, не только последний
+          fetch-depth: 0   # нужны все коммиты
 
       - name: Configure git user
         run: |
@@ -30,13 +34,27 @@ jobs:
         run: |
           git fetch origin
 
+      - name: Validate confirmation text
+        run: |
+          CONFIRM="${{ github.event.inputs.confirm_text }}"
+          REQUIRED="Я ОЧЕНЬ ХОЧУ ПЕРЕЗАПИСАТЬ MAIN"
+
+          echo "Проверяем подтверждение..."
+          if [ "$CONFIRM" != "$REQUIRED" ]; then
+            echo "Текст подтверждения не совпадает."
+            echo "Ожидалось: $REQUIRED"
+            echo "Получено:  $CONFIRM"
+            echo "Операция отменена."
+            exit 1
+          fi
+
       - name: Reset main to source branch
         run: |
           SRC_BRANCH="${{ github.event.inputs.source_branch }}"
 
           echo "Синхронизируем main с origin/$SRC_BRANCH"
 
-          # Подстрахуемся: проверим, что такая ветка вообще есть
+          # Проверим, что ветка-источник существует на origin
           git show-ref --verify --quiet "refs/remotes/origin/$SRC_BRANCH" || {
             echo "Ветка origin/$SRC_BRANCH не найдена"
             exit 1
