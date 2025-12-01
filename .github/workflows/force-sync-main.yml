@@ -1,19 +1,10 @@
-name: Force sync branch into main
+name: Force sync main from test
 
 on:
-  workflow_dispatch:
-    inputs:
-      source_branch:
-        description: 'Из какой ветки сделать main'
-        required: true
-        default: 'test'
-      confirm_text:
-        description: 'Напиши: Я ХОЧУ ПОЛНОСТЬЮ ПЕРЕЗАПИСАТЬ MAIN'
-        required: true
-        default: ''
+  workflow_dispatch: {}
 
 permissions:
-  contents: write   # нужно, чтобы пушить в репозиторий
+  contents: write
 
 jobs:
   force-sync:
@@ -23,7 +14,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # нужны все коммиты
+          fetch-depth: 0
 
       - name: Configure git user
         run: |
@@ -34,37 +25,18 @@ jobs:
         run: |
           git fetch origin
 
-      - name: Validate confirmation text
+      - name: Reset main to origin/test
         run: |
-          CONFIRM="${{ github.event.inputs.confirm_text }}"
-          REQUIRED="Я ХОЧУ ПОЛНОСТЬЮ ПЕРЕЗАПИСАТЬ MAIN"
-
-          echo "Проверяем подтверждение..."
-          if [ "$CONFIRM" != "$REQUIRED" ]; then
-            echo "Текст подтверждения не совпадает."
-            echo "Ожидалось: $REQUIRED"
-            echo "Получено:  $CONFIRM"
-            echo "Операция отменена."
-            exit 1
-          fi
-
-      - name: Reset main to source branch
-        run: |
-          SRC_BRANCH="${{ github.event.inputs.source_branch }}"
-
-          echo "Синхронизируем main с origin/$SRC_BRANCH"
-
-          # Проверим, что ветка-источник существует на origin
-          git show-ref --verify --quiet "refs/remotes/origin/$SRC_BRANCH" || {
-            echo "Ветка origin/$SRC_BRANCH не найдена"
+          git show-ref --verify --quiet "refs/remotes/origin/test" || {
+            echo "Ветка origin/test не найдена"
             exit 1
           }
 
-          # Переключаемся на main
+          echo "Переключаемся на main"
           git checkout main
 
-          # Жёстко приравниваем main к origin/source_branch
-          git reset --hard "origin/$SRC_BRANCH"
+          echo "Жёстко приравниваем main к origin/test"
+          git reset --hard origin/test
 
       - name: Force push main
         run: |
