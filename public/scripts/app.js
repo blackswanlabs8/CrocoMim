@@ -147,6 +147,21 @@ const APP_LANGUAGE = document.documentElement?.lang || 'ru';
 const versionBadgeEl = document.getElementById('versionBadge');
 
 function ensureRuntimeConfig(){
+  const normalizeConfig = cfg => {
+    const flags = (typeof window.RUNTIME_FLAGS === 'object' && window.RUNTIME_FLAGS) || {};
+    const origin = window.location?.origin || '';
+    const apiPath = flags.testMode ? '/test/api' : '/api';
+    const apiBase = origin ? `${origin}${apiPath}` : apiPath;
+    const runtime = cfg && typeof cfg === 'object' ? cfg : {};
+    if (!runtime.publicApiBaseUrl){
+      runtime.publicApiBaseUrl = apiBase;
+    }
+    if (!runtime.backendBaseUrl){
+      runtime.backendBaseUrl = apiBase;
+    }
+    return runtime;
+  };
+
   const ready = window.RUNTIME_CONFIG_READY;
   if (ready && typeof ready.then === 'function'){
     return ready
@@ -154,13 +169,10 @@ function ensureRuntimeConfig(){
         console.warn('Runtime-конфигурация недоступна', err);
         return window.RUNTIME_CONFIG;
       })
-      .then(() => {
-        const cfg = window.RUNTIME_CONFIG;
-        return cfg && typeof cfg === 'object' ? cfg : {};
-      });
+      .then(() => normalizeConfig(window.RUNTIME_CONFIG));
   }
-  const cfg = window.RUNTIME_CONFIG;
-  return Promise.resolve(cfg && typeof cfg === 'object' ? cfg : {});
+
+  return Promise.resolve(normalizeConfig(window.RUNTIME_CONFIG));
 }
 
 function resolveBackendUrl(path, config){
@@ -221,8 +233,30 @@ async function fetchBackendVersion(){
     }
     const payload = await response.json();
     const version = typeof payload?.version === 'string' ? payload.version.trim() : '';
+    const backendLabel = (() => {
+      const backendBase = typeof runtimeConfig?.backendBaseUrl === 'string'
+        ? runtimeConfig.backendBaseUrl.trim()
+        : '';
+      if (!backendBase) return 'unknown';
+
+      const parsePathname = candidate => {
+        if (!candidate) return '';
+        try{
+          const asUrl = new URL(candidate, window.location?.origin || undefined);
+          return asUrl.pathname || '';
+        }catch{
+          return candidate;
+        }
+      };
+
+      const pathname = parsePathname(backendBase);
+      if (/\/test\/api\/?$/i.test(pathname)) return 'test/api';
+      if (/\/api\/?$/i.test(pathname)) return 'api';
+      return pathname.replace(/^\/+/, '') || backendBase;
+    })();
+
     if (version){
-      console.info(`[CrocoMim] Backend version resolved: ${version}`);
+      console.info(`[CrocoMim] Backend version resolved: ${version} (backend: ${backendLabel})`);
       updateVersionBadge(`v${version}`, { title: `Версия: ${version}` });
     }else{
       console.warn('[CrocoMim] Backend version response did not include a version string');
