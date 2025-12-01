@@ -220,12 +220,14 @@ async function fetchBackendVersion(){
     const payload = await response.json();
     const version = typeof payload?.version === 'string' ? payload.version.trim() : '';
     if (version){
+      console.info(`[CrocoMim] Backend version resolved: ${version}`);
       updateVersionBadge(`v${version}`, { title: `Версия: ${version}` });
     }else{
+      console.warn('[CrocoMim] Backend version response did not include a version string');
       updateVersionBadge('Версия недоступна');
     }
   }catch(err){
-    console.error('Не удалось получить версию бэкенда', err);
+    console.error('[CrocoMim] Не удалось получить версию бэкенда', err);
     updateVersionBadge('Версия недоступна');
   }
 }
