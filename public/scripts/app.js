@@ -141,7 +141,7 @@ const WORD_SECRET_PLACEHOLDER = '•••';
 const WORD_DESCRIPTION_FALLBACK = 'Описание недоступно';
 const WORD_DESCRIPTION_HIDDEN = 'Слово скрыто';
 const WORD_HELP_FALLBACK = 'Подсказка недоступна';
-// Версия приложения обновлена до 0.5.6, синхронизирована с бекендом.
+// Версия приложения обновлена до 0.5.8, синхронизирована с бекендом.
 const APP_VERSION = document.querySelector('meta[name="app-version"]')?.content || 'unknown';
 const APP_LANGUAGE = document.documentElement?.lang || 'ru';
 const versionBadgeEl = document.getElementById('versionBadge');
