@@ -60,3 +60,14 @@ jobs:
       - name: Push updated test
         run: |
           git push origin test
+
+      - name: Delete merged branch
+        run: |
+          BRANCH="${GITHUB_REF#refs/heads/}"
+          echo "Удаляем ветку $BRANCH из origin"
+
+          # Пытаемся удалить удалённую ветку
+          git push origin --delete "$BRANCH" || echo "Не удалось удалить ветку $BRANCH (возможно, уже удалена)"
+
+          # Чистим локальную ветку на раннере (на всякий случай)
+          git branch -D "$BRANCH" || true
