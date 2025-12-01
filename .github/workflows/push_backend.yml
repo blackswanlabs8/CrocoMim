@@ -1,7 +1,16 @@
 name: Deploy /backend to crocomim.ru/api
 
 on:
+  # запуск по кнопке
   workflow_dispatch: {}
+
+  # автозапуск после завершения Force sync
+  workflow_run:
+    workflows: ["Force sync - test → main"]
+    types:
+      - completed
+
+  # старое поведение: деплой при обычном push в main
   push:
     branches: [ main ]
     paths: ['backend/**']   # деплой только при изменениях в /backend
@@ -12,6 +21,8 @@ concurrency:
 
 jobs:
   deploy:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+
     runs-on: ubuntu-latest
 
     steps:
