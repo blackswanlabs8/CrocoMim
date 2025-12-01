@@ -1,0 +1,53 @@
+name: Force sync branch into main
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_branch:
+        description: 'Из какой ветки сделать main'
+        required: true
+        default: 'test'
+
+permissions:
+  contents: write   # нужно, чтобы пушить в репозиторий
+
+jobs:
+  force-sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # важно: нужны ВСЕ коммиты, не только последний
+
+      - name: Configure git user
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch all branches
+        run: |
+          git fetch origin
+
+      - name: Reset main to source branch
+        run: |
+          SRC_BRANCH="${{ github.event.inputs.source_branch }}"
+
+          echo "Синхронизируем main с origin/$SRC_BRANCH"
+
+          # Подстрахуемся: проверим, что такая ветка вообще есть
+          git show-ref --verify --quiet "refs/remotes/origin/$SRC_BRANCH" || {
+            echo "Ветка origin/$SRC_BRANCH не найдена"
+            exit 1
+          }
+
+          # Переключаемся на main
+          git checkout main
+
+          # Жёстко приравниваем main к origin/source_branch
+          git reset --hard "origin/$SRC_BRANCH"
+
+      - name: Force push main
+        run: |
+          git push origin main --force
