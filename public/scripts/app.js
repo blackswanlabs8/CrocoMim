@@ -145,7 +145,58 @@ const WORD_HELP_FALLBACK = 'Подсказка недоступна';
 const APP_VERSION = document.querySelector('meta[name="app-version"]')?.content || 'unknown';
 const APP_LANGUAGE = document.documentElement?.lang || 'ru';
 const versionBadgeEl = document.getElementById('versionBadge');
-const BACKEND_VERSION_URL = 'https://crocomim.ru/test/api/version';
+
+function ensureRuntimeConfig(){
+  const ready = window.RUNTIME_CONFIG_READY;
+  if (ready && typeof ready.then === 'function'){
+    return ready
+      .catch(err => {
+        console.warn('Runtime-конфигурация недоступна', err);
+        return window.RUNTIME_CONFIG;
+      })
+      .then(() => {
+        const cfg = window.RUNTIME_CONFIG;
+        return cfg && typeof cfg === 'object' ? cfg : {};
+      });
+  }
+  const cfg = window.RUNTIME_CONFIG;
+  return Promise.resolve(cfg && typeof cfg === 'object' ? cfg : {});
+}
+
+function resolveBackendUrl(path, config){
+  const normalizedPath = typeof path === 'string' ? path.trim() : '';
+  if (/^[a-z][a-z0-9+.-]*:/i.test(normalizedPath)) return normalizedPath;
+
+  const baseRaw = typeof config?.backendBaseUrl === 'string' ? config.backendBaseUrl.trim() : '';
+  if (!baseRaw) return normalizedPath || path;
+
+  const cleanPath = normalizedPath.replace(/^\/+/g, '');
+  const withTrailingSlash = value => value.endsWith('/') ? value : `${value}/`;
+
+  const origin = window.location?.origin;
+  const candidates = [baseRaw];
+
+  if (origin){
+    if (baseRaw.startsWith('/')){
+      candidates.push(`${origin}${baseRaw}`);
+    }else if (!/^[a-z][a-z0-9+.-]*:/i.test(baseRaw)){
+      candidates.push(`${origin}/${baseRaw}`);
+    }
+  }
+
+  let lastError = null;
+  for (const candidate of candidates){
+    try{
+      const url = new URL(cleanPath, withTrailingSlash(candidate));
+      return url.toString();
+    }catch(err){
+      lastError = err;
+    }
+  }
+
+  console.warn('Некорректный backendBaseUrl в runtime-конфигурации', lastError);
+  return normalizedPath || path;
+}
 
 function updateVersionBadge(text, options = {}){
   if (!versionBadgeEl) return;
@@ -160,7 +211,9 @@ async function fetchBackendVersion(){
   if (!versionBadgeEl) return;
   try{
     updateVersionBadge('Версия загружается…');
-    const response = await fetch(BACKEND_VERSION_URL, { cache: 'no-store' });
+    const runtimeConfig = await ensureRuntimeConfig();
+    const url = resolveBackendUrl('version', runtimeConfig);
+    const response = await fetch(url, { cache: 'no-store' });
     if (!response.ok){
       throw new Error(`HTTP ${response.status}`);
     }
