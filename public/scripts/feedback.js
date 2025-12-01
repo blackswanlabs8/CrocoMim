@@ -57,6 +57,21 @@
   };
 
   function ensureRuntimeConfig(){
+    const normalizeConfig = cfg => {
+      const flags = (typeof global.RUNTIME_FLAGS === 'object' && global.RUNTIME_FLAGS) || {};
+      const origin = global.location?.origin || '';
+      const apiPath = flags.testMode ? '/test/api' : '/api';
+      const apiBase = origin ? `${origin}${apiPath}` : apiPath;
+      const runtime = cfg && typeof cfg === 'object' ? cfg : {};
+      if (!runtime.publicApiBaseUrl){
+        runtime.publicApiBaseUrl = apiBase;
+      }
+      if (!runtime.backendBaseUrl){
+        runtime.backendBaseUrl = apiBase;
+      }
+      return runtime;
+    };
+
     const ready = global.RUNTIME_CONFIG_READY;
     if (ready && typeof ready.then === 'function'){
       return ready
@@ -64,13 +79,10 @@
           console.warn('Runtime-конфигурация недоступна', err);
           return global.RUNTIME_CONFIG;
         })
-        .then(() => {
-          const cfg = global.RUNTIME_CONFIG;
-          return cfg && typeof cfg === 'object' ? cfg : {};
-        });
+        .then(() => normalizeConfig(global.RUNTIME_CONFIG));
     }
-    const cfg = global.RUNTIME_CONFIG;
-    return Promise.resolve(cfg && typeof cfg === 'object' ? cfg : {});
+
+    return Promise.resolve(normalizeConfig(global.RUNTIME_CONFIG));
   }
 
   function resolveApiUrl(path, config){

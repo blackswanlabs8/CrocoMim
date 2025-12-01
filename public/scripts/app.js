@@ -147,6 +147,21 @@ const APP_LANGUAGE = document.documentElement?.lang || 'ru';
 const versionBadgeEl = document.getElementById('versionBadge');
 
 function ensureRuntimeConfig(){
+  const normalizeConfig = cfg => {
+    const flags = (typeof window.RUNTIME_FLAGS === 'object' && window.RUNTIME_FLAGS) || {};
+    const origin = window.location?.origin || '';
+    const apiPath = flags.testMode ? '/test/api' : '/api';
+    const apiBase = origin ? `${origin}${apiPath}` : apiPath;
+    const runtime = cfg && typeof cfg === 'object' ? cfg : {};
+    if (!runtime.publicApiBaseUrl){
+      runtime.publicApiBaseUrl = apiBase;
+    }
+    if (!runtime.backendBaseUrl){
+      runtime.backendBaseUrl = apiBase;
+    }
+    return runtime;
+  };
+
   const ready = window.RUNTIME_CONFIG_READY;
   if (ready && typeof ready.then === 'function'){
     return ready
@@ -154,13 +169,10 @@ function ensureRuntimeConfig(){
         console.warn('Runtime-конфигурация недоступна', err);
         return window.RUNTIME_CONFIG;
       })
-      .then(() => {
-        const cfg = window.RUNTIME_CONFIG;
-        return cfg && typeof cfg === 'object' ? cfg : {};
-      });
+      .then(() => normalizeConfig(window.RUNTIME_CONFIG));
   }
-  const cfg = window.RUNTIME_CONFIG;
-  return Promise.resolve(cfg && typeof cfg === 'object' ? cfg : {});
+
+  return Promise.resolve(normalizeConfig(window.RUNTIME_CONFIG));
 }
 
 function resolveBackendUrl(path, config){
