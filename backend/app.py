@@ -139,7 +139,9 @@ def healthz():
 
 @app.route("/version")
 def version() -> Any:
-    LOGGER.info("/version endpoint called from %s", request.remote_addr)
+    LOGGER.info(
+        "/version endpoint called from %s with version %s", request.remote_addr, APP_VERSION
+    )
     return jsonify({"version": APP_VERSION})
 
 
