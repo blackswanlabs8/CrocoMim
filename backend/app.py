@@ -20,7 +20,7 @@ app = Flask(__name__)
 
 
 # Версия приложения фиксируется здесь, чтобы проще отслеживать сборки.
-APP_VERSION = "0.5.6"
+APP_VERSION = "0.5.7"
 
 LOGGER = logging.getLogger(__name__)
 
