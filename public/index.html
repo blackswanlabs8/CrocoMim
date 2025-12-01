@@ -403,20 +403,7 @@
       const target = typeof global !== 'undefined' ? global : {};
       const loc = target.location;
       const inTestPath = !!(loc && /\/test(\/|$)/.test(loc.pathname));
-      const queryEnv = (() => {
-        if (!loc || !loc.search) return null;
-        const param = new URLSearchParams(loc.search).get('env');
-        if (!param) return null;
-        const value = param.trim().toLowerCase();
-        if (value === 'test' || value === 'prod' || value === 'production'){
-          return value;
-        }
-        return null;
-      })();
-
-      const env = queryEnv
-        ? (queryEnv === 'test' ? 'test' : 'prod')
-        : (inTestPath ? 'test' : 'prod');
+      const env = inTestPath ? 'test' : 'prod';
       const runtimeFlags = {
         env,
         testMode: env === 'test',
@@ -432,35 +419,14 @@
       const runtime = (target.RUNTIME_CONFIG && typeof target.RUNTIME_CONFIG === 'object')
         ? target.RUNTIME_CONFIG
         : {};
-      if (typeof runtime.publicApiBaseUrl !== 'string'){ runtime.publicApiBaseUrl = ''; }
-      if (typeof runtime.backendBaseUrl !== 'string'){ runtime.backendBaseUrl = ''; }
-      const baseConfigPath = runtimeFlags.testMode ? '/test' : '';
-      const CONFIG_PATH = `${baseConfigPath}/config/runtime.json`;
-      debugLog('Определена среда', runtimeFlags.env, 'Путь к конфигурации', CONFIG_PATH);
-      const readyPromise = fetch(CONFIG_PATH, { cache: 'no-cache' })
-        .then(response => {
-          if (!response.ok){
-            throw new Error(`HTTP ${response.status}`);
-          }
-          return response.json();
-        })
-        .then(config => {
-          if (config && typeof config === 'object'){
-            if (typeof config.publicApiBaseUrl === 'string'){
-              runtime.publicApiBaseUrl = config.publicApiBaseUrl.trim();
-            }
-            if (typeof config.backendBaseUrl === 'string'){
-              runtime.backendBaseUrl = config.backendBaseUrl.trim();
-            }
-          }
-          return runtime;
-        })
-        .catch(err => {
-          console.error('Не удалось загрузить runtime-конфигурацию', err);
-          return runtime;
-        });
+      const origin = loc && typeof loc.origin === 'string' ? loc.origin : '';
+      const apiPath = runtimeFlags.testMode ? '/test/api' : '/api';
+      const apiBase = origin ? `${origin}${apiPath}` : apiPath;
+      runtime.publicApiBaseUrl = apiBase;
+      runtime.backendBaseUrl = apiBase;
+      debugLog('Определена среда', runtimeFlags.env, 'Базовый API', apiBase);
       target.RUNTIME_CONFIG = runtime;
-      target.RUNTIME_CONFIG_READY = readyPromise;
+      target.RUNTIME_CONFIG_READY = Promise.resolve(runtime);
     })(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : undefined));
   </script>
   <script src="./scripts/dicts.js"></script>
