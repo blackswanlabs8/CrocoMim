@@ -25,6 +25,9 @@ APP_VERSION = "0.5.5"
 LOGGER = logging.getLogger(__name__)
 
 
+# Блок ниже оставляем рядом с константами, чтобы логгер был готов прежде, чем
+# запустятся любые обработчики Flask — это заметно упрощает расследование ошибок.
+
 def _configure_logging() -> Path:
     data_dir = Path(os.environ.get("DATA_DIR", DEFAULT_DATA_DIR)).expanduser().resolve()
     log_file = os.environ.get("BACKEND_LOG_FILE", DEFAULT_LOG_FILE).strip() or DEFAULT_LOG_FILE

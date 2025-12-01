@@ -207,6 +207,8 @@ function updateVersionBadge(text, options = {}){
   }
 }
 
+// Отдельная функция для запроса версии нужна, чтобы показывать пользователю,
+// к какому бэкенду он подключён (например, после переключения окружения).
 async function fetchBackendVersion(){
   if (!versionBadgeEl) return;
   try{
