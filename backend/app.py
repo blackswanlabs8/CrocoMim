@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Tuple
 
 from flask import Flask, jsonify, request
 
+from generate_dict import DIFFICULTY_DESCRIPTIONS, generate_crocodile_words
 from smtp_send import send_email
 
 ALLOWED_CATEGORIES = {"typo", "difficulty", "other"}
@@ -20,7 +21,7 @@ app = Flask(__name__)
 
 
 # Версия приложения фиксируется здесь, чтобы проще отслеживать сборки.
-APP_VERSION = "0.6.0"
+APP_VERSION = "0.6.1"
 
 LOGGER = logging.getLogger(__name__)
 
@@ -130,6 +131,35 @@ def _validate_feedback(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], List[st
     return normalized, errors
 
 
+def _validate_generation(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
+    errors: List[str] = []
+
+    topic_raw = payload.get("topic")
+    topic = topic_raw.strip() if isinstance(topic_raw, str) else None
+    if not topic:
+        errors.append("topic must be a non-empty string")
+
+    difficulty_raw = payload.get("difficulty", "medium")
+    difficulty = difficulty_raw.strip().lower() if isinstance(difficulty_raw, str) else "medium"
+    if difficulty not in DIFFICULTY_DESCRIPTIONS:
+        errors.append("difficulty must be one of: easy, medium, hard")
+
+    limit_raw = payload.get("limit") or payload.get("target_words")
+    limit = limit_raw if isinstance(limit_raw, int) else 50
+    try:
+        limit = max(1, min(200, int(limit)))
+    except (TypeError, ValueError):
+        errors.append("limit must be an integer between 1 and 200")
+        limit = None
+
+    normalized = {
+        "topic": topic,
+        "difficulty": difficulty,
+        "limit": limit,
+    }
+    return normalized, errors
+
+
 @app.route("/")
 def index():
     LOGGER.info("Health check root endpoint called")
@@ -140,6 +170,40 @@ def index():
 def healthz():
     LOGGER.info("/healthz endpoint called")
     return jsonify({"ok": True})
+
+
+@app.route("/generate", methods=["POST"])
+def generate_dictionary() -> Any:
+    LOGGER.info("Received /generate request")
+
+    if not request.is_json:
+        LOGGER.warning("Request rejected: body is not JSON")
+        return jsonify({"ok": False, "error": "Expected JSON body"}), 400
+
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        LOGGER.warning("Request rejected: malformed JSON body")
+        return jsonify({"ok": False, "error": "Malformed JSON"}), 400
+
+    normalized, errors = _validate_generation(payload)
+    if errors:
+        LOGGER.info("Generation validation failed with errors: %s", errors)
+        return jsonify({"ok": False, "errors": errors}), 400
+
+    try:
+        words = generate_crocodile_words(
+            normalized["topic"],
+            difficulty=normalized["difficulty"],
+            target_words=normalized["limit"] or 50,
+        )
+    except ValueError as exc:
+        LOGGER.info("Generation failed with validation error: %s", exc)
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    except Exception:
+        LOGGER.exception("Unexpected error during GPT generation")
+        return jsonify({"ok": False, "error": "Failed to generate words"}), 500
+
+    return jsonify({"ok": True, "words": words})
 
 
 @app.route("/version")
