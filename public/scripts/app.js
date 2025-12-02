@@ -1024,6 +1024,13 @@ function collectQuickSettings(){
     : 'easy';
   const time = Number(qs.time);
   const pts = Number(qs.pts);
+  const genTopic = typeof qs.generator?.topicInput?.value === 'string'
+    ? qs.generator.topicInput.value.trim()
+    : '';
+  const genDifficulty = typeof qs.generator?.difficulty === 'string'
+    && DIFFICULTY_ORDER.includes(qs.generator.difficulty)
+      ? qs.generator.difficulty
+      : 'medium';
   const profile = {
     selectedDictionaries: selected,
     customSelected: !!qs.customSelected,
@@ -1032,7 +1039,9 @@ function collectQuickSettings(){
     time: Number.isFinite(time) && time > 0 ? time : 0,
     ptsEnabled: !!(qs.ptsToggle && qs.ptsToggle.checked),
     pts: Number.isFinite(pts) && pts > 0 ? pts : 0,
-    customText: typeof qs.customText?.value === 'string' ? qs.customText.value : ''
+    customText: typeof qs.customText?.value === 'string' ? qs.customText.value : '',
+    generationTopic: genTopic,
+    generationDifficulty: genDifficulty
   };
   return profile;
 }
@@ -1053,6 +1062,13 @@ function collectTeamSettings(){
     : 'easy';
   const time = Number(ts.time);
   const pts = Number(ts.pts);
+  const genTopic = typeof ts.generator?.topicInput?.value === 'string'
+    ? ts.generator.topicInput.value.trim()
+    : '';
+  const genDifficulty = typeof ts.generator?.difficulty === 'string'
+    && DIFFICULTY_ORDER.includes(ts.generator.difficulty)
+      ? ts.generator.difficulty
+      : 'medium';
   const profile = {
     selectedDictionaries: selected,
     customSelected: !!ts.customSelected,
@@ -1061,7 +1077,9 @@ function collectTeamSettings(){
     time: Number.isFinite(time) && time > 0 ? time : 0,
     ptsEnabled: !!(ts.ptsToggle && ts.ptsToggle.checked),
     pts: Number.isFinite(pts) && pts > 0 ? pts : 0,
-    customText: typeof ts.customText?.value === 'string' ? ts.customText.value : ''
+    customText: typeof ts.customText?.value === 'string' ? ts.customText.value : '',
+    generationTopic: genTopic,
+    generationDifficulty: genDifficulty
   };
   return profile;
 }
@@ -1258,6 +1276,14 @@ const qs = {
   dictElements: new Map(),
   customSelected: false,
   difficulty: 'easy',
+  generator: {
+    topic: '',
+    topicInput: $('#quickGenTopic'),
+    difficultyContainer: $('#quickGenDifficulty'),
+    difficultyButtons: {},
+    difficulty: 'medium',
+    triggerButton: $('#quickGenPreview')
+  },
   customBox: $('#quickCustomBox'),
   customText: $('#quickCustomWords'),
   timerToggle: $('#quickTimerToggle'),
@@ -1311,6 +1337,22 @@ if (storedQuickSettingsRaw && typeof storedQuickSettingsRaw === 'object'){
   if (qs.customText && typeof storedQuickSettingsRaw.customText === 'string'){
     qs.customText.value = storedQuickSettingsRaw.customText;
   }
+  const storedGenDifficulty = typeof storedQuickSettingsRaw.generationDifficulty === 'string'
+    && DIFFICULTY_ORDER.includes(storedQuickSettingsRaw.generationDifficulty)
+      ? storedQuickSettingsRaw.generationDifficulty
+      : null;
+  if (qs.generator){
+    const storedGenTopic = typeof storedQuickSettingsRaw.generationTopic === 'string'
+      ? storedQuickSettingsRaw.generationTopic
+      : '';
+    qs.generator.topic = storedGenTopic;
+    if (qs.generator.topicInput){
+      qs.generator.topicInput.value = storedGenTopic;
+    }
+    if (storedGenDifficulty){
+      qs.generator.difficulty = storedGenDifficulty;
+    }
+  }
   quickSavedProfile = {
     selectedDictionaries: [...selected],
     customSelected: quickInitialCustomSelected,
@@ -1319,7 +1361,11 @@ if (storedQuickSettingsRaw && typeof storedQuickSettingsRaw === 'object'){
     time: Number.isFinite(storedTime) && storedTime > 0 ? storedTime : 0,
     ptsEnabled,
     pts: Number.isFinite(storedPts) && storedPts > 0 ? storedPts : 0,
-    customText: typeof storedQuickSettingsRaw.customText === 'string' ? storedQuickSettingsRaw.customText : ''
+    customText: typeof storedQuickSettingsRaw.customText === 'string' ? storedQuickSettingsRaw.customText : '',
+    generationTopic: typeof storedQuickSettingsRaw.generationTopic === 'string'
+      ? storedQuickSettingsRaw.generationTopic
+      : '',
+    generationDifficulty: storedGenDifficulty || 'medium'
   };
 }else{
   quickInitialSelectedIds = Array.from(qs.selectedDictionaries || []);
@@ -1336,6 +1382,27 @@ qs.onDifficultyChange = level => {
   qs.difficulty = level;
   persistQuickSettings();
 };
+if (qs.generator){
+  initDifficultyControls(qs.generator);
+  qs.generator.onDifficultyChange = level => {
+    qs.generator.difficulty = level;
+    persistQuickSettings();
+  };
+  if (qs.generator.topicInput){
+    qs.generator.topicInput.addEventListener('input', evt => {
+      qs.generator.topic = evt.target.value;
+      persistQuickSettings();
+    });
+  }
+  if (qs.generator.setDifficulty && qs.generator.difficulty){
+    qs.generator.setDifficulty(qs.generator.difficulty, { silent:true });
+  }
+  if (qs.generator.triggerButton){
+    qs.generator.triggerButton.addEventListener('click', () => {
+      qs.generator.triggerButton.blur();
+    });
+  }
+}
 const upQuickTime = () => qs.timeLabel.textContent = qs.time+' с';
 const upQuickPts = () => qs.ptsLabel.textContent = qs.pts;
 upQuickTime();
@@ -2006,6 +2073,14 @@ const ts = {
   dictElements: new Map(),
   customSelected: false,
   difficulty: 'easy',
+  generator: {
+    topic: '',
+    topicInput: $('#teamGenTopic'),
+    difficultyContainer: $('#teamGenDifficulty'),
+    difficultyButtons: {},
+    difficulty: 'medium',
+    triggerButton: $('#teamGenPreview')
+  },
   customBox: $('#teamCustomBox'),
   customText: $('#teamCustomWords'),
   timerToggle: $('#teamTimerToggle'),
@@ -2056,6 +2131,22 @@ if (storedTeamSettingsRaw && typeof storedTeamSettingsRaw === 'object'){
   if (ts.customText && typeof storedTeamSettingsRaw.customText === 'string'){
     ts.customText.value = storedTeamSettingsRaw.customText;
   }
+  const storedTeamGenDifficulty = typeof storedTeamSettingsRaw.generationDifficulty === 'string'
+    && DIFFICULTY_ORDER.includes(storedTeamSettingsRaw.generationDifficulty)
+      ? storedTeamSettingsRaw.generationDifficulty
+      : null;
+  if (ts.generator){
+    const storedGenTopic = typeof storedTeamSettingsRaw.generationTopic === 'string'
+      ? storedTeamSettingsRaw.generationTopic
+      : '';
+    ts.generator.topic = storedGenTopic;
+    if (ts.generator.topicInput){
+      ts.generator.topicInput.value = storedGenTopic;
+    }
+    if (storedTeamGenDifficulty){
+      ts.generator.difficulty = storedTeamGenDifficulty;
+    }
+  }
   teamSavedProfile = {
     selectedDictionaries: [...selected],
     customSelected: teamInitialCustomSelected,
@@ -2064,7 +2155,11 @@ if (storedTeamSettingsRaw && typeof storedTeamSettingsRaw === 'object'){
     time: Number.isFinite(storedTime) && storedTime > 0 ? storedTime : 0,
     ptsEnabled,
     pts: Number.isFinite(storedPts) && storedPts > 0 ? storedPts : 0,
-    customText: typeof storedTeamSettingsRaw.customText === 'string' ? storedTeamSettingsRaw.customText : ''
+    customText: typeof storedTeamSettingsRaw.customText === 'string' ? storedTeamSettingsRaw.customText : '',
+    generationTopic: typeof storedTeamSettingsRaw.generationTopic === 'string'
+      ? storedTeamSettingsRaw.generationTopic
+      : '',
+    generationDifficulty: storedTeamGenDifficulty || 'medium'
   };
 }else{
   teamInitialSelectedIds = Array.from(ts.selectedDictionaries || []);
@@ -2081,6 +2176,27 @@ ts.onDifficultyChange = level => {
   ts.difficulty = level;
   persistTeamSettings();
 };
+if (ts.generator){
+  initDifficultyControls(ts.generator);
+  ts.generator.onDifficultyChange = level => {
+    ts.generator.difficulty = level;
+    persistTeamSettings();
+  };
+  if (ts.generator.topicInput){
+    ts.generator.topicInput.addEventListener('input', evt => {
+      ts.generator.topic = evt.target.value;
+      persistTeamSettings();
+    });
+  }
+  if (ts.generator.setDifficulty && ts.generator.difficulty){
+    ts.generator.setDifficulty(ts.generator.difficulty, { silent:true });
+  }
+  if (ts.generator.triggerButton){
+    ts.generator.triggerButton.addEventListener('click', () => {
+      ts.generator.triggerButton.blur();
+    });
+  }
+}
 const upTeamTime = () => ts.timeLabel.textContent = ts.time+' с';
 const upPts = () => ts.ptsLabel.textContent = ts.pts;
 upTeamTime(); upPts();

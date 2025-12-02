@@ -96,6 +96,56 @@
           <div id="quickCustomBox" class="stack custom-dict-box" style="display:none;">
             <label class="muted">Вставьте слова через запятую или перенос строки</label>
             <textarea class="input" id="quickCustomWords" rows="4" placeholder="яблоко, корабль, радуга..."></textarea>
+            <div class="dict-generate" aria-live="polite">
+              <div class="dict-generate-header">
+                <div class="dict-generate-title-row">
+                  <div class="menu-block-title">Генерация словаря</div>
+                  <span class="dict-generate-badge">новое</span>
+                </div>
+                <p class="dict-generate-desc">Укажите тему и сложность — после добавления запроса получим слова прямо в ваш словарь.</p>
+              </div>
+              <label class="dict-generate-field">
+                <span class="muted">Тема генерации</span>
+                <input class="input" id="quickGenTopic" name="quickGenTopic" type="text" autocomplete="off" placeholder="Например: космос, путешествия, IT" />
+              </label>
+              <div class="difficulty-block dict-generate-difficulty" id="quickGenDifficulty">
+                <div class="difficulty-title">Сложность новых слов</div>
+                <div class="difficulty-row">
+                  <button class="difficulty-btn" type="button" data-level="easy" aria-pressed="false">Лёгкий</button>
+                  <button class="difficulty-btn" type="button" data-level="medium" aria-pressed="false">Средний</button>
+                  <button class="difficulty-btn" type="button" data-level="hard" aria-pressed="false">Сложный</button>
+                </div>
+              </div>
+              <div class="dict-generate-actions">
+                <button class="btn ghost" id="quickGenPreview" type="button" disabled title="Скоро: запрос на генерацию">Подготовить генерацию</button>
+                <div class="dict-generate-hint muted">Поля сохранятся, а отправку добавим после подключения к серверу.</div>
+              </div>
+            </div>
+          </div>
+          <div class="dict-generate" aria-live="polite">
+            <div class="dict-generate-header">
+              <div class="dict-generate-title-row">
+                <div class="menu-block-title">Генерация словаря</div>
+                <span class="dict-generate-badge">новое</span>
+              </div>
+              <p class="dict-generate-desc">Укажите тему и сложность — позже добавим запрос к бэкенду и получим свежий список слов.</p>
+            </div>
+            <label class="dict-generate-field">
+              <span class="muted">Тема генерации</span>
+              <input class="input" id="quickGenTopic" name="quickGenTopic" type="text" autocomplete="off" placeholder="Например: космос, путешествия, IT" />
+            </label>
+            <div class="difficulty-block dict-generate-difficulty" id="quickGenDifficulty">
+              <div class="difficulty-title">Сложность новых слов</div>
+              <div class="difficulty-row">
+                <button class="difficulty-btn" type="button" data-level="easy" aria-pressed="false">Лёгкий</button>
+                <button class="difficulty-btn" type="button" data-level="medium" aria-pressed="false">Средний</button>
+                <button class="difficulty-btn" type="button" data-level="hard" aria-pressed="false">Сложный</button>
+              </div>
+            </div>
+            <div class="dict-generate-actions">
+              <button class="btn ghost" id="quickGenPreview" type="button" disabled title="Скоро: запрос на генерацию">Подготовить генерацию</button>
+              <div class="dict-generate-hint muted">Полноценный запрос к модели добавим после подключения к серверу.</div>
+            </div>
           </div>
         </div>
 
@@ -252,6 +302,56 @@
       <div id="teamCustomBox" class="stack custom-dict-box" style="display:none;">
         <label class="muted">Вставьте слова через запятую или перенос строки</label>
         <textarea class="input" id="teamCustomWords" rows="4" placeholder="яблоко, корабль, радуга..."></textarea>
+        <div class="dict-generate" aria-live="polite">
+          <div class="dict-generate-header">
+            <div class="dict-generate-title-row">
+              <h3 class="menu-block-title" style="margin:0">Генерация словаря</h3>
+              <span class="dict-generate-badge">новое</span>
+            </div>
+            <p class="dict-generate-desc">Заполните тему и сложность — запрос отправим в ваш словарь, когда подключим бэкенд.</p>
+          </div>
+          <label class="dict-generate-field">
+            <span class="muted">Тема генерации</span>
+            <input class="input" id="teamGenTopic" name="teamGenTopic" type="text" autocomplete="off" placeholder="Например: праздники, спорт, фильмы" />
+          </label>
+          <div class="difficulty-block dict-generate-difficulty" id="teamGenDifficulty">
+            <div class="difficulty-title">Сложность новых слов</div>
+            <div class="difficulty-row">
+              <button class="difficulty-btn" type="button" data-level="easy" aria-pressed="false">Лёгкий</button>
+              <button class="difficulty-btn" type="button" data-level="medium" aria-pressed="false">Средний</button>
+              <button class="difficulty-btn" type="button" data-level="hard" aria-pressed="false">Сложный</button>
+            </div>
+          </div>
+          <div class="dict-generate-actions">
+            <button class="btn ghost" id="teamGenPreview" type="button" disabled title="Скоро: запрос на генерацию">Подготовить генерацию</button>
+            <div class="dict-generate-hint muted">Поля сохранятся, а отправку добавим после интеграции генератора.</div>
+          </div>
+        </div>
+      </div>
+      <div class="dict-generate" aria-live="polite">
+        <div class="dict-generate-header">
+          <div class="dict-generate-title-row">
+            <h3 class="menu-block-title" style="margin:0">Генерация словаря</h3>
+            <span class="dict-generate-badge">новое</span>
+          </div>
+          <p class="dict-generate-desc">Скоро можно будет запросить свежие слова прямо из меню командной игры.</p>
+        </div>
+        <label class="dict-generate-field">
+          <span class="muted">Тема генерации</span>
+          <input class="input" id="teamGenTopic" name="teamGenTopic" type="text" autocomplete="off" placeholder="Например: праздники, спорт, фильмы" />
+        </label>
+        <div class="difficulty-block dict-generate-difficulty" id="teamGenDifficulty">
+          <div class="difficulty-title">Сложность новых слов</div>
+          <div class="difficulty-row">
+            <button class="difficulty-btn" type="button" data-level="easy" aria-pressed="false">Лёгкий</button>
+            <button class="difficulty-btn" type="button" data-level="medium" aria-pressed="false">Средний</button>
+            <button class="difficulty-btn" type="button" data-level="hard" aria-pressed="false">Сложный</button>
+          </div>
+        </div>
+        <div class="dict-generate-actions">
+          <button class="btn ghost" id="teamGenPreview" type="button" disabled title="Скоро: запрос на генерацию">Подготовить генерацию</button>
+          <div class="dict-generate-hint muted">Поля сохранятся, а отправку добавим после интеграции генератора.</div>
+        </div>
       </div>
     </div>
 
