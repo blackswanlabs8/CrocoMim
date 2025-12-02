@@ -4,6 +4,7 @@ import json
 import logging
 import os
 from datetime import datetime, timezone
+from importlib import import_module
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -23,6 +24,7 @@ app = Flask(__name__)
 APP_VERSION = "0.6.0"
 
 LOGGER = logging.getLogger(__name__)
+_GENERATOR_CACHE: Dict[str, Any] = {}
 
 
 # Блок ниже оставляем рядом с константами, чтобы логгер был готов прежде, чем
@@ -49,6 +51,34 @@ def _configure_logging() -> Path:
 
 # Configure logging as early as possible so that all modules share the same setup
 LOG_PATH = _configure_logging()
+
+
+def _load_generator() -> Dict[str, Any]:
+    if _GENERATOR_CACHE.get("ready"):
+        return _GENERATOR_CACHE
+
+    module = import_module("generate_dict")
+
+    generate_fn = getattr(module, "generate_crocodile_words", None)
+    difficulties = getattr(module, "DIFFICULTY_DESCRIPTIONS", None)
+
+    if not callable(generate_fn):  # pragma: no cover - unexpected configuration
+        raise RuntimeError("Dictionary generator function is missing")
+
+    if not isinstance(difficulties, dict) or not difficulties:  # pragma: no cover - unexpected configuration
+        raise RuntimeError("Dictionary generator difficulties are not configured")
+
+    _GENERATOR_CACHE.update(
+        {
+            "ready": True,
+            "generate": generate_fn,
+            "difficulties": set(difficulties.keys()),
+        }
+    )
+    LOGGER.info(
+        "Dictionary generator loaded. Difficulties: %s", ", ".join(sorted(_GENERATOR_CACHE["difficulties"]))
+    )
+    return _GENERATOR_CACHE
 
 
 def _resolve_storage_path() -> Path:
@@ -148,6 +178,79 @@ def version() -> Any:
         "/version endpoint called from %s with version %s", request.remote_addr, APP_VERSION
     )
     return jsonify({"version": APP_VERSION})
+
+
+@app.route("/generate-dictionary", methods=["POST"])
+def generate_dictionary():
+    LOGGER.info("Received /generate-dictionary request")
+
+    if not request.is_json:
+        LOGGER.warning("Request rejected: body is not JSON")
+        return jsonify({"ok": False, "error": "Expected JSON body"}), 400
+
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        LOGGER.warning("Request rejected: malformed JSON body")
+        return jsonify({"ok": False, "error": "Malformed JSON"}), 400
+
+    topic = (payload.get("topic") or "").strip()
+    difficulty_raw = (payload.get("difficulty") or "medium").strip().lower()
+    words_raw = payload.get("words") if "words" in payload else payload.get("targetWords")
+
+    errors: List[str] = []
+    if len(topic) < 3:
+        errors.append("topic must contain at least 3 characters")
+
+    try:
+        target_words = int(words_raw) if words_raw is not None else 50
+    except (TypeError, ValueError):
+        errors.append("words must be a number")
+        target_words = 50
+
+    target_words = max(5, min(target_words, 200))
+
+    try:
+        generator = _load_generator()
+    except Exception as exc:  # pragma: no cover - unexpected config issues
+        LOGGER.exception("Dictionary generator is not available")
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+    allowed_difficulties = generator.get("difficulties", set())
+    if difficulty_raw not in allowed_difficulties:
+        errors.append(
+            f"difficulty must be one of: {', '.join(sorted(allowed_difficulties))}"
+        )
+
+    if errors:
+        LOGGER.info("Validation failed for /generate-dictionary: %s", errors)
+        return jsonify({"ok": False, "errors": errors}), 400
+
+    try:
+        words = generator["generate"](topic=topic, difficulty=difficulty_raw, target_words=target_words)
+    except Exception as exc:  # pragma: no cover - network or external errors
+        LOGGER.exception("Failed to generate dictionary")
+        return jsonify({"ok": False, "error": f"Failed to generate dictionary: {exc}"}), 500
+
+    if not isinstance(words, list):  # pragma: no cover - unexpected return type
+        LOGGER.error("Generator returned unsupported type: %s", type(words))
+        return jsonify({"ok": False, "error": "Generator returned unsupported format"}), 500
+
+    normalized_words = [w.strip() for w in words if isinstance(w, str) and w.strip()]
+    LOGGER.info(
+        "Generated dictionary for topic '%s' with %d words (requested %d)",
+        topic,
+        len(normalized_words),
+        target_words,
+    )
+    return jsonify(
+        {
+            "ok": True,
+            "topic": topic,
+            "difficulty": difficulty_raw,
+            "count": len(normalized_words),
+            "words": normalized_words,
+        }
+    )
 
 
 @app.route("/feedback", methods=["POST"])
