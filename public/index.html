@@ -102,7 +102,7 @@
                   <div class="menu-block-title">Генерация словаря</div>
                   <span class="dict-generate-badge">новое</span>
                 </div>
-                <p class="dict-generate-desc">Укажите тему и сложность — после добавления запроса получим слова прямо в ваш словарь.</p>
+                <p class="dict-generate-desc">Укажите тему и сложность — отправим запрос в GPT и добавим слова в ваш словарь.</p>
               </div>
               <label class="dict-generate-field">
                 <span class="muted">Тема генерации</span>
@@ -117,8 +117,8 @@
                 </div>
               </div>
               <div class="dict-generate-actions">
-                <button class="btn ghost" id="quickGenPreview" type="button" disabled title="Скоро: запрос на генерацию">Подготовить генерацию</button>
-                <div class="dict-generate-hint muted">Поля сохранятся, а отправку добавим после подключения к серверу.</div>
+                <button class="btn ghost" id="quickGenPreview" type="button">Сгенерировать и добавить</button>
+                <div class="dict-generate-hint muted" id="quickGenStatus">Генерируйте через GPT, чтобы пополнить свой список.</div>
               </div>
             </div>
           </div>
@@ -283,7 +283,7 @@
               <h3 class="menu-block-title" style="margin:0">Генерация словаря</h3>
               <span class="dict-generate-badge">новое</span>
             </div>
-            <p class="dict-generate-desc">Заполните тему и сложность — запрос отправим в ваш словарь, когда подключим бэкенд.</p>
+            <p class="dict-generate-desc">Заполните тему и сложность — отправим запрос в GPT и положим слова в командный словарь.</p>
           </div>
           <label class="dict-generate-field">
             <span class="muted">Тема генерации</span>
@@ -298,8 +298,8 @@
             </div>
           </div>
           <div class="dict-generate-actions">
-            <button class="btn ghost" id="teamGenPreview" type="button" disabled title="Скоро: запрос на генерацию">Подготовить генерацию</button>
-            <div class="dict-generate-hint muted">Поля сохранятся, а отправку добавим после интеграции генератора.</div>
+            <button class="btn ghost" id="teamGenPreview" type="button">Сгенерировать и добавить</button>
+            <div class="dict-generate-hint muted" id="teamGenStatus">Отправьте запрос в GPT, и новые слова появятся здесь же.</div>
           </div>
         </div>
       </div>
