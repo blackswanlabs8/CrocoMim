@@ -268,6 +268,139 @@ async function fetchBackendVersion(){
   }
 }
 
+async function requestGeneratedWords({ topic, difficulty, limit = 50 }){
+  const runtimeConfig = await ensureRuntimeConfig();
+  const url = resolveBackendUrl('generate', runtimeConfig);
+  const payload = {
+    topic,
+    difficulty,
+    limit,
+  };
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  let data = null;
+  try{
+    data = await response.json();
+  }catch(err){
+    console.error('Не удалось разобрать ответ генератора', err);
+  }
+  if (!response.ok){
+    const message = data?.error || (Array.isArray(data?.errors) ? data.errors.join('; ') : `HTTP ${response.status}`);
+    throw new Error(message || 'Не удалось сгенерировать слова');
+  }
+  if (!data || !Array.isArray(data.words)){
+    throw new Error('Сервер вернул пустой ответ');
+  }
+  const normalized = data.words
+    .map(item => (typeof item === 'string' ? item : String(item || '')).trim())
+    .filter(Boolean);
+  if (!normalized.length){
+    throw new Error('Не удалось получить список слов');
+  }
+  return normalized;
+}
+
+function setGeneratorStatus(generator, message, options = {}){
+  const target = generator?.status;
+  if (!target) return;
+  const text = typeof message === 'string' ? message.trim() : '';
+  target.textContent = text || '';
+  target.classList.remove('is-success', 'is-error');
+  if (!text) return;
+  if (options.level === 'success'){
+    target.classList.add('is-success');
+  }else if (options.level === 'error'){
+    target.classList.add('is-error');
+  }
+}
+
+const parseCustomWords = (raw, options = {}) => {
+  const input = typeof raw === 'string' ? raw : '';
+  const rawDifficulty = typeof options.difficulty === 'string' ? options.difficulty.trim().toLowerCase() : '';
+  const normalizedDifficulty = ALL_DIFFICULTIES.includes(rawDifficulty) ? rawDifficulty : '';
+  return input
+    .split(/[,\n\r]+/)
+    .map(s=>s.trim())
+    .filter(Boolean)
+    .map((term, idx) => {
+      const entry = {
+        id: `custom_${idx+1}`,
+        dictionaryId: CUSTOM_DICTIONARY_META.id,
+        term,
+        description: '',
+        about: ''
+      };
+      if (normalizedDifficulty && normalizedDifficulty !== 'mix'){
+        entry.difficulty = normalizedDifficulty;
+      }
+      return entry;
+    });
+};
+
+function appendGeneratedWordsToCustom(state, words){
+  const target = state?.customText;
+  if (!target) return { added: 0, total: 0 };
+  const existingEntries = parseCustomWords(target.value);
+  const existing = new Set(existingEntries.map(entry => entry.term.toLowerCase()));
+  const incoming = Array.isArray(words) ? words : [];
+  const fresh = [];
+  incoming.forEach(word => {
+    const key = word.toLowerCase();
+    if (!existing.has(key)){
+      existing.add(key);
+      fresh.push(word);
+    }
+  });
+  if (fresh.length){
+    const prefix = target.value && target.value.trim() ? '\n' : '';
+    target.value = `${target.value.trim()}${prefix}${fresh.join('\n')}`.trim();
+  }
+  return { added: fresh.length, total: existing.size };
+}
+
+function attachGeneratorHandler(state, options = {}){
+  if (!state?.generator || !state.generator.triggerButton || !state.generator.topicInput) return;
+  const generator = state.generator;
+  const button = generator.triggerButton;
+  const defaultLabel = button.textContent || 'Сгенерировать';
+  button.addEventListener('click', async () => {
+    const topic = generator.topicInput.value.trim();
+    if (!topic){
+      setGeneratorStatus(generator, 'Укажите тему для генерации', { level: 'error' });
+      generator.topicInput.focus();
+      return;
+    }
+    const difficulty = DIFFICULTY_ORDER.includes(generator.difficulty) ? generator.difficulty : 'medium';
+    setGeneratorStatus(generator, 'Генерация словаря…');
+    button.disabled = true;
+    button.textContent = 'Генерируем…';
+    try{
+      const words = await requestGeneratedWords({ topic, difficulty, limit: options.limit || 50 });
+      const { added, total } = appendGeneratedWordsToCustom(state, words);
+      setCustomSelection(state, true);
+      if (state === qs){
+        persistQuickSettings();
+      }else if (state === ts){
+        persistTeamSettings();
+      }
+      if (added > 0){
+        setGeneratorStatus(generator, `Добавлено ${added} слов (всего ${total}).`, { level: 'success' });
+      }else{
+        setGeneratorStatus(generator, 'Новых слов нет: все уже в словаре.', { level: 'error' });
+      }
+    }catch(err){
+      console.error('Ошибка генерации словаря', err);
+      setGeneratorStatus(generator, err?.message || 'Не удалось сгенерировать слова', { level: 'error' });
+    }finally{
+      button.disabled = false;
+      button.textContent = defaultLabel;
+    }
+  });
+}
+
 function updateWordView(view, { entry, hidden, helpState }){
   const hasEntry = !!entry && typeof entry.term === 'string' && entry.term.trim().length;
   const isHidden = !!hidden;
@@ -1282,7 +1415,8 @@ const qs = {
     difficultyContainer: $('#quickGenDifficulty'),
     difficultyButtons: {},
     difficulty: 'medium',
-    triggerButton: $('#quickGenPreview')
+    triggerButton: $('#quickGenPreview'),
+    status: $('#quickGenStatus')
   },
   customBox: $('#quickCustomBox'),
   customText: $('#quickCustomWords'),
@@ -1397,11 +1531,7 @@ if (qs.generator){
   if (qs.generator.setDifficulty && qs.generator.difficulty){
     qs.generator.setDifficulty(qs.generator.difficulty, { silent:true });
   }
-  if (qs.generator.triggerButton){
-    qs.generator.triggerButton.addEventListener('click', () => {
-      qs.generator.triggerButton.blur();
-    });
-  }
+  attachGeneratorHandler(qs, { limit: 50 });
 }
 const upQuickTime = () => qs.timeLabel.textContent = qs.time+' с';
 const upQuickPts = () => qs.ptsLabel.textContent = qs.pts;
@@ -1684,29 +1814,6 @@ const formatWordList = list => {
     .filter(Boolean);
   return items.length ? items.join(', ') : '—';
 };
-const parseCustomWords = (raw, options = {}) => {
-  const input = typeof raw === 'string' ? raw : '';
-  const rawDifficulty = typeof options.difficulty === 'string' ? options.difficulty.trim().toLowerCase() : '';
-  const normalizedDifficulty = ALL_DIFFICULTIES.includes(rawDifficulty) ? rawDifficulty : '';
-  return input
-    .split(/[,\n\r]+/)
-    .map(s=>s.trim())
-    .filter(Boolean)
-    .map((term, idx) => {
-      const entry = {
-        id: `custom_${idx+1}`,
-        dictionaryId: CUSTOM_DICTIONARY_META.id,
-        term,
-        description: '',
-        about: ''
-      };
-      if (normalizedDifficulty && normalizedDifficulty !== 'mix'){
-        entry.difficulty = normalizedDifficulty;
-      }
-      return entry;
-    });
-};
-
 function updateQuickTimerButton(){
   const restartBtn = document.getElementById('qRestartTimer');
   if (!restartBtn) return;
@@ -2079,7 +2186,8 @@ const ts = {
     difficultyContainer: $('#teamGenDifficulty'),
     difficultyButtons: {},
     difficulty: 'medium',
-    triggerButton: $('#teamGenPreview')
+    triggerButton: $('#teamGenPreview'),
+    status: $('#teamGenStatus')
   },
   customBox: $('#teamCustomBox'),
   customText: $('#teamCustomWords'),
@@ -2191,11 +2299,7 @@ if (ts.generator){
   if (ts.generator.setDifficulty && ts.generator.difficulty){
     ts.generator.setDifficulty(ts.generator.difficulty, { silent:true });
   }
-  if (ts.generator.triggerButton){
-    ts.generator.triggerButton.addEventListener('click', () => {
-      ts.generator.triggerButton.blur();
-    });
-  }
+  attachGeneratorHandler(ts, { limit: 50 });
 }
 const upTeamTime = () => ts.timeLabel.textContent = ts.time+' с';
 const upPts = () => ts.ptsLabel.textContent = ts.pts;

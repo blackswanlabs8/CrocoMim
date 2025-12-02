@@ -256,6 +256,8 @@ body{
   font-size:12px;
   line-height:1.4;
 }
+.dict-generate-hint.is-success{ color:var(--accent-strong); }
+.dict-generate-hint.is-error{ color:var(--danger); }
 .dict-selected{
   display:flex;
   flex-direction:column;
