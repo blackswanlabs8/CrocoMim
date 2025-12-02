@@ -30,6 +30,7 @@ const CUSTOM_DICTIONARY_META = {
   description: 'Вставьте слова ниже',
   icon: 'edit'
 };
+const CUSTOM_GENERATED_WORDS = 50;
 
 const ICON_SANITIZE_RE = /[^A-Za-zА-Яа-яЁё0-9]/g;
 
@@ -455,7 +456,8 @@ function sanitizeQuickSession(raw){
     selectedDictionaries: Array.isArray(raw.selectedDictionaries)
       ? raw.selectedDictionaries.filter(id => typeof id === 'string')
       : [],
-    customText: typeof raw.customText === 'string' ? raw.customText : ''
+    customText: typeof raw.customText === 'string' ? raw.customText : '',
+    customTopic: typeof raw.customTopic === 'string' ? raw.customTopic : ''
   };
 }
 
@@ -502,7 +504,8 @@ function sanitizeTeamSession(raw){
     selectedDictionaries: Array.isArray(raw.selectedDictionaries)
       ? raw.selectedDictionaries.filter(id => typeof id === 'string')
       : [],
-    customText: typeof raw.customText === 'string' ? raw.customText : ''
+    customText: typeof raw.customText === 'string' ? raw.customText : '',
+    customTopic: typeof raw.customTopic === 'string' ? raw.customTopic : ''
   };
 }
 
@@ -673,12 +676,22 @@ function computeDictionaryAvailability(dictIds){
 function updateDifficultyAvailabilityForSelection(state){
   if (!state?.difficultyContainer) return;
   const selectedIds = Array.from(state.selectedDictionaries || []);
-  if (!selectedIds.length){
+  const hasCustom = !!state.customSelected;
+  if (!selectedIds.length && !hasCustom){
     state.difficultyContainer.style.display = 'none';
     return;
   }
   state.difficultyContainer.style.display = '';
-  const { available, mix } = computeDictionaryAvailability(selectedIds);
+  let { available, mix } = computeDictionaryAvailability(selectedIds);
+  if (hasCustom){
+    const customAvailable = new Set(["easy", "medium", "hard"]);
+    available = Array.from(new Set([...(available || []), ...customAvailable]));
+    mix = mix && selectedIds.length > 0;
+  }
+  if ((!available || !available.length) && hasCustom){
+    available = ["easy", "medium", "hard"];
+    mix = false;
+  }
   if (!state.difficultyButtons) state.difficultyButtons = {};
   Object.entries(state.difficultyButtons).forEach(([level, btn]) => {
     if (!btn) return;
@@ -1032,7 +1045,8 @@ function collectQuickSettings(){
     time: Number.isFinite(time) && time > 0 ? time : 0,
     ptsEnabled: !!(qs.ptsToggle && qs.ptsToggle.checked),
     pts: Number.isFinite(pts) && pts > 0 ? pts : 0,
-    customText: typeof qs.customText?.value === 'string' ? qs.customText.value : ''
+    customText: typeof qs.customText?.value === 'string' ? qs.customText.value : '',
+    customTopic: typeof qs.customTopic?.value === 'string' ? qs.customTopic.value : ''
   };
   return profile;
 }
@@ -1061,7 +1075,8 @@ function collectTeamSettings(){
     time: Number.isFinite(time) && time > 0 ? time : 0,
     ptsEnabled: !!(ts.ptsToggle && ts.ptsToggle.checked),
     pts: Number.isFinite(pts) && pts > 0 ? pts : 0,
-    customText: typeof ts.customText?.value === 'string' ? ts.customText.value : ''
+    customText: typeof ts.customText?.value === 'string' ? ts.customText.value : '',
+    customTopic: typeof ts.customTopic?.value === 'string' ? ts.customTopic.value : ''
   };
   return profile;
 }
@@ -1259,7 +1274,10 @@ const qs = {
   customSelected: false,
   difficulty: 'easy',
   customBox: $('#quickCustomBox'),
+  customTopic: $('#quickCustomTopic'),
   customText: $('#quickCustomWords'),
+  customGenerate: $('#quickGenerateDict'),
+  customStatus: $('#quickCustomStatus'),
   timerToggle: $('#quickTimerToggle'),
   time: 60,
   timeMinus: $('#quickTimeMinus'),
@@ -1311,6 +1329,9 @@ if (storedQuickSettingsRaw && typeof storedQuickSettingsRaw === 'object'){
   if (qs.customText && typeof storedQuickSettingsRaw.customText === 'string'){
     qs.customText.value = storedQuickSettingsRaw.customText;
   }
+  if (qs.customTopic && typeof storedQuickSettingsRaw.customTopic === 'string'){
+    qs.customTopic.value = storedQuickSettingsRaw.customTopic;
+  }
   quickSavedProfile = {
     selectedDictionaries: [...selected],
     customSelected: quickInitialCustomSelected,
@@ -1319,7 +1340,8 @@ if (storedQuickSettingsRaw && typeof storedQuickSettingsRaw === 'object'){
     time: Number.isFinite(storedTime) && storedTime > 0 ? storedTime : 0,
     ptsEnabled,
     pts: Number.isFinite(storedPts) && storedPts > 0 ? storedPts : 0,
-    customText: typeof storedQuickSettingsRaw.customText === 'string' ? storedQuickSettingsRaw.customText : ''
+    customText: typeof storedQuickSettingsRaw.customText === 'string' ? storedQuickSettingsRaw.customText : '',
+    customTopic: typeof storedQuickSettingsRaw.customTopic === 'string' ? storedQuickSettingsRaw.customTopic : ''
   };
 }else{
   quickInitialSelectedIds = Array.from(qs.selectedDictionaries || []);
@@ -1401,6 +1423,13 @@ if (qs.customText){
     persistQuickSettings();
   });
 }
+setupCustomGenerator(qs, {
+  topicInput: qs.customTopic,
+  wordsInput: qs.customText,
+  statusEl: qs.customStatus,
+  trigger: qs.customGenerate,
+  persist: persistQuickSettings
+});
 
 // Quick game state
 const initialQuickStats = readJson(QUICK_STATS_KEY, {hitWords:[], missWords:[]}) || {hitWords:[], missWords:[]};
@@ -1466,7 +1495,8 @@ function collectQuickSession(){
     difficulty: typeof qs.difficulty === 'string' ? qs.difficulty : '',
     customSelected: !!qs.customSelected,
     selectedDictionaries: Array.from(qs.selectedDictionaries || []).filter(id => typeof id === 'string'),
-    customText: typeof qs.customText?.value === 'string' ? qs.customText.value : ''
+    customText: typeof qs.customText?.value === 'string' ? qs.customText.value : '',
+    customTopic: typeof qs.customTopic?.value === 'string' ? qs.customTopic.value : ''
   };
 }
 
@@ -1639,6 +1669,110 @@ const parseCustomWords = (raw, options = {}) => {
       return entry;
     });
 };
+
+function setupCustomGenerator(state, options = {}){
+  const topicInput = options.topicInput;
+  const wordsInput = options.wordsInput;
+  const statusEl = options.statusEl;
+  const trigger = options.trigger;
+  const persist = typeof options.persist === 'function' ? options.persist : null;
+
+  const setStatus = (text, mode) => {
+    if (!statusEl) return;
+    statusEl.textContent = text || '';
+    statusEl.classList.remove('is-error', 'is-success');
+    if (mode){
+      statusEl.classList.add(mode);
+    }
+  };
+
+  const getDifficulty = () => {
+    const level = typeof state?.difficulty === 'string' ? state.difficulty.toLowerCase() : '';
+    return ['easy', 'medium', 'hard'].includes(level) ? level : 'medium';
+  };
+
+  const handleGenerate = async () => {
+    const topic = typeof topicInput?.value === 'string' ? topicInput.value.trim() : '';
+    setStatus('');
+    if (!topic){
+      setStatus('Введите тему словаря', 'is-error');
+      if (topicInput) topicInput.focus();
+      return;
+    }
+
+    const difficulty = getDifficulty();
+    if (trigger) trigger.disabled = true;
+    setStatus('Генерация словаря…');
+
+    try{
+      const runtimeConfig = await ensureRuntimeConfig();
+      const url = resolveBackendUrl('generate-dictionary', runtimeConfig);
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic, difficulty, words: CUSTOM_GENERATED_WORDS })
+      });
+
+      let payload = {};
+      try{
+        payload = await response.json();
+      }catch(err){
+        payload = {};
+      }
+
+      const aggregatedError = () => {
+        if (payload?.error) return String(payload.error);
+        if (Array.isArray(payload?.errors) && payload.errors.length) return payload.errors.join('; ');
+        return '';
+      };
+
+      if (!response.ok || payload?.ok === false){
+        const detail = aggregatedError();
+        throw new Error(detail || `Не удалось сгенерировать словарь (HTTP ${response.status})`);
+      }
+
+      const words = Array.isArray(payload?.words)
+        ? payload.words.filter(item => typeof item === 'string' && item.trim())
+        : [];
+
+      if (!words.length){
+        throw new Error('Сервис вернул пустой список слов');
+      }
+
+      if (wordsInput){
+        wordsInput.value = words.join('\n');
+      }
+      setCustomSelection(state, true);
+      if (state?.setDifficulty){
+        state.setDifficulty(difficulty);
+      }
+      setStatus(`Сгенерировано слов: ${words.length}`, 'is-success');
+      if (persist) persist();
+    }catch(err){
+      setStatus(err?.message || 'Не удалось сгенерировать словарь', 'is-error');
+    }finally{
+      if (trigger) trigger.disabled = false;
+    }
+  };
+
+  if (trigger){
+    trigger.addEventListener('click', handleGenerate);
+  }
+  if (topicInput){
+    topicInput.addEventListener('keydown', evt => {
+      if (evt.key === 'Enter'){
+        evt.preventDefault();
+        handleGenerate();
+      }
+    });
+    topicInput.addEventListener('input', () => {
+      setStatus('');
+      if (persist) persist();
+    });
+  }
+
+  return { generate: handleGenerate, setStatus };
+}
 
 function updateQuickTimerButton(){
   const restartBtn = document.getElementById('qRestartTimer');
@@ -2007,7 +2141,10 @@ const ts = {
   customSelected: false,
   difficulty: 'easy',
   customBox: $('#teamCustomBox'),
+  customTopic: $('#teamCustomTopic'),
   customText: $('#teamCustomWords'),
+  customGenerate: $('#teamGenerateDict'),
+  customStatus: $('#teamCustomStatus'),
   timerToggle: $('#teamTimerToggle'),
   time: 60,
   timeMinus: $('#teamTimeMinus'),
@@ -2056,6 +2193,9 @@ if (storedTeamSettingsRaw && typeof storedTeamSettingsRaw === 'object'){
   if (ts.customText && typeof storedTeamSettingsRaw.customText === 'string'){
     ts.customText.value = storedTeamSettingsRaw.customText;
   }
+  if (ts.customTopic && typeof storedTeamSettingsRaw.customTopic === 'string'){
+    ts.customTopic.value = storedTeamSettingsRaw.customTopic;
+  }
   teamSavedProfile = {
     selectedDictionaries: [...selected],
     customSelected: teamInitialCustomSelected,
@@ -2064,7 +2204,8 @@ if (storedTeamSettingsRaw && typeof storedTeamSettingsRaw === 'object'){
     time: Number.isFinite(storedTime) && storedTime > 0 ? storedTime : 0,
     ptsEnabled,
     pts: Number.isFinite(storedPts) && storedPts > 0 ? storedPts : 0,
-    customText: typeof storedTeamSettingsRaw.customText === 'string' ? storedTeamSettingsRaw.customText : ''
+    customText: typeof storedTeamSettingsRaw.customText === 'string' ? storedTeamSettingsRaw.customText : '',
+    customTopic: typeof storedTeamSettingsRaw.customTopic === 'string' ? storedTeamSettingsRaw.customTopic : ''
   };
 }else{
   teamInitialSelectedIds = Array.from(ts.selectedDictionaries || []);
@@ -2145,6 +2286,13 @@ if (ts.customText){
     persistTeamSettings();
   });
 }
+setupCustomGenerator(ts, {
+  topicInput: ts.customTopic,
+  wordsInput: ts.customText,
+  statusEl: ts.customStatus,
+  trigger: ts.customGenerate,
+  persist: persistTeamSettings
+});
 
 ensureDictionaryIndex().then(() => {
   setupDictionarySelector(qs);
@@ -2363,7 +2511,8 @@ function collectTeamSession(){
     difficulty: typeof ts.difficulty === 'string' ? ts.difficulty : '',
     customSelected: !!ts.customSelected,
     selectedDictionaries: Array.from(ts.selectedDictionaries || []).filter(id => typeof id === 'string'),
-    customText: typeof ts.customText?.value === 'string' ? ts.customText.value : ''
+    customText: typeof ts.customText?.value === 'string' ? ts.customText.value : '',
+    customTopic: typeof ts.customTopic?.value === 'string' ? ts.customTopic.value : ''
   };
 }
 
