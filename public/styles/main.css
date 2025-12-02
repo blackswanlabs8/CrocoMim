@@ -213,7 +213,6 @@ body{
 .dict-selector > .menu-block-title,
 .dict-selector > h2{ margin:0; }
 .section > .dict-selector{ margin-bottom:12px; }
-.custom-dict-box{ margin-top:10px; }
 .dict-generate{
   display:flex;
   flex-direction:column;
