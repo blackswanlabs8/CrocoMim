@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Tuple
 
 from flask import Flask, jsonify, request
 
-from generate_dict import DIFFICULTY_DESCRIPTIONS, generate_crocodile_words
+from generate_gpt import DIFFICULTY_DESCRIPTIONS, generate_crocodile_words
 from smtp_send import send_email
 
 ALLOWED_CATEGORIES = {"typo", "difficulty", "other"}
