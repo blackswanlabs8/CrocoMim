@@ -1,6 +1,6 @@
 {
   "name": "crocomim",
-  "version": "1.0.0",
+  "version": "0.6.0",
   "description": "Интерактивная игра «CrocoMim» теперь разнесена на отдельные файлы для удобства разработки и подготовки к публикации как PWA.",
   "main": "backend/app.py",
   "directories": {
