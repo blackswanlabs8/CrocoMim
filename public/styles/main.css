@@ -213,6 +213,50 @@ body{
 .dict-selector > .menu-block-title,
 .dict-selector > h2{ margin:0; }
 .section > .dict-selector{ margin-bottom:12px; }
+.custom-dict-box{ margin-top:10px; }
+.dict-generate{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  padding:12px;
+  border-radius:12px;
+  border:1px dashed var(--panel-border);
+  background:var(--panel-2);
+}
+.dict-generate-title-row{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.dict-generate-badge{
+  padding:4px 8px;
+  border-radius:999px;
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  background:var(--accent-soft);
+  color:var(--accent-strong);
+}
+.dict-generate-desc{
+  margin:4px 0 0;
+  color:var(--muted);
+  line-height:1.4;
+}
+.dict-generate-field{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.dict-generate-actions{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.dict-generate-hint{
+  font-size:12px;
+  line-height:1.4;
+}
 .dict-selected{
   display:flex;
   flex-direction:column;
