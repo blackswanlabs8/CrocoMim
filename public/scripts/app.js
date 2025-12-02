@@ -649,7 +649,7 @@ function renderDictionarySummary(state){
 
 function updateCustomBoxVisibility(state){
   if (!state?.customBox) return;
-  state.customBox.style.display = state.customSelected ? 'block' : 'none';
+  state.customBox.style.display = state.customSelected ? '' : 'none';
 }
 
 function computeDictionaryAvailability(dictIds){
