@@ -21,7 +21,7 @@ app = Flask(__name__)
 
 
 # Версия приложения фиксируется здесь, чтобы проще отслеживать сборки.
-APP_VERSION = "0.6.0"
+APP_VERSION = "0.6.1"
 
 LOGGER = logging.getLogger(__name__)
 # _GENERATOR_CACHE: Dict[str, Any] = {}
