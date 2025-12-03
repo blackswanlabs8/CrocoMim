@@ -1423,6 +1423,7 @@ if (qs.customText){
     persistQuickSettings();
   });
 }
+/*
 setupCustomGenerator(qs, {
   topicInput: qs.customTopic,
   wordsInput: qs.customText,
@@ -1430,6 +1431,7 @@ setupCustomGenerator(qs, {
   trigger: qs.customGenerate,
   persist: persistQuickSettings
 });
+*/
 
 // Quick game state
 const initialQuickStats = readJson(QUICK_STATS_KEY, {hitWords:[], missWords:[]}) || {hitWords:[], missWords:[]};
@@ -1670,6 +1672,7 @@ const parseCustomWords = (raw, options = {}) => {
     });
 };
 
+/*
 function setupCustomGenerator(state, options = {}){
   const topicInput = options.topicInput;
   const wordsInput = options.wordsInput;
@@ -1773,6 +1776,7 @@ function setupCustomGenerator(state, options = {}){
 
   return { generate: handleGenerate, setStatus };
 }
+*/
 
 function updateQuickTimerButton(){
   const restartBtn = document.getElementById('qRestartTimer');
@@ -2286,6 +2290,7 @@ if (ts.customText){
     persistTeamSettings();
   });
 }
+/*
 setupCustomGenerator(ts, {
   topicInput: ts.customTopic,
   wordsInput: ts.customText,
@@ -2293,6 +2298,7 @@ setupCustomGenerator(ts, {
   trigger: ts.customGenerate,
   persist: persistTeamSettings
 });
+*/
 
 ensureDictionaryIndex().then(() => {
   setupDictionarySelector(qs);
