@@ -26,7 +26,7 @@ const DIFFICULTY_LABELS = {
 };
 const CUSTOM_DICTIONARY_META = {
   id: 'custom',
-  title: 'Свой словарь + ИИ',
+  title: 'Свой словарь',
   description: 'Вставьте слова ниже',
   icon: 'edit'
 };
@@ -893,7 +893,7 @@ const HELP_FALLBACK_TEXT = [
   '📚 Слова',
   '• 📖 Выбери словари → слова перемешаются в одну колоду.',
   '• 🔁 Сложность: Лёгкий / Средний / Сложный / Микс (все уровни сложности смешаются).',
-  '• ✏️ Свой словарь + ИИ — вставь слова через запятую или с новой строки.',
+  '• ✏️ Свой словарь — вставь слова через запятую или с новой строки.',
   '',
   '🛠 Во время игры',
   '• 💡 Подсказка — подсказка, как можно показать (если есть).',
@@ -3038,7 +3038,7 @@ function getDictionaryLabelById(dictId){
   if (dictId === CUSTOM_DICTIONARY_META.id){
     const customTitle = typeof CUSTOM_DICTIONARY_META?.title === 'string' && CUSTOM_DICTIONARY_META.title.trim()
       ? CUSTOM_DICTIONARY_META.title.trim()
-      : 'Свой словарь + ИИ';
+      : 'Свой словарь';
     return customTitle;
   }
   const meta = getDictionaryMeta(dictId);
