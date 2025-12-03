@@ -1215,6 +1215,10 @@ const qs = {
   ptsPlus: $('#quickPtsPlus'),
   ptsLabel: $('#quickPtsLabel'),
   customText: $('#quickCustomText'),
+  customInput: $('#quickCustomInput'),
+  customAddBtn: $('#quickCustomAdd'),
+  customBtn: $('#quickCustomBtn'),
+  customStatus: $('#quickCustomStatus'),
   start: $('#startQuick')
 };
 
@@ -1338,7 +1342,22 @@ updateQuickPts();
 if (qs.customText){
   qs.customText.addEventListener('input', () => {
     setCustomSelection(qs, !!qs.customText.value.trim());
+    setCustomStatus(qs, '', null);
     persistQuickSettings();
+  });
+}
+if (qs.customAddBtn){
+  qs.customAddBtn.addEventListener('click', () => appendCustomWord(qs));
+}
+if (qs.customBtn){
+  qs.customBtn.addEventListener('click', () => focusCustomDictionary(qs));
+}
+if (qs.customInput){
+  qs.customInput.addEventListener('keypress', evt => {
+    if (evt.key === 'Enter'){
+      evt.preventDefault();
+      appendCustomWord(qs);
+    }
   });
 }
 
@@ -1557,6 +1576,15 @@ function setCustomSelection(state, enabled){
   }
   applyDictionarySelectionChange(state);
 }
+function setCustomStatus(state, message, tone){
+  const box = state?.customStatus;
+  if (!box) return;
+  box.textContent = message || '';
+  box.classList.remove('is-error', 'is-success');
+  if (!message) return;
+  if (tone === 'error') box.classList.add('is-error');
+  if (tone === 'success') box.classList.add('is-success');
+}
 function readCustomText(state){
   return typeof state?.customText?.value === 'string' ? state.customText.value : '';
 }
@@ -1605,6 +1633,36 @@ function stopQuickTimer(){
   updateQuickTimerButton();
   if (Array.isArray(qWords) && qWords.length){
     persistQuickSession();
+  }
+}
+function appendCustomWord(state){
+  if (!state?.customInput || !state.customText) return;
+  const raw = state.customInput.value.trim();
+  if (!raw){
+    setCustomStatus(state, 'Введите слово, чтобы добавить его.', 'error');
+    return;
+  }
+  const normalized = raw.replace(/\s+/g, ' ');
+  const existing = parseCustomWords(readCustomText(state))
+    .map(entry => entry.term.toLocaleLowerCase('ru-RU'));
+  if (existing.includes(normalized.toLocaleLowerCase('ru-RU'))){
+    setCustomStatus(state, 'Это слово уже есть в вашем словаре.', 'error');
+    return;
+  }
+  const current = readCustomText(state).trim();
+  state.customText.value = current ? `${current}\n${normalized}` : normalized;
+  state.customInput.value = '';
+  setCustomSelection(state, true);
+  state.customText.dispatchEvent(new Event('input', { bubbles:true }));
+  setCustomStatus(state, 'Слово добавлено!', 'success');
+  state.customText.focus();
+}
+function focusCustomDictionary(state){
+  setCustomSelection(state, true);
+  setCustomStatus(state, '', null);
+  if (state?.customText){
+    state.customText.focus();
+    state.customText.scrollIntoView({ behavior:'smooth', block:'center' });
   }
 }
 
@@ -1962,6 +2020,10 @@ const ts = {
   ptsControls: $('#ptsControls'),
   pts: 10, ptsMinus: $('#ptsMinus'), ptsPlus: $('#ptsPlus'), ptsLabel: $('#ptsLabel'),
   customText: $('#teamCustomText'),
+  customInput: $('#teamCustomInput'),
+  customAddBtn: $('#teamCustomAdd'),
+  customBtn: $('#teamCustomBtn'),
+  customStatus: $('#teamCustomStatus'),
   start: $('#startTeam')
 };
 
@@ -2084,7 +2146,22 @@ updatePtsUI();
 if (ts.customText){
   ts.customText.addEventListener('input', () => {
     setCustomSelection(ts, !!ts.customText.value.trim());
+    setCustomStatus(ts, '', null);
     persistTeamSettings();
+  });
+}
+if (ts.customAddBtn){
+  ts.customAddBtn.addEventListener('click', () => appendCustomWord(ts));
+}
+if (ts.customBtn){
+  ts.customBtn.addEventListener('click', () => focusCustomDictionary(ts));
+}
+if (ts.customInput){
+  ts.customInput.addEventListener('keypress', evt => {
+    if (evt.key === 'Enter'){
+      evt.preventDefault();
+      appendCustomWord(ts);
+    }
   });
 }
 
