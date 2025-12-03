@@ -1,3 +1,6 @@
+# Временное отключение генерации словарей.
+
+'''
 import json
 import re
 import time
@@ -245,3 +248,5 @@ def generate_crocodile_words(topic: str,
 
     print(f"Готово за {t1 - t0:.2f} сек. Тема: {topic}, сложность: {difficulty}")
     return best_words
+
+'''
