@@ -1303,6 +1303,21 @@ if (qs.ptsToggle){
   };
 }
 updateQuickPts();
+updateCustomBoxVisibility(qs);
+if (qs.customText){
+  qs.customText.addEventListener('input', () => {
+    persistQuickSettings();
+  });
+}
+/*
+setupCustomGenerator(qs, {
+  topicInput: qs.customTopic,
+  wordsInput: qs.customText,
+  statusEl: qs.customStatus,
+  trigger: qs.customGenerate,
+  persist: persistQuickSettings
+});
+*/
 
 // Quick game state
 const initialQuickStats = readJson(QUICK_STATS_KEY, {hitWords:[], missWords:[]}) || {hitWords:[], missWords:[]};
@@ -1510,6 +1525,134 @@ const formatWordList = list => {
     .filter(Boolean);
   return items.length ? items.join(', ') : '—';
 };
+const parseCustomWords = (raw, options = {}) => {
+  const input = typeof raw === 'string' ? raw : '';
+  const rawDifficulty = typeof options.difficulty === 'string' ? options.difficulty.trim().toLowerCase() : '';
+  const normalizedDifficulty = ALL_DIFFICULTIES.includes(rawDifficulty) ? rawDifficulty : '';
+  return input
+    .split(/[,\n\r]+/)
+    .map(s=>s.trim())
+    .filter(Boolean)
+    .map((term, idx) => {
+      const entry = {
+        id: `custom_${idx+1}`,
+        dictionaryId: CUSTOM_DICTIONARY_META.id,
+        term,
+        description: '',
+        about: ''
+      };
+      if (normalizedDifficulty && normalizedDifficulty !== 'mix'){
+        entry.difficulty = normalizedDifficulty;
+      }
+      return entry;
+    });
+};
+
+/*
+function setupCustomGenerator(state, options = {}){
+  const topicInput = options.topicInput;
+  const wordsInput = options.wordsInput;
+  const statusEl = options.statusEl;
+  const trigger = options.trigger;
+  const persist = typeof options.persist === 'function' ? options.persist : null;
+
+  const setStatus = (text, mode) => {
+    if (!statusEl) return;
+    statusEl.textContent = text || '';
+    statusEl.classList.remove('is-error', 'is-success');
+    if (mode){
+      statusEl.classList.add(mode);
+    }
+  };
+
+  const getDifficulty = () => {
+    const level = typeof state?.difficulty === 'string' ? state.difficulty.toLowerCase() : '';
+    return ['easy', 'medium', 'hard'].includes(level) ? level : 'medium';
+  };
+
+  const handleGenerate = async () => {
+    const topic = typeof topicInput?.value === 'string' ? topicInput.value.trim() : '';
+    setStatus('');
+    if (!topic){
+      setStatus('Введите тему словаря', 'is-error');
+      if (topicInput) topicInput.focus();
+      return;
+    }
+
+    const difficulty = getDifficulty();
+    if (trigger) trigger.disabled = true;
+    setStatus('Генерация словаря…');
+
+    try{
+      const runtimeConfig = await ensureRuntimeConfig();
+      const url = resolveBackendUrl('generate-dictionary', runtimeConfig);
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic, difficulty, words: CUSTOM_GENERATED_WORDS })
+      });
+
+      let payload = {};
+      try{
+        payload = await response.json();
+      }catch(err){
+        payload = {};
+      }
+
+      const aggregatedError = () => {
+        if (payload?.error) return String(payload.error);
+        if (Array.isArray(payload?.errors) && payload.errors.length) return payload.errors.join('; ');
+        return '';
+      };
+
+      if (!response.ok || payload?.ok === false){
+        const detail = aggregatedError();
+        throw new Error(detail || `Не удалось сгенерировать словарь (HTTP ${response.status})`);
+      }
+
+      const words = Array.isArray(payload?.words)
+        ? payload.words.filter(item => typeof item === 'string' && item.trim())
+        : [];
+
+      if (!words.length){
+        throw new Error('Сервис вернул пустой список слов');
+      }
+
+      if (wordsInput){
+        wordsInput.value = words.join('\n');
+      }
+      setCustomSelection(state, true);
+      if (state?.setDifficulty){
+        state.setDifficulty(difficulty);
+      }
+      setStatus(`Сгенерировано слов: ${words.length}`, 'is-success');
+      if (persist) persist();
+    }catch(err){
+      setStatus(err?.message || 'Не удалось сгенерировать словарь', 'is-error');
+    }finally{
+      if (trigger) trigger.disabled = false;
+    }
+  };
+
+  if (trigger){
+    trigger.addEventListener('click', handleGenerate);
+  }
+  if (topicInput){
+    topicInput.addEventListener('keydown', evt => {
+      if (evt.key === 'Enter'){
+        evt.preventDefault();
+        handleGenerate();
+      }
+    });
+    topicInput.addEventListener('input', () => {
+      setStatus('');
+      if (persist) persist();
+    });
+  }
+
+  return { generate: handleGenerate, setStatus };
+}
+*/
 
 function updateQuickTimerButton(){
   const restartBtn = document.getElementById('qRestartTimer');
@@ -1986,6 +2129,21 @@ if (ts.ptsToggle){
   };
 }
 updatePtsUI();
+if (ts.customText){
+  ts.customText.addEventListener('input', () => {
+    persistTeamSettings();
+  });
+}
+/*
+setupCustomGenerator(ts, {
+  topicInput: ts.customTopic,
+  wordsInput: ts.customText,
+  statusEl: ts.customStatus,
+  trigger: ts.customGenerate,
+  persist: persistTeamSettings
+});
+*/
+
 ensureDictionaryIndex().then(() => {
   setupDictionarySelector(qs);
   setupDictionarySelector(ts);
