@@ -1303,7 +1303,6 @@ if (qs.ptsToggle){
   };
 }
 updateQuickPts();
-updateCustomBoxVisibility(qs);
 if (qs.customText){
   qs.customText.addEventListener('input', () => {
     persistQuickSettings();
