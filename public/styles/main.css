@@ -877,21 +877,6 @@ body.theme-dark .help-overlay{
   background:rgba(8,15,28,.72);
 }
 
-.version-badge{
-  position:fixed;
-  left:calc(12px + env(safe-area-inset-left));
-  bottom:calc(12px + env(safe-area-inset-bottom));
-  padding:8px 12px;
-  font-size:12px;
-  color:var(--muted);
-  background:var(--panel);
-  border:1px solid var(--panel-border);
-  border-radius:14px;
-  box-shadow:var(--shadow);
-  z-index:2100;
-  pointer-events:none;
-}
-
 .menu-feedback{
   margin-top:16px;
 }
