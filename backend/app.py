@@ -4,7 +4,7 @@ import json
 import logging
 import os
 from datetime import datetime, timezone
-from importlib import import_module
+# from importlib import import_module
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -21,10 +21,10 @@ app = Flask(__name__)
 
 
 # Версия приложения фиксируется здесь, чтобы проще отслеживать сборки.
-APP_VERSION = "0.6.0"
+APP_VERSION = "0.6.1"
 
 LOGGER = logging.getLogger(__name__)
-_GENERATOR_CACHE: Dict[str, Any] = {}
+# _GENERATOR_CACHE: Dict[str, Any] = {}
 
 
 # Блок ниже оставляем рядом с константами, чтобы логгер был готов прежде, чем
@@ -53,6 +53,7 @@ def _configure_logging() -> Path:
 LOG_PATH = _configure_logging()
 
 
+'''
 def _load_generator() -> Dict[str, Any]:
     if _GENERATOR_CACHE.get("ready"):
         return _GENERATOR_CACHE
@@ -79,6 +80,7 @@ def _load_generator() -> Dict[str, Any]:
         "Dictionary generator loaded. Difficulties: %s", ", ".join(sorted(_GENERATOR_CACHE["difficulties"]))
     )
     return _GENERATOR_CACHE
+'''
 
 
 def _resolve_storage_path() -> Path:
@@ -180,6 +182,7 @@ def version() -> Any:
     return jsonify({"version": APP_VERSION})
 
 
+'''
 @app.route("/generate-dictionary", methods=["POST"])
 def generate_dictionary():
     LOGGER.info("Received /generate-dictionary request")
@@ -251,6 +254,7 @@ def generate_dictionary():
             "words": normalized_words,
         }
     )
+'''
 
 
 @app.route("/feedback", methods=["POST"])
