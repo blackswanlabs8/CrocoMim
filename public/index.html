@@ -95,6 +95,21 @@
           </div>
         </div>
 
+        <div class="menu-block">
+          <div class="menu-block-title">Свой словарь</div>
+          <div class="stack" style="gap:8px">
+            <label class="stack" style="gap:6px">
+              <span class="custom-gen-hint">Вставьте слова через запятую или с новой строки.</span>
+              <textarea id="quickCustomText" class="feedback-textarea" rows="3" placeholder="кот, самолёт, время..."></textarea>
+            </label>
+            <div class="custom-gen-row">
+              <input id="quickCustomTopic" class="feedback-input" type="text" placeholder="Тема для генерации с ИИ (опционально)">
+              <button class="btn ghost" id="quickCustomGenerate" type="button">Сгенерировать</button>
+            </div>
+            <div class="custom-gen-status" id="quickCustomStatus"></div>
+          </div>
+        </div>
+
         <div class="footer menu-footer">
           <button class="btn btn-full" id="startQuick">Начать игру</button>
         </div>
@@ -243,6 +258,21 @@
           <button class="difficulty-btn" type="button" data-level="medium" aria-pressed="false">Средний</button>
           <button class="difficulty-btn" type="button" data-level="hard" aria-pressed="false">Сложный</button>
           <button class="difficulty-btn" type="button" data-level="mix" aria-pressed="false" title="Все уровни сложности выбранного словаря">Микс</button>
+        </div>
+      </div>
+
+      <div class="menu-block">
+        <div class="menu-block-title">Свой словарь</div>
+        <div class="stack" style="gap:8px">
+          <label class="stack" style="gap:6px">
+            <span class="custom-gen-hint">Вставьте слова через запятую или с новой строки.</span>
+            <textarea id="teamCustomText" class="feedback-textarea" rows="3" placeholder="кот, самолёт, время..."></textarea>
+          </label>
+          <div class="custom-gen-row">
+            <input id="teamCustomTopic" class="feedback-input" type="text" placeholder="Тема для генерации с ИИ (опционально)">
+            <button class="btn ghost" id="teamCustomGenerate" type="button">Сгенерировать</button>
+          </div>
+          <div class="custom-gen-status" id="teamCustomStatus"></div>
         </div>
       </div>
     </div>
