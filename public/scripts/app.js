@@ -2100,6 +2100,7 @@ ts.ptsPlus.onclick = ()=>{
   upPts();
   persistTeamSettings();
 };
+updateCustomBoxVisibility(ts);
 const updateTeamTimerUI = ()=>{
   if (!ts.timerToggle) return;
   const enabled = ts.timerToggle.checked;
