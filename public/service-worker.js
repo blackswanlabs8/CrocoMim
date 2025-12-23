@@ -15,12 +15,13 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', event => {
-  event.waitUntil(
-    Promise.allSettled([
+  event.waitUntil((async () => {
+    await Promise.allSettled([
       caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)),
       precacheDictionaries()
-    ])
-  );
+    ]);
+    self.skipWaiting();
+  })());
 });
 
 const ALLOWED_CACHES = new Set([CACHE_NAME, DICTS_CACHE]);
@@ -31,7 +32,7 @@ self.addEventListener('activate', event => {
       Promise.all(keys
         .filter(key => !ALLOWED_CACHES.has(key))
         .map(key => caches.delete(key)))
-    )
+    ).then(() => self.clients.claim())
   );
 });
 
