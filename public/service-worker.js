@@ -1,6 +1,7 @@
 // тест
-const CACHE_NAME = 'crocomim-static-v5';
-const DICTS_CACHE = 'crocomim-dicts-runtime-v2';
+const CACHE_NAME = 'crocomim-static-v6';
+const DICTS_CACHE = 'crocomim-dicts-runtime-v3';
+const DICTS_INDEX_PATH = './dicts/index.json';
 const ASSETS = [
   './',
   './index.html',
@@ -8,20 +9,28 @@ const ASSETS = [
   './scripts/app.js',
   './scripts/feedback.js',
   './scripts/dicts.js',
+  DICTS_INDEX_PATH,
   './manifest.json',
   './icons/icon.svg'
 ];
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
+    Promise.allSettled([
+      caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)),
+      precacheDictionaries()
+    ])
   );
 });
+
+const ALLOWED_CACHES = new Set([CACHE_NAME, DICTS_CACHE]);
 
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)))
+      Promise.all(keys
+        .filter(key => !ALLOWED_CACHES.has(key))
+        .map(key => caches.delete(key)))
     )
   );
 });
@@ -35,16 +44,17 @@ const isDictRequest = request => {
   return url.pathname.startsWith('/dicts/');
 };
 
-const networkFirstDict = async request => {
+const cacheFirstDict = async request => {
+  const cache = await caches.open(DICTS_CACHE);
+  const cached = await cache.match(request);
+  if (cached) {
+    return cached;
+  }
   try {
     const response = await fetch(request);
-    const copy = response.clone();
-    const cache = await caches.open(DICTS_CACHE);
-    await cache.put(request, copy);
+    await cache.put(request, response.clone());
     return response;
   } catch (error) {
-    const cache = await caches.open(DICTS_CACHE);
-    const cached = await cache.match(request);
     if (cached) {
       return cached;
     }
@@ -83,7 +93,7 @@ self.addEventListener('fetch', event => {
 
   if (isDictRequest(request)) {
     event.respondWith(
-      networkFirstDict(request).catch(() => Response.error())
+      cacheFirstDict(request).catch(() => Response.error())
     );
     return;
   }
@@ -94,3 +104,32 @@ self.addEventListener('fetch', event => {
     );
   }
 });
+
+async function precacheDictionaries(){
+  try {
+    const response = await fetch(DICTS_INDEX_PATH, { cache: 'no-cache' });
+    if (!response.ok) return;
+
+    const data = await response.json().catch(() => null);
+    const list = Array.isArray(data?.dictionaries) ? data.dictionaries : [];
+    const paths = new Set([DICTS_INDEX_PATH]);
+
+    list.forEach(dict => {
+      if (!dict || typeof dict !== 'object') return;
+      const diffs = dict.difficulties && typeof dict.difficulties === 'object' ? dict.difficulties : {};
+      Object.values(diffs).forEach(info => {
+        const path = typeof info?.path === 'string' && info.path.trim() ? info.path.trim() : '';
+        if (path) {
+          paths.add(`./dicts/${path}`);
+        }
+      });
+    });
+
+    if (!paths.size) return;
+
+    const cache = await caches.open(DICTS_CACHE);
+    await cache.addAll(Array.from(paths));
+  } catch (error) {
+    console.warn('[CrocoMim] Не удалось предзагрузить словари для офлайн-режима', error);
+  }
+}
