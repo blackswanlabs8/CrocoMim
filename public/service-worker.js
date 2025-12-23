@@ -5,7 +5,7 @@ const DICTS_INDEX_PATH = './dicts/index.json';
 const ASSETS = [
   './',
   './index.html',
-  './styles/main.css',
+  './styles/main.css?v=2024-07-06',
   './scripts/app.js',
   './scripts/feedback.js',
   './scripts/dicts.js',
