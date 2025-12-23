@@ -1300,3 +1300,11 @@ body.feedback-modal-open{
   .menu-settings{ gap:10px; }
   .menu-block{ padding:12px; gap:10px; }
 }
+
+body.theme-dark {
+  margin-top:10vh
+}
+
+body.theme-light {
+  margin-top:10vh
+}
