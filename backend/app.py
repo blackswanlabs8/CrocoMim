@@ -131,7 +131,7 @@ def _validate_feedback(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], List[st
 
     # Email теперь необязательное поле, его можно не передавать
     email = payload.get("email")
-    if email is not None and not (isinstance(email, str) and email.strip()):
+    if email is not None and (not isinstance(email, str) or not email.strip()):
         errors.append("email must be a non-empty string or omitted")
 
     # Consent больше не требуется - убираем проверку
