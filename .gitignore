@@ -1,1 +1,42 @@
-Nothing should be ignored in this case, as only a JavaScript source file was modified and no build artifacts, dependencies, or temporary files were detected.
+```
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Logs
+*.log
+data/*.log
+
+# Dependencies
+.venv/
+venv/
+env/
+node_modules/
+
+# Build artifacts
+dist/
+build/
+target/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Coverage
+.coverage
+coverage/
+htmlcov/
+
+# OS
+.DS_Store
+Thumbs.db
+```
