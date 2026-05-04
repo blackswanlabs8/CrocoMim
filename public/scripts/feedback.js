@@ -526,8 +526,6 @@
       id: generateId(),
       category: categoryInput.value,
       message,
-      email: null,
-      consent: true,
       context,
       client: {
         userAgent: global.navigator?.userAgent || '',
@@ -618,8 +616,6 @@
     const payload = {
       category: draft.category,
       message: draft.message,
-      email: draft.email || null,
-      consent: draft.consent !== false,
       context: draft.context,
       client: draft.client
     };

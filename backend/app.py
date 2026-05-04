@@ -129,14 +129,12 @@ def _validate_feedback(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], List[st
     if not isinstance(message, str) or len(message.strip()) < 10:
         errors.append("message must be a string with at least 10 characters")
 
+    # Email теперь необязательное поле, его можно не передавать
     email = payload.get("email")
     if email is not None and not (isinstance(email, str) and email.strip()):
         errors.append("email must be a non-empty string or omitted")
 
-    consent = payload.get("consent")
-    if consent is not True:
-        errors.append("consent must be true")
-
+    # Consent больше не требуется - убираем проверку
     context = payload.get("context")
     if context is None:
         context = {}
@@ -153,7 +151,6 @@ def _validate_feedback(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], List[st
         "category": category,
         "message": message.strip() if isinstance(message, str) else None,
         "email": email.strip() if isinstance(email, str) else None,
-        "consent": consent,
         "context": context,
         "client": client,
     }
@@ -277,17 +274,16 @@ def submit_feedback():
     }
 
     LOGGER.info(
-        "Persisting feedback. Category=%s, Email=%s, Consent=%s",
+        "Persisting feedback. Category=%s, Email=%s",
         record.get("category"),
         record.get("email") or "—",
-        record.get("consent"),
     )
 
     try:
         _send_email(record)
     except Exception as exc:  # pragma: no cover - unexpected SMTP errors
-        LOGGER.exception("Failed to send feedback emails")
-        return jsonify({"ok": False, "error": f"Failed to deliver feedback: {exc}"}), 500
+        LOGGER.warning("Failed to send feedback notification email: %s. Continuing to save to file.", exc)
+        # Не прерываем обработку, если email не отправился — всё равно сохраняем в файл
 
     try:
         storage_path = _resolve_storage_path()
