@@ -40,8 +40,6 @@
     cancelButton: null,
     messageField: null,
     messageCounter: null,
-    emailField: null,
-    consentField: null,
     categoryInputs: [],
     statusBox: null,
     statusMessage: null,
@@ -221,38 +219,6 @@
     messageCounter.textContent = '0 / 2000';
     messageLabel.appendChild(messageCounter);
 
-    const emailLabel = doc.createElement('label');
-    emailLabel.className = 'feedback-label';
-    emailLabel.setAttribute('for', 'feedbackEmail');
-    emailLabel.textContent = 'Email (опционально)';
-    const emailHint = doc.createElement('span');
-    emailHint.textContent = 'Оставьте контакт для ответа.';
-    emailLabel.appendChild(emailHint);
-
-    const emailField = doc.createElement('input');
-    emailField.id = 'feedbackEmail';
-    emailField.name = 'email';
-    emailField.type = 'email';
-    emailField.className = 'feedback-input';
-    emailField.placeholder = 'example@mail.com';
-    emailLabel.appendChild(emailField);
-
-    const consentLabel = doc.createElement('label');
-    consentLabel.className = 'feedback-consent';
-    consentLabel.setAttribute('for', 'feedbackConsent');
-
-    const consentInput = doc.createElement('input');
-    consentInput.type = 'checkbox';
-    consentInput.id = 'feedbackConsent';
-    consentInput.name = 'consent';
-    consentInput.required = true;
-
-    const consentText = doc.createElement('span');
-    consentText.innerHTML = 'Согласен на обработку данных. <a href="https://yourdomain.tld/privacy" target="_blank" rel="noopener">Политика конфиденциальности</a>';
-
-    consentLabel.appendChild(consentInput);
-    consentLabel.appendChild(consentText);
-
     const contextBox = doc.createElement('div');
     contextBox.className = 'feedback-context';
 
@@ -315,8 +281,6 @@
     form.appendChild(intro);
     form.appendChild(fieldset);
     form.appendChild(messageLabel);
-    form.appendChild(emailLabel);
-    form.appendChild(consentLabel);
     form.appendChild(actions);
     form.appendChild(contextBox);
     form.appendChild(statusBox);
@@ -341,8 +305,6 @@
     state.cancelButton = cancelButton;
     state.messageField = messageField;
     state.messageCounter = messageCounter;
-    state.emailField = emailField;
-    state.consentField = consentInput;
     state.statusBox = statusBox;
     state.statusMessage = statusMessage;
     state.mailtoButton = mailtoButton;
@@ -557,7 +519,6 @@
       state.messageField.focus();
       return;
     }
-    const emailRaw = state.emailField.value.trim();
     const context = normalizeContext(state.currentContext);
     const timestamp = new Date().toISOString();
     context.timestamp = timestamp;
@@ -565,8 +526,6 @@
       id: generateId(),
       category: categoryInput.value,
       message,
-      email: emailRaw ? emailRaw : undefined,
-      consent: true,
       context,
       client: {
         userAgent: global.navigator?.userAgent || '',
@@ -636,7 +595,6 @@
     const lines = [
       `Категория: ${CATEGORY_LABELS[draft.category] || draft.category}`,
       `Сообщение:\n${draft.message}`,
-      `Email: ${draft.email || '—'}`,
       '---',
       `Режим: ${MODE_LABELS[draft.context.mode] || draft.context.mode}`,
       `Слово: ${draft.context.termText || '—'}`,
@@ -658,8 +616,6 @@
     const payload = {
       category: draft.category,
       message: draft.message,
-      email: draft.email || null,
-      consent: true,
       context: draft.context,
       client: draft.client
     };
