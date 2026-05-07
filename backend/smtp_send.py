@@ -1,29 +1,28 @@
 import logging
-import os
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 
-from dotenv import load_dotenv
-
 
 LOGGER = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent
-load_dotenv(BASE_DIR / ".env")
+
+# Настройки SMTP (захардкожены)
+SMTP_HOST = "smtp.crocomim.ru"
+SMTP_PORT = 587
+SMTP_USER = "hi@crocomim.ru"
+SMTP_PASSWORD = "q8wRZ06k"
+DEFAULT_TO_EMAIL = "hi@crocomim.ru"
 
 
 def send_email(subject: str, body: str, to_email: str | None = None) -> None:
-    smtp_host = os.getenv("SMTP_HOST", "smtp.crocomim.ru")
-    smtp_port = int(os.getenv("SMTP_PORT", "587"))
-
-    smtp_user = os.getenv("SMTP_USER", "hi@crocomim.ru")
-    smtp_password = os.getenv("SMTP_PASSWORD")
-    default_to_email = os.getenv("DEFAULT_TO_EMAIL", "hi@crocomim.ru")
-
-    if not smtp_password:
-        raise RuntimeError("SMTP_PASSWORD не задан в .env")
+    smtp_host = SMTP_HOST
+    smtp_port = SMTP_PORT
+    smtp_user = SMTP_USER
+    smtp_password = SMTP_PASSWORD
+    default_to_email = DEFAULT_TO_EMAIL
 
     from_email = smtp_user
     recipient = to_email if to_email is not None else default_to_email
