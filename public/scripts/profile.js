@@ -2,7 +2,16 @@
 // Используется бэкенд Flask для регистрации, авторизации и статистики
 
 const PROFILE_SESSION_KEY = 'croc-profile-session';
-const API_BASE = '/api'; // Префикс для API endpoints
+
+// Определяем API_BASE динамически, как в app.js и feedback.js
+function getApiBase() {
+  const flags = window.CrocoRuntimeFlags || {};
+  const apiPath = flags.testMode ? '/test/api' : '/api';
+  const origin = window.location.origin;
+  return origin ? `${origin}${apiPath}` : apiPath;
+}
+
+const API_BASE = getApiBase(); // Префикс для API endpoints
 
 // Состояние профиля
 let profileState = {
