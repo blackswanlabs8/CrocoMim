@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Tuple
 
 import bcrypt
 from flask import Flask, jsonify, request
+from flask_cors import CORS
 
 from smtp_send import send_email
 
@@ -21,6 +22,7 @@ DEFAULT_LOG_FILE = "backend.log"
 DEFAULT_DB_FILE = "users.db"
 
 app = Flask(__name__)
+CORS(app)  # Разрешаем CORS запросы с фронтенда
 
 
 # Версия приложения фиксируется здесь, чтобы проще отслеживать сборки.
