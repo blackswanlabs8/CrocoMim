@@ -94,3 +94,13 @@ sqlite3.OperationalError: database is locked
 2026-05-21 09:38:52,319 [INFO] werkzeug - 127.0.0.1 - - [21/May/2026 09:38:52] "POST /api/auth/login HTTP/1.1" 200 -
 2026-05-21 09:38:54,616 [INFO] __main__ - Received /auth/stats GET request
 2026-05-21 09:38:54,617 [INFO] werkzeug - 127.0.0.1 - - [21/May/2026 09:38:54] "GET /api/auth/stats?userId=4 HTTP/1.1" 200 -
+2026-05-21 09:50:55,033 [INFO] __main__ - Logging configured. Writing to /workspace/data/backend.log
+2026-05-21 09:50:55,049 [INFO] __main__ - Database initialized at /workspace/data/users.db
+2026-05-21 09:50:55,049 [INFO] __main__ - Starting Flask app. Version=0.6.1
+2026-05-21 09:50:55,094 [INFO] werkzeug - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3000
+ * Running on http://21.0.8.5:3000
+2026-05-21 09:50:55,094 [INFO] werkzeug - [33mPress CTRL+C to quit[0m
+2026-05-21 09:51:05,112 [INFO] __main__ - /healthz endpoint called
+2026-05-21 09:51:05,113 [INFO] werkzeug - 127.0.0.1 - - [21/May/2026 09:51:05] "GET /api/healthz HTTP/1.1" 200 -
