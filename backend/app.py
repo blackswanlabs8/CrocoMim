@@ -11,6 +11,14 @@ from typing import Any, Dict, List, Tuple
 from flask import Flask, jsonify, request
 
 from smtp_send import send_email
+from user_auth import (
+    register_user,
+    login_user,
+    logout_user,
+    get_user_by_session,
+    update_display_name,
+    change_password,
+)
 
 ALLOWED_CATEGORIES = {"typo", "difficulty", "other"}
 DEFAULT_DATA_DIR = Path(__file__).resolve().parent.parent / "data"
@@ -297,6 +305,212 @@ def submit_feedback():
 
     LOGGER.info("Feedback stored successfully")
     return jsonify({"ok": True})
+
+
+# ==================== USER AUTHENTICATION ROUTES ====================
+
+@app.route("/auth/register", methods=["POST"])
+def api_register():
+    """Регистрация нового пользователя."""
+    LOGGER.info("Received /auth/register request")
+    
+    if not request.is_json:
+        LOGGER.warning("Request rejected: body is not JSON")
+        return jsonify({"ok": False, "error": "Expected JSON body"}), 400
+    
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        LOGGER.warning("Request rejected: malformed JSON body")
+        return jsonify({"ok": False, "error": "Malformed JSON"}), 400
+    
+    username = (payload.get("username") or "").strip()
+    email = (payload.get("email") or "").strip()
+    password = payload.get("password") or ""
+    
+    success, message, user_data = register_user(username, email, password)
+    
+    if not success:
+        LOGGER.info("Registration failed: %s", message)
+        return jsonify({"ok": False, "error": message}), 400
+    
+    LOGGER.info("User registered successfully: %s", username)
+    return jsonify({"ok": True, "user": user_data}), 201
+
+
+@app.route("/auth/login", methods=["POST"])
+def api_login():
+    """Вход пользователя."""
+    LOGGER.info("Received /auth/login request")
+    
+    if not request.is_json:
+        LOGGER.warning("Request rejected: body is not JSON")
+        return jsonify({"ok": False, "error": "Expected JSON body"}), 400
+    
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        LOGGER.warning("Request rejected: malformed JSON body")
+        return jsonify({"ok": False, "error": "Malformed JSON"}), 400
+    
+    username = (payload.get("username") or "").strip()
+    password = payload.get("password") or ""
+    
+    success, message, user_data, session_token = login_user(username, password)
+    
+    if not success:
+        LOGGER.info("Login failed: %s", message)
+        return jsonify({"ok": False, "error": message}), 401
+    
+    LOGGER.info("User logged in successfully: %s", username)
+    return jsonify({
+        "ok": True,
+        "user": user_data,
+        "session_token": session_token
+    }), 200
+
+
+@app.route("/auth/logout", methods=["POST"])
+def api_logout():
+    """Выход пользователя."""
+    LOGGER.info("Received /auth/logout request")
+    
+    # Получаем токен из заголовка Authorization или из тела запроса
+    auth_header = request.headers.get("Authorization", "")
+    session_token = None
+    
+    if auth_header.startswith("Bearer "):
+        session_token = auth_header[7:]
+    elif request.is_json:
+        payload = request.get_json(silent=True)
+        if isinstance(payload, dict):
+            session_token = payload.get("session_token")
+    
+    success, message = logout_user(session_token or "")
+    
+    if not success:
+        LOGGER.info("Logout failed: %s", message)
+        return jsonify({"ok": False, "error": message}), 400
+    
+    LOGGER.info("User logged out successfully")
+    return jsonify({"ok": True, "message": message}), 200
+
+
+@app.route("/auth/me", methods=["GET"])
+def api_get_current_user():
+    """Получить данные текущего пользователя."""
+    LOGGER.info("Received /auth/me request")
+    
+    # Получаем токен из заголовка Authorization
+    auth_header = request.headers.get("Authorization", "")
+    session_token = None
+    
+    if auth_header.startswith("Bearer "):
+        session_token = auth_header[7:]
+    
+    if not session_token:
+        LOGGER.warning("No session token provided")
+        return jsonify({"ok": False, "error": "Требуется авторизация"}), 401
+    
+    success, message, user_data = get_user_by_session(session_token)
+    
+    if not success:
+        LOGGER.info("Get current user failed: %s", message)
+        return jsonify({"ok": False, "error": message}), 401
+    
+    LOGGER.info("Current user retrieved: %s", user_data["username"])
+    return jsonify({"ok": True, "user": user_data}), 200
+
+
+@app.route("/auth/profile", methods=["PUT"])
+def api_update_profile():
+    """Обновить профиль пользователя (отображаемое имя)."""
+    LOGGER.info("Received /auth/profile request")
+    
+    # Получаем токен из заголовка Authorization
+    auth_header = request.headers.get("Authorization", "")
+    session_token = None
+    
+    if auth_header.startswith("Bearer "):
+        session_token = auth_header[7:]
+    
+    if not session_token:
+        LOGGER.warning("No session token provided")
+        return jsonify({"ok": False, "error": "Требуется авторизация"}), 401
+    
+    # Проверяем сессию и получаем пользователя
+    success, message, user_data = get_user_by_session(session_token)
+    
+    if not success:
+        LOGGER.info("Profile update - auth failed: %s", message)
+        return jsonify({"ok": False, "error": message}), 401
+    
+    if not request.is_json:
+        LOGGER.warning("Request rejected: body is not JSON")
+        return jsonify({"ok": False, "error": "Expected JSON body"}), 400
+    
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        LOGGER.warning("Request rejected: malformed JSON body")
+        return jsonify({"ok": False, "error": "Malformed JSON"}), 400
+    
+    display_name = payload.get("display_name")
+    
+    if display_name is None:
+        LOGGER.warning("No display_name provided")
+        return jsonify({"ok": False, "error": "Поле display_name обязательно"}), 400
+    
+    success, message, updated_user = update_display_name(user_data["id"], display_name)
+    
+    if not success:
+        LOGGER.info("Profile update failed: %s", message)
+        return jsonify({"ok": False, "error": message}), 400
+    
+    LOGGER.info("Profile updated for user: %s", user_data["username"])
+    return jsonify({"ok": True, "user": updated_user}), 200
+
+
+@app.route("/auth/change-password", methods=["POST"])
+def api_change_password():
+    """Изменить пароль пользователя."""
+    LOGGER.info("Received /auth/change-password request")
+    
+    # Получаем токен из заголовка Authorization
+    auth_header = request.headers.get("Authorization", "")
+    session_token = None
+    
+    if auth_header.startswith("Bearer "):
+        session_token = auth_header[7:]
+    
+    if not session_token:
+        LOGGER.warning("No session token provided")
+        return jsonify({"ok": False, "error": "Требуется авторизация"}), 401
+    
+    # Проверяем сессию и получаем пользователя
+    success, message, user_data = get_user_by_session(session_token)
+    
+    if not success:
+        LOGGER.info("Change password - auth failed: %s", message)
+        return jsonify({"ok": False, "error": message}), 401
+    
+    if not request.is_json:
+        LOGGER.warning("Request rejected: body is not JSON")
+        return jsonify({"ok": False, "error": "Expected JSON body"}), 400
+    
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        LOGGER.warning("Request rejected: malformed JSON body")
+        return jsonify({"ok": False, "error": "Malformed JSON"}), 400
+    
+    old_password = payload.get("old_password") or ""
+    new_password = payload.get("new_password") or ""
+    
+    success, message = change_password(user_data["id"], old_password, new_password)
+    
+    if not success:
+        LOGGER.info("Change password failed: %s", message)
+        return jsonify({"ok": False, "error": message}), 400
+    
+    LOGGER.info("Password changed for user: %s", user_data["username"])
+    return jsonify({"ok": True, "message": message}), 200
 
 
 if __name__ == "__main__":
