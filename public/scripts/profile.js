@@ -1,41 +1,8 @@
-// Личный кабинет: API и UI с локальным хранением данных
-// Данные хранятся в localStorage браузера с шифрованием
+// Личный кабинет: API и UI с серверным хранением данных
+// Используется бэкенд Flask для регистрации, авторизации и статистики
 
-const PROFILE_STORAGE_KEY = 'croc-profile-data';
 const PROFILE_SESSION_KEY = 'croc-profile-session';
-
-// Простое шифрование base64 (для демонстрации, не для продакшена)
-function simpleEncrypt(data) {
-  try {
-    const json = JSON.stringify(data);
-    return btoa(unescape(encodeURIComponent(json)));
-  } catch (e) {
-    console.warn('Encryption failed', e);
-    return null;
-  }
-}
-
-function simpleDecrypt(encrypted) {
-  try {
-    const json = decodeURIComponent(escape(atob(encrypted)));
-    return JSON.parse(json);
-  } catch (e) {
-    console.warn('Decryption failed', e);
-    return null;
-  }
-}
-
-// Хеш пароля (простой, для демонстрации)
-function hashPassword(password) {
-  // В реальном проекте используйте bcrypt или argon2
-  let hash = 0;
-  for (let i = 0; i < password.length; i++) {
-    const char = password.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  return Math.abs(hash).toString(16) + '_' + btoa(password.split('').reverse().join(''));
-}
+const API_BASE = '/api'; // Префикс для API endpoints
 
 // Состояние профиля
 let profileState = {
@@ -45,39 +12,12 @@ let profileState = {
   stats: null
 };
 
-// Загрузка всех данных
-function loadAllProfileData() {
-  try {
-    const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
-    if (raw) {
-      return simpleDecrypt(raw);
-    }
-  } catch (e) {
-    console.warn('Failed to load profile data', e);
-  }
-  return { users: [], currentUser: null };
-}
-
-// Сохранение всех данных
-function saveAllProfileData(data) {
-  try {
-    const encrypted = simpleEncrypt(data);
-    if (encrypted) {
-      localStorage.setItem(PROFILE_STORAGE_KEY, encrypted);
-      return true;
-    }
-  } catch (e) {
-    console.warn('Failed to save profile data', e);
-  }
-  return false;
-}
-
-// Загрузка сохранённого пользователя
-function loadProfileUser() {
+// Загрузка сохранённой сессии
+function loadProfileSession() {
   try {
     const session = localStorage.getItem(PROFILE_SESSION_KEY);
     if (session) {
-      const data = simpleDecrypt(session);
+      const data = JSON.parse(session);
       if (data && data.userId) {
         profileState.isLoggedIn = true;
         profileState.userId = data.userId;
@@ -86,25 +26,22 @@ function loadProfileUser() {
       }
     }
   } catch (e) {
-    console.warn('Failed to load profile user', e);
+    console.warn('Failed to load profile session', e);
   }
   return false;
 }
 
-// Сохранение пользователя в сессию
-function saveProfileUser(userId, email) {
+// Сохранение сессии
+function saveProfileSession(userId, email) {
   try {
     const sessionData = { userId, email, timestamp: Date.now() };
-    const encrypted = simpleEncrypt(sessionData);
-    if (encrypted) {
-      localStorage.setItem(PROFILE_SESSION_KEY, encrypted);
-      profileState.isLoggedIn = true;
-      profileState.userId = userId;
-      profileState.email = email;
-      return true;
-    }
+    localStorage.setItem(PROFILE_SESSION_KEY, JSON.stringify(sessionData));
+    profileState.isLoggedIn = true;
+    profileState.userId = userId;
+    profileState.email = email;
+    return true;
   } catch (e) {
-    console.warn('Failed to save profile user', e);
+    console.warn('Failed to save profile session', e);
   }
   return false;
 }
@@ -119,122 +56,64 @@ function logoutProfile() {
   profileState = { isLoggedIn: false, userId: null, email: null, stats: null };
 }
 
-// Регистрация пользователя
+// Регистрация пользователя через сервер
 async function register(email, password) {
-  return new Promise((resolve) => {
-    // Валидация
-    if (!email || !email.includes('@')) {
-      resolve({ ok: false, data: { error: 'Некорректный email' }, status: 400 });
-      return;
-    }
-    
-    if (!password || password.length < 6) {
-      resolve({ ok: false, data: { error: 'Пароль должен быть не менее 6 символов' }, status: 400 });
-      return;
-    }
-    
-    const allData = loadAllProfileData();
-    
-    // Проверка на существующего пользователя
-    const existingUser = allData.users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (existingUser) {
-      resolve({ ok: false, data: { error: 'Пользователь с таким email уже существует' }, status: 409 });
-      return;
-    }
-    
-    // Создание нового пользователя
-    const newUser = {
-      userId: 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-      email: email,
-      passwordHash: hashPassword(password),
-      createdAt: new Date().toISOString(),
-      lastLogin: null,
-      stats: {
-        quickGamesPlayed: 0,
-        quickWordsHit: 0,
-        quickWordsMissed: 0,
-        teamGamesPlayed: 0,
-        teamRoundsPlayed: 0,
-        teamTotalScore: 0
-      }
-    };
-    
-    allData.users.push(newUser);
-    allData.currentUser = newUser.userId;
-    
-    if (saveAllProfileData(allData)) {
-      saveProfileUser(newUser.userId, newUser.email);
-      resolve({ ok: true, data: { userId: newUser.userId, email: newUser.email }, status: 201 });
-    } else {
-      resolve({ ok: false, data: { error: 'Ошибка сохранения данных' }, status: 500 });
-    }
-  });
+  try {
+    const response = await fetch(`${API_BASE}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await response.json();
+    return { ok: data.ok, data, status: response.status };
+  } catch (e) {
+    console.error('Registration error', e);
+    return { ok: false, data: { error: 'Ошибка сети' }, status: 500 };
+  }
 }
 
-// Вход пользователя
+// Вход пользователя через сервер
 async function login(email, password) {
-  return new Promise((resolve) => {
-    if (!email || !password) {
-      resolve({ ok: false, data: { error: 'Введите email и пароль' }, status: 400 });
-      return;
-    }
-    
-    const allData = loadAllProfileData();
-    const user = allData.users.find(u => 
-      u.email.toLowerCase() === email.toLowerCase() && 
-      u.passwordHash === hashPassword(password)
-    );
-    
-    if (!user) {
-      resolve({ ok: false, data: { error: 'Неверный email или пароль' }, status: 401 });
-      return;
-    }
-    
-    // Обновление времени последнего входа
-    user.lastLogin = new Date().toISOString();
-    allData.currentUser = user.userId;
-    saveAllProfileData(allData);
-    
-    saveProfileUser(user.userId, user.email);
-    resolve({ ok: true, data: { userId: user.userId, email: user.email }, status: 200 });
-  });
+  try {
+    const response = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await response.json();
+    return { ok: data.ok, data, status: response.status };
+  } catch (e) {
+    console.error('Login error', e);
+    return { ok: false, data: { error: 'Ошибка сети' }, status: 500 };
+  }
 }
 
-// Загрузка статистики
+// Загрузка статистики с сервера
 async function loadStats(userId) {
-  return new Promise((resolve) => {
-    const allData = loadAllProfileData();
-    const user = allData.users.find(u => u.userId === userId);
-    
-    if (!user) {
-      resolve({ ok: false, data: { error: 'Пользователь не найден' }, status: 404 });
-      return;
-    }
-    
-    resolve({ ok: true, data: { stats: { ...user.stats, email: user.email, createdAt: user.createdAt, lastLogin: user.lastLogin } }, status: 200 });
-  });
+  try {
+    const response = await fetch(`${API_BASE}/auth/stats?userId=${userId}`);
+    const data = await response.json();
+    return { ok: data.ok, data: data.ok ? { stats: data.stats } : data, status: response.status };
+  } catch (e) {
+    console.error('Load stats error', e);
+    return { ok: false, data: { error: 'Ошибка сети' }, status: 500 };
+  }
 }
 
-// Обновление статистики
+// Обновление статистики на сервере
 async function updateStats(userId, stats) {
-  return new Promise((resolve) => {
-    const allData = loadAllProfileData();
-    const user = allData.users.find(u => u.userId === userId);
-    
-    if (!user) {
-      resolve({ ok: false, data: { error: 'Пользователь не найден' }, status: 404 });
-      return;
-    }
-    
-    // Обновление статистики
-    user.stats = { ...user.stats, ...stats };
-    
-    if (saveAllProfileData(allData)) {
-      resolve({ ok: true, data: { stats: user.stats }, status: 200 });
-    } else {
-      resolve({ ok: false, data: { error: 'Ошибка сохранения' }, status: 500 });
-    }
-  });
+  try {
+    const response = await fetch(`${API_BASE}/auth/stats`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, stats })
+    });
+    const data = await response.json();
+    return { ok: data.ok, data, status: response.status };
+  } catch (e) {
+    console.error('Update stats error', e);
+    return { ok: false, data: { error: 'Ошибка сети' }, status: 500 };
+  }
 }
 
 // Отрисовка вида профиля
@@ -299,7 +178,7 @@ function setupProfileForms() {
       
       const result = await login(email, password);
       if (result.ok) {
-        saveProfileUser(result.data.userId, result.data.email);
+        saveProfileSession(result.data.userId, result.data.email);
         renderProfileView();
       } else {
         errorEl.textContent = result.data.error || 'Ошибка входа';
@@ -320,7 +199,7 @@ function setupProfileForms() {
       
       const result = await register(email, password);
       if (result.ok) {
-        saveProfileUser(result.data.userId, result.data.email);
+        saveProfileSession(result.data.userId, result.data.email);
         renderProfileView();
       } else {
         errorEl.textContent = result.data.error || 'Ошибка регистрации';
@@ -340,7 +219,7 @@ function setupProfileForms() {
 }
 
 // Авто-загрузка при старте
-loadProfileUser();
+loadProfileSession();
 
 // Экспорт для использования в app.js
 window.Profile = {
