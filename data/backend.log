@@ -94,3 +94,30 @@ sqlite3.OperationalError: database is locked
 2026-05-21 09:38:52,319 [INFO] werkzeug - 127.0.0.1 - - [21/May/2026 09:38:52] "POST /api/auth/login HTTP/1.1" 200 -
 2026-05-21 09:38:54,616 [INFO] __main__ - Received /auth/stats GET request
 2026-05-21 09:38:54,617 [INFO] werkzeug - 127.0.0.1 - - [21/May/2026 09:38:54] "GET /api/auth/stats?userId=4 HTTP/1.1" 200 -
+2026-05-21 11:09:36,116 [INFO] __main__ - Logging configured. Writing to /workspace/data/backend.log
+2026-05-21 11:09:36,120 [INFO] __main__ - Database initialized at /workspace/data/users.db
+2026-05-21 11:09:36,120 [INFO] __main__ - Starting Flask app. Version=0.6.1
+2026-05-21 11:09:36,156 [INFO] werkzeug - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3000
+ * Running on http://21.0.8.233:3000
+2026-05-21 11:09:36,156 [INFO] werkzeug - [33mPress CTRL+C to quit[0m
+2026-05-21 11:09:37,107 [INFO] __main__ - /version endpoint called from 127.0.0.1 with version 0.6.1
+2026-05-21 11:09:37,108 [INFO] werkzeug - 127.0.0.1 - - [21/May/2026 11:09:37] "GET /api/version HTTP/1.1" 200 -
+2026-05-21 11:09:40,758 [INFO] __main__ - Received /auth/register request
+2026-05-21 11:09:41,362 [WARNING] __main__ - Registration failed: email already exists - test@example.com
+2026-05-21 11:09:41,363 [INFO] werkzeug - 127.0.0.1 - - [21/May/2026 11:09:41] "[31m[1mPOST /api/auth/register HTTP/1.1[0m" 409 -
+2026-05-21 11:09:44,620 [INFO] __main__ - Received /auth/register request
+2026-05-21 11:09:45,221 [INFO] __main__ - User registered: newuser@example.com
+2026-05-21 11:09:45,222 [INFO] werkzeug - 127.0.0.1 - - [21/May/2026 11:09:45] "POST /api/auth/register HTTP/1.1" 200 -
+2026-05-21 11:09:48,935 [INFO] __main__ - Received /auth/login request
+2026-05-21 11:09:49,520 [INFO] __main__ - User logged in: newuser@example.com
+2026-05-21 11:09:49,521 [INFO] werkzeug - 127.0.0.1 - - [21/May/2026 11:09:49] "POST /api/auth/login HTTP/1.1" 200 -
+2026-05-21 11:10:52,919 [INFO] __main__ - Received /auth/register request
+2026-05-21 11:10:53,535 [INFO] __main__ - User registered: test2@example.com
+2026-05-21 11:10:53,536 [INFO] werkzeug - 127.0.0.1 - - [21/May/2026 11:10:53] "POST /api/auth/register HTTP/1.1" 200 -
+2026-05-21 11:11:17,857 [INFO] __main__ - Received /auth/login request
+2026-05-21 11:11:18,457 [INFO] __main__ - User logged in: test2@example.com
+2026-05-21 11:11:18,458 [INFO] werkzeug - 127.0.0.1 - - [21/May/2026 11:11:18] "POST /api/auth/login HTTP/1.1" 200 -
+2026-05-21 11:11:21,495 [INFO] __main__ - Received /auth/stats GET request
+2026-05-21 11:11:21,496 [INFO] werkzeug - 127.0.0.1 - - [21/May/2026 11:11:21] "GET /api/auth/stats?userId=6 HTTP/1.1" 200 -

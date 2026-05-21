@@ -3,8 +3,11 @@
 
 const PROFILE_SESSION_KEY = 'croc-profile-session';
 
-// Используем относительный путь к API, как в feedback.js
-const API_BASE = '/api';
+// Базовый URL API - используется полный URL для локальной разработки
+// В production можно заменить на относительный путь '/api'
+const API_BASE = window.location.protocol === 'file:' 
+  ? 'http://localhost:3000/api' 
+  : (window.RUNTIME_CONFIG?.backendBaseUrl || '/api');
 
 // Минимальная длина пароля
 const MIN_PASSWORD_LENGTH = 6;
