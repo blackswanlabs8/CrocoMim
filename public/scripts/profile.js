@@ -6,6 +6,9 @@ const PROFILE_SESSION_KEY = 'croc-profile-session';
 // Используем относительный путь к API, как в feedback.js
 const API_BASE = '/api';
 
+// Минимальная длина пароля
+const MIN_PASSWORD_LENGTH = 6;
+
 // Состояние профиля
 let profileState = {
   isLoggedIn: false,
@@ -13,6 +16,22 @@ let profileState = {
   email: null,
   stats: null
 };
+
+// Валидация email
+function isValidEmail(email) {
+  if (!email || typeof email !== 'string') return false;
+  const trimmed = email.trim();
+  if (trimmed.length < 5) return false;
+  // Простая проверка формата email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(trimmed);
+}
+
+// Валидация пароля
+function isValidPassword(password) {
+  if (!password || typeof password !== 'string') return false;
+  return password.length >= MIN_PASSWORD_LENGTH;
+}
 
 // Загрузка сохранённой сессии
 function loadProfileSession() {
@@ -165,8 +184,46 @@ function setupProfileForms() {
       const tabName = tab.dataset.tab;
       document.getElementById('loginForm').hidden = tabName !== 'login';
       document.getElementById('registerForm').hidden = tabName !== 'register';
+      
+      // Сброс ошибок при переключении табов
+      const loginErrorEl = document.getElementById('loginError');
+      const registerErrorEl = document.getElementById('registerError');
+      if (loginErrorEl) loginErrorEl.hidden = true;
+      if (registerErrorEl) registerErrorEl.hidden = true;
     });
   });
+  
+  // Обработка отправки форм по Enter
+  const loginEmailInput = document.getElementById('loginEmail');
+  const loginPasswordInput = document.getElementById('loginPassword');
+  const registerEmailInput = document.getElementById('registerEmail');
+  const registerPasswordInput = document.getElementById('registerPassword');
+  
+  // Вход по Enter
+  if (loginEmailInput && loginPasswordInput) {
+    const handleLoginEnter = (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const loginBtn = document.getElementById('btnLoginSubmit');
+        if (loginBtn) loginBtn.click();
+      }
+    };
+    loginEmailInput.addEventListener('keydown', handleLoginEnter);
+    loginPasswordInput.addEventListener('keydown', handleLoginEnter);
+  }
+  
+  // Регистрация по Enter
+  if (registerEmailInput && registerPasswordInput) {
+    const handleRegisterEnter = (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const registerBtn = document.getElementById('btnRegisterSubmit');
+        if (registerBtn) registerBtn.click();
+      }
+    };
+    registerEmailInput.addEventListener('keydown', handleRegisterEnter);
+    registerPasswordInput.addEventListener('keydown', handleRegisterEnter);
+  }
   
   // Вход
   const loginBtn = document.getElementById('btnLoginSubmit');
@@ -177,6 +234,19 @@ function setupProfileForms() {
       const errorEl = document.getElementById('loginError');
       
       errorEl.hidden = true;
+      
+      // Валидация входных данных
+      if (!isValidEmail(email)) {
+        errorEl.textContent = 'Введите корректный email (не менее 5 символов)';
+        errorEl.hidden = false;
+        return;
+      }
+      
+      if (!password || password.length < 1) {
+        errorEl.textContent = 'Введите пароль';
+        errorEl.hidden = false;
+        return;
+      }
       
       const result = await login(email, password);
       if (result.ok) {
@@ -198,6 +268,19 @@ function setupProfileForms() {
       const errorEl = document.getElementById('registerError');
       
       errorEl.hidden = true;
+      
+      // Валидация входных данных
+      if (!isValidEmail(email)) {
+        errorEl.textContent = 'Введите корректный email (не менее 5 символов)';
+        errorEl.hidden = false;
+        return;
+      }
+      
+      if (!isValidPassword(password)) {
+        errorEl.textContent = `Пароль должен содержать не менее ${MIN_PASSWORD_LENGTH} символов`;
+        errorEl.hidden = false;
+        return;
+      }
       
       const result = await register(email, password);
       if (result.ok) {

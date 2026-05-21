@@ -20,6 +20,7 @@ DEFAULT_DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 DEFAULT_FEEDBACK_FILE = "feedback.log"
 DEFAULT_LOG_FILE = "backend.log"
 DEFAULT_DB_FILE = "users.db"
+MIN_PASSWORD_LENGTH = 6
 
 app = Flask(__name__)
 CORS(app)  # Разрешаем CORS запросы с фронтенда
@@ -514,32 +515,40 @@ def register_api_routes(app):
         errors = []
         if not isinstance(email, str) or len(email.strip()) < 5:
             errors.append("email must be a string with at least 5 characters")
-        if not isinstance(password, str) or len(password) < 6:
-            errors.append("password must be a string with at least 6 characters")
+        else:
+            # Проверка формата email
+            email_stripped = email.strip().lower()
+            if '@' not in email_stripped or '.' not in email_stripped.split('@')[-1]:
+                errors.append("email must be in valid format (e.g., user@example.com)")
+        if not isinstance(password, str) or len(password) < MIN_PASSWORD_LENGTH:
+            errors.append(f"password must be a string with at least {MIN_PASSWORD_LENGTH} characters")
         
         if errors:
             return jsonify({"ok": False, "errors": errors}), 400
         
         email = email.strip().lower()
-        password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+        # Используем увеличенный cost factor для лучшей защиты паролей
+        password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode("utf-8")
         created_at = datetime.now(timezone.utc).isoformat()
         
         try:
             conn = _get_db_connection()
-            cursor = conn.cursor()
-            cursor.execute(
-                "INSERT INTO users (email, password_hash, created_at) VALUES (?, ?, ?)",
-                (email, password_hash, created_at)
-            )
-            user_id = cursor.lastrowid
-            cursor.execute(
-                "INSERT INTO user_stats (user_id, updated_at) VALUES (?, ?)",
-                (user_id, created_at)
-            )
-            conn.commit()
-            conn.close()
-            LOGGER.info("User registered: %s", email)
-            return jsonify({"ok": True, "userId": user_id, "email": email})
+            try:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "INSERT INTO users (email, password_hash, created_at) VALUES (?, ?, ?)",
+                    (email, password_hash, created_at)
+                )
+                user_id = cursor.lastrowid
+                cursor.execute(
+                    "INSERT INTO user_stats (user_id, updated_at) VALUES (?, ?)",
+                    (user_id, created_at)
+                )
+                conn.commit()
+                LOGGER.info("User registered: %s", email)
+                return jsonify({"ok": True, "userId": user_id, "email": email})
+            finally:
+                conn.close()
         except sqlite3.IntegrityError:
             LOGGER.warning("Registration failed: email already exists - %s", email)
             return jsonify({"ok": False, "error": "Email already registered"}), 409
@@ -564,6 +573,11 @@ def register_api_routes(app):
         errors = []
         if not isinstance(email, str) or len(email.strip()) < 5:
             errors.append("email must be a string with at least 5 characters")
+        else:
+            # Проверка формата email
+            email_stripped = email.strip().lower()
+            if '@' not in email_stripped or '.' not in email_stripped.split('@')[-1]:
+                errors.append("email must be in valid format (e.g., user@example.com)")
         if not isinstance(password, str) or len(password) < 1:
             errors.append("password is required")
         
@@ -574,30 +588,30 @@ def register_api_routes(app):
         
         try:
             conn = _get_db_connection()
-            cursor = conn.cursor()
-            cursor.execute("SELECT id, password_hash FROM users WHERE email = ?", (email,))
-            row = cursor.fetchone()
-            
-            if not row:
-                LOGGER.warning("Login failed: user not found - %s", email)
+            try:
+                cursor = conn.cursor()
+                cursor.execute("SELECT id, password_hash FROM users WHERE email = ?", (email,))
+                row = cursor.fetchone()
+                
+                if not row:
+                    LOGGER.warning("Login failed: user not found - %s", email)
+                    return jsonify({"ok": False, "error": "Invalid email or password"}), 401
+                
+                user_id = row["id"]
+                password_hash = row["password_hash"]
+                
+                if not bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8")):
+                    LOGGER.warning("Login failed: wrong password - %s", email)
+                    return jsonify({"ok": False, "error": "Invalid email or password"}), 401
+                
+                last_login = datetime.now(timezone.utc).isoformat()
+                cursor.execute("UPDATE users SET last_login = ? WHERE id = ?", (last_login, user_id))
+                conn.commit()
+                
+                LOGGER.info("User logged in: %s", email)
+                return jsonify({"ok": True, "userId": user_id, "email": email})
+            finally:
                 conn.close()
-                return jsonify({"ok": False, "error": "Invalid email or password"}), 401
-            
-            user_id = row["id"]
-            password_hash = row["password_hash"]
-            
-            if not bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8")):
-                LOGGER.warning("Login failed: wrong password - %s", email)
-                conn.close()
-                return jsonify({"ok": False, "error": "Invalid email or password"}), 401
-            
-            last_login = datetime.now(timezone.utc).isoformat()
-            cursor.execute("UPDATE users SET last_login = ? WHERE id = ?", (last_login, user_id))
-            conn.commit()
-            conn.close()
-            
-            LOGGER.info("User logged in: %s", email)
-            return jsonify({"ok": True, "userId": user_id, "email": email})
         except Exception as exc:
             LOGGER.exception("Login failed")
             return jsonify({"ok": False, "error": str(exc)}), 500
@@ -618,35 +632,37 @@ def register_api_routes(app):
 
         try:
             conn = _get_db_connection()
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT u.email, u.created_at, u.last_login, 
-                       s.quick_games_played, s.quick_words_hit, s.quick_words_missed,
-                       s.team_games_played, s.team_rounds_played, s.updated_at
-                FROM users u
-                JOIN user_stats s ON u.id = s.user_id
-                WHERE u.id = ?
-            """, (user_id,)
-            )
-            row = cursor.fetchone()
-            conn.close()
+            try:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT u.email, u.created_at, u.last_login, 
+                           s.quick_games_played, s.quick_words_hit, s.quick_words_missed,
+                           s.team_games_played, s.team_rounds_played, s.updated_at
+                    FROM users u
+                    JOIN user_stats s ON u.id = s.user_id
+                    WHERE u.id = ?
+                """, (user_id,)
+                )
+                row = cursor.fetchone()
 
-            if not row:
-                return jsonify({"ok": False, "error": "User not found"}), 404
+                if not row:
+                    return jsonify({"ok": False, "error": "User not found"}), 404
 
-            stats = {
-                "email": row["email"],
-                "createdAt": row["created_at"],
-                "lastLogin": row["last_login"],
-                "quickGamesPlayed": row["quick_games_played"] or 0,
-                "quickWordsHit": row["quick_words_hit"] or 0,
-                "quickWordsMissed": row["quick_words_missed"] or 0,
-                "teamGamesPlayed": row["team_games_played"] or 0,
-                "teamRoundsPlayed": row["team_rounds_played"] or 0,
-                "updatedAt": row["updated_at"]
-            }
-            return jsonify({"ok": True, "stats": stats})
+                stats = {
+                    "email": row["email"],
+                    "createdAt": row["created_at"],
+                    "lastLogin": row["last_login"],
+                    "quickGamesPlayed": row["quick_games_played"] or 0,
+                    "quickWordsHit": row["quick_words_hit"] or 0,
+                    "quickWordsMissed": row["quick_words_missed"] or 0,
+                    "teamGamesPlayed": row["team_games_played"] or 0,
+                    "teamRoundsPlayed": row["team_rounds_played"] or 0,
+                    "updatedAt": row["updated_at"]
+                }
+                return jsonify({"ok": True, "stats": stats})
+            finally:
+                conn.close()
         except Exception as exc:
             LOGGER.exception("Failed to fetch stats")
             return jsonify({"ok": False, "error": str(exc)}), 500
@@ -690,31 +706,32 @@ def register_api_routes(app):
 
         try:
             conn = _get_db_connection()
-            cursor = conn.cursor()
+            try:
+                cursor = conn.cursor()
 
-            set_clauses = []
-            params = []
-            for key, value in updates.items():
-                set_clauses.append(f"{key} = ?")
-                params.append(value)
+                set_clauses = []
+                params = []
+                for key, value in updates.items():
+                    set_clauses.append(f"{key} = ?")
+                    params.append(value)
 
-            updated_at = datetime.now(timezone.utc).isoformat()
-            set_clauses.append("updated_at = ?")
-            params.append(updated_at)
+                updated_at = datetime.now(timezone.utc).isoformat()
+                set_clauses.append("updated_at = ?")
+                params.append(updated_at)
 
-            params.append(user_id)
+                params.append(user_id)
 
-            query = f"UPDATE user_stats SET {', '.join(set_clauses)} WHERE user_id = ?"
-            cursor.execute(query, params)
+                query = f"UPDATE user_stats SET {', '.join(set_clauses)} WHERE user_id = ?"
+                cursor.execute(query, params)
 
-            if cursor.rowcount == 0:
+                if cursor.rowcount == 0:
+                    return jsonify({"ok": False, "error": "User stats not found"}), 404
+
+                conn.commit()
+                LOGGER.info("Stats updated for user %s", user_id)
+                return jsonify({"ok": True})
+            finally:
                 conn.close()
-                return jsonify({"ok": False, "error": "User stats not found"}), 404
-
-            conn.commit()
-            conn.close()
-            LOGGER.info("Stats updated for user %s", user_id)
-            return jsonify({"ok": True})
         except Exception as exc:
             LOGGER.exception("Failed to update stats")
             return jsonify({"ok": False, "error": str(exc)}), 500
