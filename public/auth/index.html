@@ -6,10 +6,19 @@
     <title>Личный кабинет - CrocoMim</title>
     <link rel="stylesheet" href="../styles/main.css?v=2024-07-06">
     <script>
-        // Инициализируем RUNTIME_CONFIG перед загрузкой auth.js
+        // Инициализируем RUNTIME_CONFIG и RUNTIME_FLAGS перед загрузкой auth.js
         (function(target){
-            const runtimeFlags = { testMode: false, debug: false, env: 'production' };
-            const loc = target.location || { origin: '' };
+            const loc = target.location || { origin: '', href: '' };
+            const href = typeof loc.href === 'string' ? loc.href : '';
+            const inTestPath = href.includes('/test/');
+            const env = inTestPath ? 'test' : 'prod';
+            const runtimeFlags = {
+                env,
+                testMode: env === 'test',
+                debug: env === 'test'
+            };
+            target.RUNTIME_FLAGS = runtimeFlags;
+            
             const runtime = (target.RUNTIME_CONFIG && typeof target.RUNTIME_CONFIG === 'object')
                 ? target.RUNTIME_CONFIG
                 : {};
