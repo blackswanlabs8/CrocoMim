@@ -1251,6 +1251,9 @@ backBtn.onclick = () => {
 if (profileBtn){
   profileBtn.addEventListener('click', () => {
     show('viewProfile');
+    if (window.Profile && window.Profile.setupProfileForms) {
+      window.Profile.setupProfileForms();
+    }
     renderProfileView();
   });
 }
