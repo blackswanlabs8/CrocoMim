@@ -129,7 +129,7 @@ async function loadDictionaryEntries(dictId, difficulty){
 
 // --- Utilities & state ---
 const $ = sel => document.querySelector(sel);
-const VIEWS = ['viewMenu','viewQuickGame','viewTeamSetup','viewTeamGame'];
+const VIEWS = ['viewMenu','viewQuickGame','viewTeamSetup','viewTeamGame','viewProfile'];
 const menuFeedbackBtn = $('#menuFeedbackBtn');
 let screen = 'viewMenu';
 let qBreadcrumbContext = null;
@@ -873,6 +873,7 @@ function setupDictionarySelector(state){
 }
 const backBtn = $('#btnBack');
 const helpBtn = $('#btnHelp');
+const profileBtn = $('#btnProfile');
 const modeQuickBtn = $('#modeQuick');
 const themeSlider = $('#themeSlider');
 const themeSunBtn = $('#themeSun');
@@ -1246,6 +1247,14 @@ backBtn.onclick = () => {
   }
   show('viewMenu');
 };
+
+if (profileBtn){
+  profileBtn.addEventListener('click', () => {
+    show('viewProfile');
+    renderProfileView();
+  });
+}
+
 if (helpBtn){
   helpBtn.addEventListener('click', event => {
     event.preventDefault();
