@@ -65,3 +65,32 @@ sqlite3.OperationalError: database is locked
 2026-05-21 09:33:29,367 [INFO] __main__ - Received /auth/login request
 2026-05-21 09:33:29,880 [INFO] __main__ - User logged in: test@example.com
 2026-05-21 09:33:29,880 [INFO] werkzeug - 127.0.0.1 - - [21/May/2026 09:33:29] "POST /api/auth/login HTTP/1.1" 200 -
+2026-05-21 09:37:22,915 [INFO] __main__ - /healthz endpoint called
+2026-05-21 09:37:22,916 [INFO] werkzeug - 127.0.0.1 - - [21/May/2026 09:37:22] "GET /api/healthz HTTP/1.1" 200 -
+2026-05-21 09:37:39,781 [INFO] __main__ - Logging configured. Writing to /workspace/data/backend.log
+2026-05-21 09:37:39,783 [INFO] __main__ - Database initialized at /workspace/data/users.db
+2026-05-21 09:37:39,783 [INFO] __main__ - Starting Flask app. Version=0.6.1
+2026-05-21 09:37:39,802 [INFO] werkzeug - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://21.0.12.118:5000
+2026-05-21 09:37:39,802 [INFO] werkzeug - [33mPress CTRL+C to quit[0m
+2026-05-21 09:37:44,099 [INFO] __main__ - Received /auth/register request
+2026-05-21 09:37:44,656 [INFO] __main__ - User registered: test123@example.com
+2026-05-21 09:37:44,656 [INFO] werkzeug - 127.0.0.1 - - [21/May/2026 09:37:44] "POST /api/auth/register HTTP/1.1" 200 -
+2026-05-21 09:38:40,660 [INFO] __main__ - Logging configured. Writing to /workspace/data/backend.log
+2026-05-21 09:38:40,662 [INFO] __main__ - Database initialized at /workspace/data/users.db
+2026-05-21 09:38:40,662 [INFO] __main__ - Starting Flask app. Version=0.6.1
+2026-05-21 09:38:40,680 [INFO] werkzeug - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://21.0.12.118:5000
+2026-05-21 09:38:40,680 [INFO] werkzeug - [33mPress CTRL+C to quit[0m
+2026-05-21 09:38:47,300 [INFO] __main__ - Received /auth/register request
+2026-05-21 09:38:47,818 [INFO] __main__ - User registered: newtest@example.com
+2026-05-21 09:38:47,819 [INFO] werkzeug - 127.0.0.1 - - [21/May/2026 09:38:47] "POST /api/auth/register HTTP/1.1" 200 -
+2026-05-21 09:38:51,780 [INFO] __main__ - Received /auth/login request
+2026-05-21 09:38:52,319 [INFO] __main__ - User logged in: newtest@example.com
+2026-05-21 09:38:52,319 [INFO] werkzeug - 127.0.0.1 - - [21/May/2026 09:38:52] "POST /api/auth/login HTTP/1.1" 200 -
+2026-05-21 09:38:54,616 [INFO] __main__ - Received /auth/stats GET request
+2026-05-21 09:38:54,617 [INFO] werkzeug - 127.0.0.1 - - [21/May/2026 09:38:54] "GET /api/auth/stats?userId=4 HTTP/1.1" 200 -
