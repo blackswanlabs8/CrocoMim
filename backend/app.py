@@ -577,9 +577,383 @@ def update_user_stats():
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
+# Конфигурация API префикса
+API_PREFIX = os.environ.get("API_PREFIX", "/api").rstrip("/")
+
+# Создаем Blueprint для API с префиксом
+api_bp = Flask(__name__)
+
+# Копируем все маршруты в blueprint с префиксом
+def register_api_routes(app):
+    """Регистрирует все API маршруты с префиксом /api"""
+    
+    @app.route(f"{API_PREFIX}/")
+    def api_index():
+        LOGGER.info("Health check root endpoint called")
+        return jsonify({"message": "Flask backend is alive"})
+    
+    @app.route(f"{API_PREFIX}/healthz")
+    def api_healthz():
+        LOGGER.info("/healthz endpoint called")
+        return jsonify({"ok": True})
+    
+    @app.route(f"{API_PREFIX}/version")
+    def api_version() -> Any:
+        LOGGER.info(
+            "/version endpoint called from %s with version %s", request.remote_addr, APP_VERSION
+        )
+        return jsonify({"version": APP_VERSION})
+    
+    @app.route(f"{API_PREFIX}/generate-dictionary", methods=["POST"])
+    def api_generate_dictionary():
+        LOGGER.info("Received /generate-dictionary request")
+
+        if not request.is_json:
+            LOGGER.warning("Request rejected: body is not JSON")
+            return jsonify({"ok": False, "error": "Expected JSON body"}), 400
+
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict):
+            LOGGER.warning("Request rejected: malformed JSON body")
+            return jsonify({"ok": False, "error": "Malformed JSON"}), 400
+
+        topic = (payload.get("topic") or "").strip()
+        difficulty_raw = (payload.get("difficulty") or "medium").strip().lower()
+        words_raw = payload.get("words") if "words" in payload else payload.get("targetWords")
+
+        errors: List[str] = []
+        if len(topic) < 3:
+            errors.append("topic must contain at least 3 characters")
+
+        try:
+            target_words = int(words_raw) if words_raw is not None else 50
+        except (TypeError, ValueError):
+            errors.append("words must be a number")
+            target_words = 50
+
+        target_words = max(5, min(target_words, 200))
+
+        try:
+            generator = _load_generator()
+        except Exception as exc:  # pragma: no cover - unexpected config issues
+            LOGGER.exception("Dictionary generator is not available")
+            return jsonify({"ok": False, "error": str(exc)}), 500
+
+        allowed_difficulties = generator.get("difficulties", set())
+        if difficulty_raw not in allowed_difficulties:
+            errors.append(
+                f"difficulty must be one of: {', '.join(sorted(allowed_difficulties))}"
+            )
+
+        if errors:
+            LOGGER.info("Validation failed for /generate-dictionary: %s", errors)
+            return jsonify({"ok": False, "errors": errors}), 400
+
+        try:
+            words = generator["generate"](topic=topic, difficulty=difficulty_raw, target_words=target_words)
+        except Exception as exc:  # pragma: no cover - network or external errors
+            LOGGER.exception("Failed to generate dictionary")
+            return jsonify({"ok": False, "error": f"Failed to generate dictionary: {exc}"}), 500
+
+        if not isinstance(words, list):  # pragma: no cover - unexpected return type
+            LOGGER.error("Generator returned unsupported type: %s", type(words))
+            return jsonify({"ok": False, "error": "Generator returned unsupported format"}), 500
+
+        normalized_words = [w.strip() for w in words if isinstance(w, str) and w.strip()]
+        LOGGER.info(
+            "Generated dictionary for topic '%s' with %d words (requested %d)",
+            topic,
+            len(normalized_words),
+            target_words,
+        )
+        return jsonify(
+            {
+                "ok": True,
+                "topic": topic,
+                "difficulty": difficulty_raw,
+                "count": len(normalized_words),
+                "words": normalized_words,
+            }
+        )
+
+    @app.route(f"{API_PREFIX}/feedback", methods=["POST"])
+    def api_submit_feedback():
+        LOGGER.info("Received /feedback request")
+
+        if not request.is_json:
+            LOGGER.warning("Request rejected: body is not JSON")
+            return jsonify({"ok": False, "error": "Expected JSON body"}), 400
+
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict):
+            LOGGER.warning("Request rejected: malformed JSON body")
+            return jsonify({"ok": False, "error": "Malformed JSON"}), 400
+
+        normalized, errors = _validate_feedback(payload)
+        if errors:
+            LOGGER.info("Validation failed with errors: %s", errors)
+            return jsonify({"ok": False, "errors": errors}), 400
+
+        record = {
+            **normalized,
+            "receivedAt": datetime.now(timezone.utc).isoformat(),
+        }
+
+        LOGGER.info(
+            "Persisting feedback. Category=%s, Email=%s",
+            record.get("category"),
+            record.get("email") or "—",
+        )
+
+        try:
+            _send_email(record)
+        except Exception as exc:  # pragma: no cover - unexpected SMTP errors
+            LOGGER.warning("Failed to send feedback notification email: %s. Continuing to save to file.", exc)
+            # Не прерываем обработку, если email не отправился — всё равно сохраняем в файл
+
+        try:
+            storage_path = _resolve_storage_path()
+            LOGGER.info("Appending feedback to %s", storage_path)
+            with storage_path.open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps(record, ensure_ascii=False))
+                fh.write("\n")
+        except OSError as exc:  # pragma: no cover - filesystem errors are unexpected
+            LOGGER.exception("Failed to persist feedback to file")
+            return jsonify({"ok": False, "error": f"Failed to persist feedback: {exc}"}), 500
+
+        LOGGER.info("Feedback stored successfully")
+        return jsonify({"ok": True})
+
+    # === Личный кабинет: API для регистрации, авторизации и статистики ===
+
+    @app.route(f"{API_PREFIX}/auth/register", methods=["POST"])
+    def api_register_user():
+        LOGGER.info("Received /auth/register request")
+        
+        if not request.is_json:
+            return jsonify({"ok": False, "error": "Expected JSON body"}), 400
+        
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict):
+            return jsonify({"ok": False, "error": "Malformed JSON"}), 400
+        
+        email = payload.get("email")
+        password = payload.get("password")
+        
+        errors = []
+        if not isinstance(email, str) or len(email.strip()) < 5:
+            errors.append("email must be a string with at least 5 characters")
+        if not isinstance(password, str) or len(password) < 6:
+            errors.append("password must be a string with at least 6 characters")
+        
+        if errors:
+            return jsonify({"ok": False, "errors": errors}), 400
+        
+        email = email.strip().lower()
+        password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+        created_at = datetime.now(timezone.utc).isoformat()
+        
+        try:
+            conn = _get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO users (email, password_hash, created_at) VALUES (?, ?, ?)",
+                (email, password_hash, created_at)
+            )
+            user_id = cursor.lastrowid
+            cursor.execute(
+                "INSERT INTO user_stats (user_id, updated_at) VALUES (?, ?)",
+                (user_id, created_at)
+            )
+            conn.commit()
+            conn.close()
+            LOGGER.info("User registered: %s", email)
+            return jsonify({"ok": True, "userId": user_id, "email": email})
+        except sqlite3.IntegrityError:
+            LOGGER.warning("Registration failed: email already exists - %s", email)
+            return jsonify({"ok": False, "error": "Email already registered"}), 409
+        except Exception as exc:
+            LOGGER.exception("Registration failed")
+            return jsonify({"ok": False, "error": str(exc)}), 500
+
+    @app.route(f"{API_PREFIX}/auth/login", methods=["POST"])
+    def api_login_user():
+        LOGGER.info("Received /auth/login request")
+        
+        if not request.is_json:
+            return jsonify({"ok": False, "error": "Expected JSON body"}), 400
+        
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict):
+            return jsonify({"ok": False, "error": "Malformed JSON"}), 400
+        
+        email = payload.get("email")
+        password = payload.get("password")
+        
+        errors = []
+        if not isinstance(email, str) or len(email.strip()) < 5:
+            errors.append("email must be a string with at least 5 characters")
+        if not isinstance(password, str) or len(password) < 1:
+            errors.append("password is required")
+        
+        if errors:
+            return jsonify({"ok": False, "errors": errors}), 400
+        
+        email = email.strip().lower()
+        
+        try:
+            conn = _get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, password_hash FROM users WHERE email = ?", (email,))
+            row = cursor.fetchone()
+            
+            if not row:
+                LOGGER.warning("Login failed: user not found - %s", email)
+                conn.close()
+                return jsonify({"ok": False, "error": "Invalid email or password"}), 401
+            
+            user_id = row["id"]
+            password_hash = row["password_hash"]
+            
+            if not bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8")):
+                LOGGER.warning("Login failed: wrong password - %s", email)
+                conn.close()
+                return jsonify({"ok": False, "error": "Invalid email or password"}), 401
+            
+            last_login = datetime.now(timezone.utc).isoformat()
+            cursor.execute("UPDATE users SET last_login = ? WHERE id = ?", (last_login, user_id))
+            conn.commit()
+            conn.close()
+            
+            LOGGER.info("User logged in: %s", email)
+            return jsonify({"ok": True, "userId": user_id, "email": email})
+        except Exception as exc:
+            LOGGER.exception("Login failed")
+            return jsonify({"ok": False, "error": str(exc)}), 500
+
+    @app.route(f"{API_PREFIX}/auth/stats", methods=["GET"])
+    def api_get_user_stats():
+        LOGGER.info("Received /auth/stats GET request")
+
+        user_id = request.args.get("userId")
+
+        if not user_id:
+            return jsonify({"ok": False, "error": "userId is required"}), 400
+
+        try:
+            user_id = int(user_id)
+        except (TypeError, ValueError):
+            return jsonify({"ok": False, "error": "userId must be an integer"}), 400
+
+        try:
+            conn = _get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT u.email, u.created_at, u.last_login, 
+                       s.quick_games_played, s.quick_words_hit, s.quick_words_missed,
+                       s.team_games_played, s.team_rounds_played, s.updated_at
+                FROM users u
+                JOIN user_stats s ON u.id = s.user_id
+                WHERE u.id = ?
+            """, (user_id,)
+            )
+            row = cursor.fetchone()
+            conn.close()
+
+            if not row:
+                return jsonify({"ok": False, "error": "User not found"}), 404
+
+            stats = {
+                "email": row["email"],
+                "createdAt": row["created_at"],
+                "lastLogin": row["last_login"],
+                "quickGamesPlayed": row["quick_games_played"] or 0,
+                "quickWordsHit": row["quick_words_hit"] or 0,
+                "quickWordsMissed": row["quick_words_missed"] or 0,
+                "teamGamesPlayed": row["team_games_played"] or 0,
+                "teamRoundsPlayed": row["team_rounds_played"] or 0,
+                "updatedAt": row["updated_at"]
+            }
+            return jsonify({"ok": True, "stats": stats})
+        except Exception as exc:
+            LOGGER.exception("Failed to fetch stats")
+            return jsonify({"ok": False, "error": str(exc)}), 500
+
+    @app.route(f"{API_PREFIX}/auth/stats", methods=["POST"])
+    def api_update_user_stats():
+        LOGGER.info("Received /auth/stats POST request")
+
+        if not request.is_json:
+            return jsonify({"ok": False, "error": "Expected JSON body"}), 400
+
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict):
+            return jsonify({"ok": False, "error": "Malformed JSON"}), 400
+
+        user_id = payload.get("userId")
+        stats_update = payload.get("stats", {})
+
+        if not user_id:
+            return jsonify({"ok": False, "error": "userId is required"}), 400
+
+        try:
+            user_id = int(user_id)
+        except (TypeError, ValueError):
+            return jsonify({"ok": False, "error": "userId must be an integer"}), 400
+
+        allowed_fields = {
+            "quick_games_played", "quick_words_hit", "quick_words_missed",
+            "team_games_played", "team_rounds_played"
+        }
+
+        updates = {}
+        for key, value in stats_update.items():
+            db_key = key.replace("quickGames", "quick_games").replace("quickWords", "quick_words").replace("teamGames", "team_games").replace("teamRounds", "team_rounds")
+            db_key = db_key.replace("Played", "_played").replace("Hit", "_hit").replace("Missed", "_missed")
+            if db_key in allowed_fields and isinstance(value, int) and value >= 0:
+                updates[db_key] = value
+
+        if not updates:
+            return jsonify({"ok": False, "error": "No valid stats to update"}), 400
+
+        try:
+            conn = _get_db_connection()
+            cursor = conn.cursor()
+
+            set_clauses = []
+            params = []
+            for key, value in updates.items():
+                set_clauses.append(f"{key} = ?")
+                params.append(value)
+
+            updated_at = datetime.now(timezone.utc).isoformat()
+            set_clauses.append("updated_at = ?")
+            params.append(updated_at)
+
+            params.append(user_id)
+
+            query = f"UPDATE user_stats SET {', '.join(set_clauses)} WHERE user_id = ?"
+            cursor.execute(query, params)
+
+            if cursor.rowcount == 0:
+                conn.close()
+                return jsonify({"ok": False, "error": "User stats not found"}), 404
+
+            conn.commit()
+            conn.close()
+            LOGGER.info("Stats updated for user %s", user_id)
+            return jsonify({"ok": True})
+        except Exception as exc:
+            LOGGER.exception("Failed to update stats")
+            return jsonify({"ok": False, "error": str(exc)}), 500
+
+
 if __name__ == "__main__":
     _init_db()
     LOGGER.info("Starting Flask app. Version=%s", APP_VERSION)
     host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT", "3000"))
+    # Регистрируем API маршруты с префиксом
+    register_api_routes(app)
     app.run(host=host, port=port)
