@@ -5,6 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Личный кабинет - CrocoMim</title>
     <link rel="stylesheet" href="../styles/main.css?v=2024-07-06">
+    <script>
+        // Инициализируем RUNTIME_CONFIG перед загрузкой auth.js
+        (function(target){
+            const runtimeFlags = { testMode: false, debug: false, env: 'production' };
+            const loc = target.location || { origin: '' };
+            const runtime = (target.RUNTIME_CONFIG && typeof target.RUNTIME_CONFIG === 'object')
+                ? target.RUNTIME_CONFIG
+                : {};
+            const origin = loc && typeof loc.origin === 'string' ? loc.origin : '';
+            const apiPath = runtimeFlags.testMode ? '/test/api' : '/api';
+            const apiBase = origin ? `${origin}${apiPath}` : apiPath;
+            runtime.publicApiBaseUrl = apiBase;
+            runtime.backendBaseUrl = apiBase;
+            target.RUNTIME_CONFIG = runtime;
+            target.RUNTIME_CONFIG_READY = Promise.resolve(runtime);
+        })(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : undefined));
+    </script>
     <style>
         .auth-container {
             max-width: 400px;

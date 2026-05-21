@@ -3,7 +3,25 @@
  * Предоставляет функции для регистрации, входа, выхода и управления профилем.
  */
 
-const API_BASE_URL = ''; // Пустой URL означает тот же домен
+/**
+ * Базовый URL для API. Использует runtime-конфигурацию если доступна.
+ */
+function getApiBaseUrl() {
+    // Проверяем runtime-конфигурацию (как в app.js и feedback.js)
+    const flags = (typeof window.RUNTIME_FLAGS === 'object' && window.RUNTIME_FLAGS) || {};
+    const origin = window.location?.origin || '';
+    const apiPath = flags.testMode ? '/test/api' : '/api';
+    const apiBase = origin ? `${origin}${apiPath}` : apiPath;
+    
+    // Используем runtime config если доступен
+    if (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.publicApiBaseUrl) {
+        return window.RUNTIME_CONFIG.publicApiBaseUrl;
+    }
+    
+    return apiBase;
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 /**
  * Сохранить токен сессии в localStorage

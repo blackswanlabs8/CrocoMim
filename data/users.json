@@ -1,0 +1,34 @@
+{
+  "users": {
+    "ec35490b8021301766db696d12ae1ac0": {
+      "id": "ec35490b8021301766db696d12ae1ac0",
+      "username": "testuser",
+      "display_name": "testuser",
+      "email": "test@example.com",
+      "password_hash": "1539bc2e0bacff644d81a5b7fcfbbd8394945ba39571000f318013b512598e1a",
+      "salt": "819a1b9d091e5a9965e1a75eeede962552c26a72d6aaebccb5bf89073239373b",
+      "created_at": "2026-05-21T11:43:28.561749+00:00",
+      "updated_at": "2026-05-21T11:43:28.561749+00:00"
+    },
+    "910597f338a45c590c6b3fdb37f8ed3d": {
+      "id": "910597f338a45c590c6b3fdb37f8ed3d",
+      "username": "newuser",
+      "display_name": "newuser",
+      "email": "newuser@example.com",
+      "password_hash": "aa372a74c0c7537bcd6402bb20243f93caab72b70349fd31f472e9f235da49ea",
+      "salt": "eb93bbe004293150af9a0d0ab1bffcdd0fd0727a2ccbce6c5472e5b4e5bc89c1",
+      "created_at": "2026-05-21T11:44:43.978161+00:00",
+      "updated_at": "2026-05-21T11:44:43.978161+00:00"
+    },
+    "a052b2d145f42c2cbeb6e74b8516e023": {
+      "id": "a052b2d145f42c2cbeb6e74b8516e023",
+      "username": "testapi",
+      "display_name": "testapi",
+      "email": "testapi@example.com",
+      "password_hash": "6e8ea3691f3db8b061df034a10381d62644f79e562b4109744b6b0b69a7b544e",
+      "salt": "e2292dc530270f06189665ac553da9e2001e15aa2caefc950dceb52742e33bbd",
+      "created_at": "2026-05-21T11:44:50.121919+00:00",
+      "updated_at": "2026-05-21T11:44:50.121919+00:00"
+    }
+  }
+}
