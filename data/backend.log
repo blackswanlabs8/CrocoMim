@@ -37,3 +37,31 @@
 2026-05-21 09:25:05,097 [INFO] __main__ - Received /auth/register request
 2026-05-21 09:25:05,641 [INFO] __main__ - User registered: test123@test.com
 2026-05-21 09:25:05,641 [INFO] werkzeug - 127.0.0.1 - - [21/May/2026 09:25:05] "POST /api/auth/register HTTP/1.1" 200 -
+2026-05-21 09:32:46,885 [INFO] __main__ - Logging configured. Writing to /workspace/data/backend.log
+2026-05-21 09:32:46,896 [INFO] __main__ - Database initialized at /workspace/data/users.db
+2026-05-21 09:32:46,897 [INFO] __main__ - Starting Flask app. Version=0.6.1
+2026-05-21 09:32:58,177 [INFO] __main__ - /healthz endpoint called
+2026-05-21 09:32:58,177 [INFO] werkzeug - 127.0.0.1 - - [21/May/2026 09:32:58] "GET /healthz HTTP/1.1" 200 -
+2026-05-21 09:33:00,723 [INFO] __main__ - /healthz endpoint called
+2026-05-21 09:33:00,723 [INFO] werkzeug - 127.0.0.1 - - [21/May/2026 09:33:00] "GET /api/healthz HTTP/1.1" 200 -
+2026-05-21 09:33:05,381 [INFO] __main__ - Received /auth/register request
+2026-05-21 09:33:05,899 [WARNING] __main__ - Registration failed: email already exists - test@example.com
+2026-05-21 09:33:05,899 [INFO] werkzeug - 127.0.0.1 - - [21/May/2026 09:33:05] "[31m[1mPOST /api/auth/register HTTP/1.1[0m" 409 -
+2026-05-21 09:33:09,139 [INFO] __main__ - Received /auth/login request
+2026-05-21 09:33:14,665 [ERROR] __main__ - Login failed
+Traceback (most recent call last):
+  File "/workspace/backend/app.py", line 592, in api_login_user
+    cursor.execute("UPDATE users SET last_login = ? WHERE id = ?", (last_login, user_id))
+sqlite3.OperationalError: database is locked
+2026-05-21 09:33:14,666 [INFO] werkzeug - 127.0.0.1 - - [21/May/2026 09:33:14] "[35m[1mPOST /api/auth/login HTTP/1.1[0m" 500 -
+2026-05-21 09:33:24,121 [INFO] __main__ - Logging configured. Writing to /workspace/data/backend.log
+2026-05-21 09:33:24,137 [INFO] __main__ - Database initialized at /workspace/data/users.db
+2026-05-21 09:33:24,137 [INFO] __main__ - Starting Flask app. Version=0.6.1
+2026-05-21 09:33:24,175 [INFO] werkzeug - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3000
+ * Running on http://21.0.12.118:3000
+2026-05-21 09:33:24,175 [INFO] werkzeug - [33mPress CTRL+C to quit[0m
+2026-05-21 09:33:29,367 [INFO] __main__ - Received /auth/login request
+2026-05-21 09:33:29,880 [INFO] __main__ - User logged in: test@example.com
+2026-05-21 09:33:29,880 [INFO] werkzeug - 127.0.0.1 - - [21/May/2026 09:33:29] "POST /api/auth/login HTTP/1.1" 200 -
