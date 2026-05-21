@@ -24,3 +24,16 @@
 2026-05-21 08:43:33,463 [INFO] werkzeug - 127.0.0.1 - - [21/May/2026 08:43:33] "POST /api/auth/login HTTP/1.1" 200 -
 2026-05-21 08:43:36,540 [INFO] __main__ - Received /auth/stats GET request
 2026-05-21 08:43:36,541 [INFO] werkzeug - 127.0.0.1 - - [21/May/2026 08:43:36] "GET /api/auth/stats?userId=1 HTTP/1.1" 200 -
+2026-05-21 09:24:32,261 [INFO] __main__ - Logging configured. Writing to /workspace/data/backend.log
+2026-05-21 09:24:32,263 [INFO] __main__ - Database initialized at /workspace/data/users.db
+2026-05-21 09:24:32,263 [INFO] __main__ - Starting Flask app. Version=0.6.1
+2026-05-21 09:24:32,282 [INFO] werkzeug - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3000
+ * Running on http://21.0.12.118:3000
+2026-05-21 09:24:32,282 [INFO] werkzeug - [33mPress CTRL+C to quit[0m
+2026-05-21 09:25:00,299 [INFO] __main__ - /healthz endpoint called
+2026-05-21 09:25:00,300 [INFO] werkzeug - 127.0.0.1 - - [21/May/2026 09:25:00] "GET /api/healthz HTTP/1.1" 200 -
+2026-05-21 09:25:05,097 [INFO] __main__ - Received /auth/register request
+2026-05-21 09:25:05,641 [INFO] __main__ - User registered: test123@test.com
+2026-05-21 09:25:05,641 [INFO] werkzeug - 127.0.0.1 - - [21/May/2026 09:25:05] "POST /api/auth/register HTTP/1.1" 200 -
