@@ -3,15 +3,8 @@
 
 const PROFILE_SESSION_KEY = 'croc-profile-session';
 
-// Определяем API_BASE динамически, как в app.js и feedback.js
-function getApiBase() {
-  const flags = window.CrocoRuntimeFlags || {};
-  const apiPath = flags.testMode ? '/test/api' : '/api';
-  const origin = window.location.origin;
-  return origin ? `${origin}${apiPath}` : apiPath;
-}
-
-const API_BASE = getApiBase(); // Префикс для API endpoints
+// Используем относительный путь к API, как в feedback.js
+const API_BASE = '/api';
 
 // Состояние профиля
 let profileState = {
