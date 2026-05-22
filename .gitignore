@@ -10,28 +10,11 @@ __pycache__/
 .env.local
 *.env.*
 
+# Logs
+*.log
+backend.log
+
 # Dependencies
 venv/
 .venv/
-.env/
-
-# Logs
-*.log
-
-# Temporary files
-*.tmp
-*.swp
-*.swo
-
-# OS generated files
-.DS_Store
-Thumbs.db
-
-# Coverage reports
-.coverage
-htmlcov/
-coverage/
-
-# MyPy cache
-.mypy_cache/
 ```
