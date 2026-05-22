@@ -361,3 +361,130 @@ def change_password(user_id: str, old_password: str, new_password: str) -> Tuple
     _save_users(users_data)
     
     return True, "Пароль успешно изменен"
+
+
+def get_user_by_id(user_id: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+    """
+    Получить данные пользователя по ID.
+    
+    Args:
+        user_id: ID пользователя
+    
+    Returns:
+        Кортеж (success, message, user_data)
+        - success: True если пользователь найден
+        - message: Сообщение о результате
+        - user_data: Данные пользователя без чувствительной информации или None
+    """
+    if not user_id:
+        return False, "ID пользователя не предоставлен", None
+    
+    users_data = _load_users()
+    
+    if user_id not in users_data["users"]:
+        return False, "Пользователь не найден", None
+    
+    user = users_data["users"][user_id]
+    
+    # Возвращаем данные пользователя без чувствительной информации
+    user_data = {
+        "id": user["id"],
+        "username": user["username"],
+        "display_name": user["display_name"],
+        "email": user["email"],
+        "created_at": user.get("created_at"),
+        "updated_at": user.get("updated_at"),
+        "last_dict_generation": user.get("last_dict_generation")
+    }
+    
+    return True, "Пользователь найден", user_data
+
+
+def check_generation_limit(user_id: str, limit_hours: int = 24) -> Tuple[bool, str, bool]:
+    """
+    Проверить, может ли пользователь сгенерировать словарь (лимит 1 генерация в N часов).
+    
+    Args:
+        user_id: ID пользователя
+        limit_hours: Период ограничения в часах (по умолчанию 24 часа)
+    
+    Returns:
+        Кортеж (success, message, can_generate)
+        - success: True если проверка выполнена успешно
+        - message: Сообщение о результате
+        - can_generate: True если пользователь может генерировать словарь
+    """
+    if not user_id:
+        return False, "ID пользователя не предоставлен", False
+    
+    users_data = _load_users()
+    
+    if user_id not in users_data["users"]:
+        return False, "Пользователь не найден", False
+    
+    user = users_data["users"][user_id]
+    last_generation = user.get("last_dict_generation")
+    
+    # Если пользователь никогда не генерировал словарь, разрешаем генерацию
+    if last_generation is None:
+        return True, "Лимит не превышен", True
+    
+    try:
+        # Парсим время последней генерации
+        last_gen_datetime = datetime.fromisoformat(last_generation)
+        
+        # Получаем текущее время в UTC
+        now = datetime.now(timezone.utc)
+        
+        # Вычисляем разницу во времени
+        time_diff = now - last_gen_datetime
+        
+        # Проверяем, прошло ли достаточно времени
+        if time_diff.total_seconds() >= limit_hours * 3600:
+            return True, "Лимит не превышен", True
+        else:
+            # Вычисляем, сколько осталось ждать
+            remaining_seconds = (limit_hours * 3600) - time_diff.total_seconds()
+            remaining_hours = int(remaining_seconds // 3600)
+            remaining_minutes = int((remaining_seconds % 3600) // 60)
+            
+            if remaining_hours > 0:
+                wait_message = f"Подождите ещё {remaining_hours} ч. {remaining_minutes} мин."
+            else:
+                wait_message = f"Подождите ещё {remaining_minutes} мин."
+            
+            return True, f"Превышен лимит генерации. {wait_message}", False
+            
+    except (ValueError, TypeError) as e:
+        # Если время некорректно, считаем что лимит не превышен
+        return True, "Лимит не превышен", True
+
+
+def update_last_generation(user_id: str) -> Tuple[bool, str]:
+    """
+    Обновить время последней генерации словаря для пользователя.
+    
+    Args:
+        user_id: ID пользователя
+    
+    Returns:
+        Кортеж (success, message)
+        - success: True если обновление выполнено успешно
+        - message: Сообщение о результате
+    """
+    if not user_id:
+        return False, "ID пользователя не предоставлен"
+    
+    users_data = _load_users()
+    
+    if user_id not in users_data["users"]:
+        return False, "Пользователь не найден"
+    
+    # Устанавливаем текущее время в UTC
+    now = datetime.now(timezone.utc).isoformat()
+    users_data["users"][user_id]["last_dict_generation"] = now
+    users_data["users"][user_id]["updated_at"] = now
+    
+    _save_users(users_data)
+    
+    return True, "Время последней генерации обновлено"
