@@ -18,7 +18,11 @@ from user_auth import (
     get_user_by_session,
     update_display_name,
     change_password,
+    check_generation_limit,
+    update_last_generation,
 )
+from services.llm_service import generate_dictionary as generate_dict_llm
+from services.llm_service import DictionaryGenerationError
 
 ALLOWED_CATEGORIES = {"typo", "difficulty", "other"}
 DEFAULT_DATA_DIR = Path(__file__).resolve().parent.parent / "data"
@@ -183,6 +187,197 @@ def version() -> Any:
         "/version endpoint called from %s with version %s", request.remote_addr, APP_VERSION
     )
     return jsonify({"version": APP_VERSION})
+
+
+@app.route("/api/generate-dictionary", methods=["POST"])
+def api_generate_dictionary():
+    """
+    Генерация словаря через OpenRouter API с проверкой лимитов.
+    
+    Требует авторизации через Bearer токен.
+    Лимит: 1 генерация в 24 часа на пользователя.
+    
+    Returns:
+        dictionary: Список слов
+        allowed: Флаг доступности генерации
+        next_available_at: Время следующей доступной генерации (UTC)
+    """
+    LOGGER.info("Received /api/generate-dictionary request")
+    
+    # Проверка авторизации
+    auth_header = request.headers.get("Authorization", "")
+    session_token = None
+    
+    if auth_header.startswith("Bearer "):
+        session_token = auth_header[7:]
+    
+    if not session_token:
+        LOGGER.warning("No session token provided for dictionary generation")
+        return jsonify({"ok": False, "error": "Требуется авторизация"}), 401
+    
+    # Получение данных пользователя
+    success, message, user_data = get_user_by_session(session_token)
+    
+    if not success:
+        LOGGER.info("Dictionary generation - auth failed: %s", message)
+        return jsonify({"ok": False, "error": message}), 401
+    
+    user_id = user_data["id"]
+    LOGGER.info("Dictionary generation request from user: %s", user_data["username"])
+    
+    # Проверка лимита генерации
+    limit_success, limit_message, can_generate = check_generation_limit(user_id, limit_hours=24)
+    
+    if not can_generate:
+        LOGGER.info("Generation limit exceeded for user %s: %s", user_id, limit_message)
+        # Извлекаем время следующей доступной генерации из сообщения
+        next_available_at = None
+        if "следующая попытка доступна" in limit_message:
+            # Парсим время из сообщения вида "... следующая попытка доступна в YYYY-MM-DDTHH:MM:SS..."
+            import re
+            match = re.search(r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})', limit_message)
+            if match:
+                next_available_at = match.group(1)
+        
+        return jsonify({
+            "ok": False,
+            "error": limit_message,
+            "allowed": False,
+            "next_available_at": next_available_at
+        }), 429
+    
+    # Парсинг параметров запроса
+    if not request.is_json:
+        LOGGER.warning("Request rejected: body is not JSON")
+        return jsonify({"ok": False, "error": "Expected JSON body"}), 400
+    
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        LOGGER.warning("Request rejected: malformed JSON body")
+        return jsonify({"ok": False, "error": "Malformed JSON"}), 400
+    
+    difficulty_raw = (payload.get("difficulty") or "medium").strip().lower()
+    topic = (payload.get("topic") or "").strip()
+    
+    # Валидация сложности
+    allowed_difficulties = {"easy", "medium", "hard"}
+    if difficulty_raw not in allowed_difficulties:
+        LOGGER.warning("Invalid difficulty: %s", difficulty_raw)
+        return jsonify({
+            "ok": False,
+            "error": f"difficulty must be one of: {', '.join(sorted(allowed_difficulties))}"
+        }), 400
+    
+    try:
+        # Генерация словаря через LLM сервис
+        LOGGER.info("Generating dictionary for user %s: difficulty=%s, topic=%s", 
+                   user_id, difficulty_raw, topic or "общая")
+        dictionary = generate_dict_llm(difficulty=difficulty_raw, topic=topic if topic else None)
+        
+        # Обновление времени последней генерации
+        update_success, update_message = update_last_generation(user_id)
+        
+        if not update_success:
+            LOGGER.warning("Failed to update last generation time for user %s: %s", user_id, update_message)
+            # Не прерываем ответ, но логируем предупреждение
+        
+        # Вычисление времени следующей доступной генерации
+        from datetime import timedelta
+        next_available = datetime.now(timezone.utc) + timedelta(hours=24)
+        next_available_at = next_available.isoformat()
+        
+        LOGGER.info("Dictionary generated successfully for user %s: %d words", user_id, len(dictionary))
+        
+        return jsonify({
+            "ok": True,
+            "dictionary": dictionary,
+            "allowed": True,
+            "next_available_at": next_available_at,
+            "count": len(dictionary)
+        }), 200
+        
+    except DictionaryGenerationError as e:
+        LOGGER.exception("Dictionary generation failed for user %s", user_id)
+        return jsonify({
+            "ok": False,
+            "error": f"Ошибка генерации словаря: {e}"
+        }), 500
+    except ValueError as e:
+        LOGGER.exception("Validation error for user %s", user_id)
+        return jsonify({
+            "ok": False,
+            "error": str(e)
+        }), 400
+    except Exception as e:
+        LOGGER.exception("Unexpected error during dictionary generation for user %s", user_id)
+        return jsonify({
+            "ok": False,
+            "error": f"Внутренняя ошибка сервера: {e}"
+        }), 500
+
+
+@app.route("/api/dict/status", methods=["GET"])
+def api_dict_status():
+    """
+    Проверка статуса лимита генерации словаря для текущего пользователя.
+    
+    Требует авторизации через Bearer токен.
+    
+    Returns:
+        allowed: Флаг доступности генерации
+        next_available_at: Время следующей доступной генерации (UTC)
+        last_generation: Время последней генерации (если есть)
+    """
+    LOGGER.info("Received /api/dict/status request")
+    
+    # Проверка авторизации
+    auth_header = request.headers.get("Authorization", "")
+    session_token = None
+    
+    if auth_header.startswith("Bearer "):
+        session_token = auth_header[7:]
+    
+    if not session_token:
+        LOGGER.warning("No session token provided for dict status")
+        return jsonify({"ok": False, "error": "Требуется авторизация"}), 401
+    
+    # Получение данных пользователя
+    success, message, user_data = get_user_by_session(session_token)
+    
+    if not success:
+        LOGGER.info("Dict status - auth failed: %s", message)
+        return jsonify({"ok": False, "error": message}), 401
+    
+    user_id = user_data["id"]
+    LOGGER.info("Dict status check for user: %s", user_data["username"])
+    
+    # Проверка лимита генерации
+    limit_success, limit_message, can_generate = check_generation_limit(user_id, limit_hours=24)
+    
+    # Извлечение времени последней генерации из данных пользователя
+    last_generation = user_data.get("last_dict_generation")
+    
+    # Вычисление времени следующей доступной генерации
+    next_available_at = None
+    if not can_generate and "следующая попытка доступна" in limit_message:
+        import re
+        match = re.search(r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})', limit_message)
+        if match:
+            next_available_at = match.group(1)
+    elif can_generate:
+        # Если генерация разрешена, следующая доступна сразу после текущей
+        from datetime import timedelta
+        next_available = datetime.now(timezone.utc) + timedelta(hours=24)
+        next_available_at = next_available.isoformat()
+    
+    LOGGER.info("Dict status for user %s: allowed=%s", user_id, can_generate)
+    
+    return jsonify({
+        "ok": True,
+        "allowed": can_generate,
+        "next_available_at": next_available_at,
+        "last_generation": last_generation
+    }), 200
 
 
 @app.route("/generate-dictionary", methods=["POST"])
