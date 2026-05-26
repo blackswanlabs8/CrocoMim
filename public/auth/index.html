@@ -559,15 +559,22 @@
         
         // Инициализация
         async function init() {
-            if (AuthAPI.isAuthenticated()) {
-                const result = await AuthAPI.getCurrentUser();
-                if (result.success) {
-                    currentUser = result.user;
-                    showProfile();
-                } else {
-                    showAuthForms();
-                }
-            } else {
+            if (!AuthAPI.isAuthenticated()) {
+                showAuthForms();
+                return;
+            }
+
+            const cachedUser = AuthAPI.getSessionUser();
+            if (cachedUser) {
+                currentUser = cachedUser;
+                showProfile();
+            }
+
+            const result = await AuthAPI.getCurrentUser();
+            if (result.success) {
+                currentUser = result.user;
+                showProfile();
+            } else if (!cachedUser) {
                 showAuthForms();
             }
         }

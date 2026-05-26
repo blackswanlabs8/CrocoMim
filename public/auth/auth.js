@@ -23,6 +23,36 @@ function getApiBaseUrl() {
 
 const API_BASE_URL = getApiBaseUrl();
 
+/**
+ * Ключ для хранения данных пользователя в localStorage
+ */
+const SESSION_USER_KEY = 'session_user';
+
+function saveSessionUser(user) {
+    if (!user || typeof user !== 'object') return;
+    try {
+        localStorage.setItem(SESSION_USER_KEY, JSON.stringify(user));
+    } catch (error) {
+        console.warn('Не удалось сохранить профиль пользователя локально:', error);
+    }
+}
+
+function getSessionUser() {
+    try {
+        const raw = localStorage.getItem(SESSION_USER_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch (error) {
+        console.warn('Не удалось прочитать профиль пользователя из localStorage:', error);
+        return null;
+    }
+}
+
+function removeSessionUser() {
+    localStorage.removeItem(SESSION_USER_KEY);
+}
+
 async function parseApiResponse(response) {
     const contentType = response.headers.get('content-type') || '';
     if (contentType.includes('application/json')) {
@@ -111,6 +141,7 @@ async function login(username, password) {
         
         if (data.ok) {
             saveSessionToken(data.session_token);
+            saveSessionUser(data.user);
             return { success: true, message: 'Вход выполнен успешно', user: data.user, session_token: data.session_token };
         } else {
             return { success: false, message: data.error || 'Ошибка входа' };
@@ -140,6 +171,7 @@ async function logout() {
         
         const data = await parseApiResponse(response);
         removeSessionToken();
+        removeSessionUser();
         
         if (data.ok) {
             return { success: true, message: data.message || 'Выход выполнен успешно' };
@@ -149,6 +181,7 @@ async function logout() {
     } catch (error) {
         console.error('Logout error:', error);
         removeSessionToken();
+        removeSessionUser();
         return { success: true, message: 'Выход выполнен (сессия удалена локально)' };
     }
 }
@@ -175,15 +208,21 @@ async function getCurrentUser() {
         const data = await parseApiResponse(response);
         
         if (data.ok) {
+            saveSessionUser(data.user);
             return { success: true, message: 'Данные получены', user: data.user };
         } else {
             if (response.status === 401) {
                 removeSessionToken();
+                removeSessionUser();
             }
             return { success: false, message: data.error || 'Ошибка получения данных' };
         }
     } catch (error) {
         console.error('Get current user error:', error);
+        const cachedUser = getSessionUser();
+        if (cachedUser) {
+            return { success: true, message: 'Показаны локально сохраненные данные пользователя', user: cachedUser, cached: true };
+        }
         return { success: false, message: 'Ошибка соединения с сервером' };
     }
 }
