@@ -1,0 +1,56 @@
+name: Deploy /backend to crocomim.ru/api.test 2
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [ test ]
+    paths: ['backend/**']   # деплой только при изменениях в /backend
+
+concurrency:
+  group: deploy-test
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify /backend exists
+        shell: bash
+        run: |
+          set -e
+          test -d backend || { echo "backend/ not found in repo root"; exit 1; }
+          echo "Found backend/:"
+          du -sh backend || true
+
+      - name: Ensure remote directory (crocomim.ru/public_html/api.test)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host:     ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key:      ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            REMOTE_ROOT="/home/${{ secrets.SSH_USER }}/domains/${{ secrets.DOMAIN }}/public_html/api.test"
+            mkdir -p "$REMOTE_ROOT"
+            chmod 755 "$REMOTE_ROOT"
+            echo "REMOTE_ROOT ensured: $REMOTE_ROOT"
+
+      - name: Deploy with rsync over SSH
+        uses: burnett01/rsync-deployments@7.1.0
+        with:
+          # -a архивный режим, -z сжатие, --delete зеркалирование
+          switches: >-
+            -az --delete
+            --chmod=F644,D755
+            --exclude='venv/'
+            --exclude='backendctl'
+            
+          path: ./backend/   # отправляем ТОЛЬКО содержимое backend/
+          remote_path: /home/${{ secrets.SSH_USER }}/domains/${{ secrets.DOMAIN }}/public_html/api.test
+          remote_host: ${{ secrets.SSH_HOST }}
+          remote_user: ${{ secrets.SSH_USER }}
+          remote_key:  ${{ secrets.SSH_KEY }}
