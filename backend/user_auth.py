@@ -6,7 +6,7 @@ Provides user registration, login, profile management functionality.
 import os
 import secrets
 import hashlib
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional, Dict, Any, Tuple
 import json
@@ -91,6 +91,24 @@ def _generate_session_token() -> str:
     """Сгенерировать уникальный токен сессии."""
     return secrets.token_urlsafe(64)
 
+
+
+
+def _is_session_expired(session: Dict[str, Any]) -> bool:
+    """Проверить, истекла ли сессия пользователя."""
+    expires_at = session.get("expires_at")
+    if not expires_at:
+        return False
+
+    try:
+        expires_dt = datetime.fromisoformat(expires_at)
+    except (TypeError, ValueError):
+        return False
+
+    if expires_dt.tzinfo is None:
+        expires_dt = expires_dt.replace(tzinfo=timezone.utc)
+
+    return datetime.now(timezone.utc) >= expires_dt
 
 def register_user(username: str, email: str, password: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
     """
@@ -198,11 +216,12 @@ def login_user(username: str, password: str) -> Tuple[bool, str, Optional[Dict[s
     session_token = _generate_session_token()
     sessions_data = _load_sessions()
     
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(days=30)
     sessions_data["sessions"][session_token] = {
         "user_id": user["id"],
-        "created_at": now,
-        "expires_at": now  # Можно добавить логику истечения сессии
+        "created_at": now.isoformat(),
+        "expires_at": expires_at.isoformat()
     }
     _save_sessions(sessions_data)
     
@@ -261,6 +280,12 @@ def get_user_by_session(session_token: str) -> Tuple[bool, str, Optional[Dict[st
         return False, "Сессия не найдена", None
     
     session = sessions_data["sessions"][session_token]
+
+    if _is_session_expired(session):
+        del sessions_data["sessions"][session_token]
+        _save_sessions(sessions_data)
+        return False, "Сессия истекла. Войдите снова", None
+
     user_id = session["user_id"]
     
     users_data = _load_users()
