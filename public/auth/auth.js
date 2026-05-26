@@ -23,6 +23,16 @@ function getApiBaseUrl() {
 
 const API_BASE_URL = getApiBaseUrl();
 
+async function parseApiResponse(response) {
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+        return response.json();
+    }
+
+    const text = await response.text();
+    return { ok: false, error: text || 'Некорректный ответ сервера' };
+}
+
 /**
  * Сохранить токен сессии в localStorage
  */
@@ -68,7 +78,7 @@ async function register(username, email, password) {
             body: JSON.stringify({ username, email, password })
         });
         
-        const data = await response.json();
+        const data = await parseApiResponse(response);
         
         if (data.ok) {
             return { success: true, message: 'Регистрация успешна', user: data.user };
@@ -97,7 +107,7 @@ async function login(username, password) {
             body: JSON.stringify({ username, password })
         });
         
-        const data = await response.json();
+        const data = await parseApiResponse(response);
         
         if (data.ok) {
             saveSessionToken(data.session_token);
@@ -128,7 +138,7 @@ async function logout() {
             body: token ? JSON.stringify({ session_token: token }) : '{}'
         });
         
-        const data = await response.json();
+        const data = await parseApiResponse(response);
         removeSessionToken();
         
         if (data.ok) {
@@ -162,7 +172,7 @@ async function getCurrentUser() {
             }
         });
         
-        const data = await response.json();
+        const data = await parseApiResponse(response);
         
         if (data.ok) {
             return { success: true, message: 'Данные получены', user: data.user };
@@ -200,7 +210,7 @@ async function updateProfile(displayName) {
             body: JSON.stringify({ display_name: displayName })
         });
         
-        const data = await response.json();
+        const data = await parseApiResponse(response);
         
         if (data.ok) {
             return { success: true, message: 'Профиль обновлен', user: data.user };
@@ -236,7 +246,7 @@ async function changePassword(oldPassword, newPassword) {
             body: JSON.stringify({ old_password: oldPassword, new_password: newPassword })
         });
         
-        const data = await response.json();
+        const data = await parseApiResponse(response);
         
         if (data.ok) {
             return { success: true, message: data.message || 'Пароль изменен' };
