@@ -871,6 +871,82 @@ function setupDictionarySelector(state){
     state.dictPanel.setAttribute('aria-hidden', 'true');
   }
 }
+
+const AUTH_TOKEN_KEY = 'crocomim.auth.token';
+let authToken = '';
+
+function loadAuthToken(){
+  try{ authToken = localStorage.getItem(AUTH_TOKEN_KEY) || ''; }catch{ authToken = ''; }
+}
+function saveAuthToken(token){
+  authToken = typeof token === 'string' ? token : '';
+  try{
+    if (authToken){ localStorage.setItem(AUTH_TOKEN_KEY, authToken); }
+    else { localStorage.removeItem(AUTH_TOKEN_KEY); }
+  }catch{}
+}
+function clearAuthToken(){ saveAuthToken(''); updateAiAuthState('Требуется вход для AI-словаря.'); }
+function getAuthHeaders(base = {}){
+  const headers = { ...base };
+  if (authToken){ headers.Authorization = `Bearer ${authToken}`; }
+  return headers;
+}
+function openAuthModal(){
+  const modal = $('#authModal');
+  if (!modal) return;
+  modal.hidden = false;
+}
+function closeAuthModal(){ const modal = $('#authModal'); if (modal) modal.hidden = true; }
+function setAuthStatus(text, isError){
+  const el = $('#authStatus');
+  if (!el) return;
+  el.textContent = text || '';
+  el.classList.toggle('is-error', !!isError);
+}
+async function loginFromModal(username, password){
+  const runtimeConfig = await ensureRuntimeConfig();
+  const url = resolveBackendUrl('auth/login', runtimeConfig);
+  const response = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ username, password })});
+  const payload = await response.json().catch(()=>({}));
+  if (!response.ok || payload?.ok === false){
+    throw new Error(payload?.error || `Ошибка входа (HTTP ${response.status})`);
+  }
+  const token = payload?.session_token || payload?.token || '';
+  if (!token) throw new Error('Токен не получен');
+  saveAuthToken(token);
+}
+async function authFetch(url, options = {}){
+  if (!authToken){
+    updateAiAuthState('Требуется вход для AI-словаря.');
+    openAuthModal();
+    throw new Error('Требуется вход');
+  }
+  const response = await fetch(url, { ...options, headers: getAuthHeaders(options.headers || {}) });
+  if (response.status === 401){
+    clearAuthToken();
+    openAuthModal();
+    throw new Error('Сессия истекла. Войдите снова.');
+  }
+  return response;
+}
+function updateAiAuthState(text){
+  const el = $('#quickAiNextTime');
+  if (el && text) el.textContent = text;
+  const btn = $('#quickAiGenerateBtn');
+  if (btn) btn.disabled = !authToken;
+}
+async function refreshAiStatus(){
+  const runtimeConfig = await ensureRuntimeConfig();
+  const url = resolveBackendUrl('api/dict/status', runtimeConfig);
+  const response = await authFetch(url, { method:'GET' });
+  const payload = await response.json().catch(()=>({}));
+  const chip = $('#quickAiLimitChip');
+  const next = $('#quickAiNextTime');
+  if (chip) chip.textContent = `Лимит: ${payload?.limit?.used_today ?? 0}/${payload?.limit?.daily_limit ?? 1}`;
+  if (next) next.textContent = payload?.allowed ? 'Можно генерировать сейчас' : `Следующая генерация: ${payload?.next_available_at || 'позже'}`;
+}
+loadAuthToken();
+
 const backBtn = $('#btnBack');
 const profileBtn = $('#btnProfile');
 const helpBtn = $('#btnHelp');
@@ -1256,10 +1332,61 @@ if (helpBtn){
 if (profileBtn){
   profileBtn.addEventListener('click', event => {
     event.preventDefault();
-    window.location.href = './auth/index.html';
+    openAuthModal();
   });
 }
 
+
+const authForm = $('#authLoginForm');
+if (authForm){
+  authForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    const username = String($('#authUsername')?.value || '').trim();
+    const password = String($('#authPassword')?.value || '');
+    setAuthStatus('Входим...');
+    try{
+      await loginFromModal(username, password);
+      setAuthStatus('Успешный вход');
+      closeAuthModal();
+      updateAiAuthState('Проверка лимита...');
+      refreshAiStatus().catch(()=>{});
+    }catch(err){
+      setAuthStatus(err?.message || 'Ошибка входа', true);
+    }
+  });
+}
+const authLogoutBtn = $('#authLogoutBtn');
+if (authLogoutBtn){
+  authLogoutBtn.addEventListener('click', () => {
+    clearAuthToken();
+    const list = $('#quickAiDictList');
+    if (list) list.innerHTML = '';
+    const result = $('#quickAiDictResult');
+    if (result) result.innerHTML = '<div class="muted">Требуется вход.</div><ol class="ai-dict-list" id="quickAiDictList"></ol>';
+    setAuthStatus('Вы вышли из аккаунта.');
+  });
+}
+document.querySelectorAll('[data-auth-close="true"]').forEach(el => el.addEventListener('click', closeAuthModal));
+const quickAiGenerateBtn = $('#quickAiGenerateBtn');
+if (quickAiGenerateBtn){
+  quickAiGenerateBtn.addEventListener('click', async () => {
+    try{
+      const runtimeConfig = await ensureRuntimeConfig();
+      const url = resolveBackendUrl('api/generate-dictionary', runtimeConfig);
+      const response = await authFetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ topic:'random', difficulty:'medium' }) });
+      const payload = await response.json().catch(()=>({}));
+      if (!response.ok || payload?.ok===false) throw new Error(payload?.error || 'Ошибка генерации');
+      const words = Array.isArray(payload?.dictionary) ? payload.dictionary : [];
+      const list = $('#quickAiDictList');
+      if (list){ list.innerHTML = words.map(w => `<li>${w}</li>`).join(''); }
+      refreshAiStatus().catch(()=>{});
+    }catch(err){
+      setAuthStatus(err?.message || 'Ошибка AI-генерации', true);
+    }
+  });
+}
+updateAiAuthState(authToken ? 'Проверка лимита...' : 'Требуется вход для AI-словаря.');
+if (authToken){ refreshAiStatus().catch(()=>{}); }
 $('#goTeam').onclick = () => {
   ensureTeamsSeed();
   renderTeams();
