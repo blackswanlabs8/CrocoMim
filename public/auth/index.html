@@ -22,7 +22,7 @@
             })();
             const env = queryEnv
                 ? (queryEnv === 'test' ? 'test' : 'prod')
-                : (inTestPath ? 'test' : 'prod');
+                : 'prod';
             const runtimeFlags = {
                 env,
                 testMode: env === 'test',
@@ -372,7 +372,7 @@
         </div>
     </div>
 
-    <script src="./auth.js"></script>
+    <script src="./auth.js?v=2026-05-27-api"></script>
     <script>
         // Состояние приложения
         let currentUser = null;

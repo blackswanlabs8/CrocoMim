@@ -427,7 +427,7 @@
 
       const env = queryEnv
         ? (queryEnv === 'test' ? 'test' : 'prod')
-        : (inTestPath ? 'test' : 'prod');
+        : 'prod';
       const runtimeFlags = {
         env,
         testMode: env === 'test',
@@ -453,8 +453,8 @@
       target.RUNTIME_CONFIG_READY = Promise.resolve(runtime);
     })(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : undefined));
   </script>
-  <script src="./scripts/dicts.js"></script>
-  <script src="./scripts/feedback.js"></script>
-  <script src="./scripts/app.js"></script>
+  <script src="./scripts/dicts.js?v=2026-05-27-api"></script>
+  <script src="./scripts/feedback.js?v=2026-05-27-api"></script>
+  <script src="./scripts/app.js?v=2026-05-27-api"></script>
 </body>
 </html>

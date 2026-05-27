@@ -10,12 +10,16 @@ function getApiBaseUrl() {
     // Проверяем runtime-конфигурацию (как в app.js и feedback.js)
     const flags = (typeof window.RUNTIME_FLAGS === 'object' && window.RUNTIME_FLAGS) || {};
     const origin = window.location?.origin || '';
-    const apiPath = flags.testMode ? '/test/api' : '/api';
+    const explicitEnv = new URLSearchParams(window.location?.search || '').get('env');
+    const useTestApi = flags.testMode && explicitEnv === 'test';
+    const apiPath = useTestApi ? '/test/api' : '/api';
     const apiBase = origin ? `${origin}${apiPath}` : apiPath;
     
     // Используем runtime config если доступен
     if (window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.publicApiBaseUrl) {
-        return window.RUNTIME_CONFIG.publicApiBaseUrl;
+        return useTestApi
+            ? window.RUNTIME_CONFIG.publicApiBaseUrl
+            : window.RUNTIME_CONFIG.publicApiBaseUrl.replace('/test/api', '/api');
     }
     
     return apiBase;

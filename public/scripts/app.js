@@ -151,7 +151,9 @@ function ensureRuntimeConfig(){
   const normalizeConfig = cfg => {
     const flags = (typeof window.RUNTIME_FLAGS === 'object' && window.RUNTIME_FLAGS) || {};
     const origin = window.location?.origin || '';
-    const apiPath = flags.testMode ? '/test/api' : '/api';
+    const explicitEnv = new URLSearchParams(window.location?.search || '').get('env');
+    const useTestApi = flags.testMode && explicitEnv === 'test';
+    const apiPath = useTestApi ? '/test/api' : '/api';
     const apiBase = origin ? `${origin}${apiPath}` : apiPath;
     const runtime = cfg && typeof cfg === 'object' ? cfg : {};
     if (!runtime.publicApiBaseUrl){
@@ -159,6 +161,14 @@ function ensureRuntimeConfig(){
     }
     if (!runtime.backendBaseUrl){
       runtime.backendBaseUrl = apiBase;
+    }
+    if (!useTestApi){
+      if (typeof runtime.publicApiBaseUrl === 'string'){
+        runtime.publicApiBaseUrl = runtime.publicApiBaseUrl.replace('/test/api', '/api');
+      }
+      if (typeof runtime.backendBaseUrl === 'string'){
+        runtime.backendBaseUrl = runtime.backendBaseUrl.replace('/test/api', '/api');
+      }
     }
     return runtime;
   };

@@ -58,7 +58,9 @@
     const normalizeConfig = cfg => {
       const flags = (typeof global.RUNTIME_FLAGS === 'object' && global.RUNTIME_FLAGS) || {};
       const origin = global.location?.origin || '';
-      const apiPath = flags.testMode ? '/test/api' : '/api';
+      const explicitEnv = new URLSearchParams(global.location?.search || '').get('env');
+      const useTestApi = flags.testMode && explicitEnv === 'test';
+      const apiPath = useTestApi ? '/test/api' : '/api';
       const apiBase = origin ? `${origin}${apiPath}` : apiPath;
       const runtime = cfg && typeof cfg === 'object' ? cfg : {};
       if (!runtime.publicApiBaseUrl){
@@ -66,6 +68,14 @@
       }
       if (!runtime.backendBaseUrl){
         runtime.backendBaseUrl = apiBase;
+      }
+      if (!useTestApi){
+        if (typeof runtime.publicApiBaseUrl === 'string'){
+          runtime.publicApiBaseUrl = runtime.publicApiBaseUrl.replace('/test/api', '/api');
+        }
+        if (typeof runtime.backendBaseUrl === 'string'){
+          runtime.backendBaseUrl = runtime.backendBaseUrl.replace('/test/api', '/api');
+        }
       }
       return runtime;
     };

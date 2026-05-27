@@ -1,14 +1,14 @@
 // тест
-const CACHE_NAME = 'crocomim-static-v11';
+const CACHE_NAME = 'crocomim-static-v12';
 const DICTS_CACHE = 'crocomim-dicts-runtime-v3';
 const DICTS_INDEX_PATH = './dicts/index.json';
 const ASSETS = [
   './',
   './index.html',
   './styles/main.css?v=2024-07-06',
-  './scripts/app.js',
-  './scripts/feedback.js',
-  './scripts/dicts.js',
+  './scripts/app.js?v=2026-05-27-api',
+  './scripts/feedback.js?v=2026-05-27-api',
+  './scripts/dicts.js?v=2026-05-27-api',
   DICTS_INDEX_PATH,
   './manifest.json',
   './icons/icon.svg'
