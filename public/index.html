@@ -100,19 +100,6 @@
             <label class="muted" for="quickCustomWords">Вставьте слова через запятую или перенос строки</label>
             <textarea class="input" id="quickCustomWords" rows="4" placeholder="яблоко, корабль, радуга..."></textarea>
           </div>
-          <div class="section menu-block ai-dict-block" id="quickAiDictBlock">
-            <div class="menu-block-title">AI-словарь</div>
-            <div class="ai-dict-status">
-              <div class="chip" id="quickAiLimitChip">Лимит: 0/1</div>
-              <div class="muted" id="quickAiNextTime">Следующая генерация: через 00:00</div>
-            </div>
-            <button class="btn" id="quickAiGenerateBtn" type="button">Сгенерировать 30 слов</button>
-            <div class="ai-dict-result" id="quickAiDictResult">
-              <div class="muted">Здесь появится список из 30 слов после генерации.</div>
-              <ol class="ai-dict-list" id="quickAiDictList"></ol>
-            </div>
-            <button class="btn ghost" id="quickAiUseBtn" type="button">Использовать в игре</button>
-          </div>
         </div>
 
         <div class="footer menu-footer">
@@ -275,19 +262,6 @@
         <div class="custom-gen-status" id="teamCustomStatus" aria-live="polite"></div>
         <label class="muted" for="teamCustomWords">Вставьте слова через запятую или перенос строки</label>
         <textarea class="input" id="teamCustomWords" rows="4" placeholder="яблоко, корабль, радуга..."></textarea>
-      </div>
-      <div class="section menu-block ai-dict-block" id="teamAiDictBlock">
-        <div class="menu-block-title">AI-словарь</div>
-        <div class="ai-dict-status">
-          <div class="chip" id="teamAiLimitChip">Лимит: 0/1</div>
-          <div class="muted" id="teamAiNextTime">Следующая генерация: через 00:00</div>
-        </div>
-        <button class="btn" id="teamAiGenerateBtn" type="button">Сгенерировать 30 слов</button>
-        <div class="ai-dict-result" id="teamAiDictResult">
-          <div class="muted">Здесь появится список из 30 слов после генерации.</div>
-          <ol class="ai-dict-list" id="teamAiDictList"></ol>
-        </div>
-        <button class="btn ghost" id="teamAiUseBtn" type="button">Использовать в игре</button>
       </div>
     </div>
 
@@ -483,23 +457,5 @@
   <script src="./scripts/dicts.js"></script>
   <script src="./scripts/feedback.js"></script>
   <script src="./scripts/app.js"></script>
-
-  <div class="auth-modal" id="authModal" hidden>
-    <div class="auth-modal__backdrop" data-auth-close="true"></div>
-    <div class="auth-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
-      <h3 id="authModalTitle">Вход в профиль</h3>
-      <form id="authLoginForm" class="stack">
-        <label>Username<input class="input" id="authUsername" name="username" autocomplete="username" required></label>
-        <label>Password<input class="input" id="authPassword" name="password" type="password" autocomplete="current-password" required></label>
-        <div class="muted" id="authStatus" aria-live="polite"></div>
-        <div class="row">
-          <button class="btn" type="submit">Войти</button>
-          <button class="btn ghost" type="button" id="authLogoutBtn">Выйти</button>
-          <button class="btn ghost" type="button" data-auth-close="true">Закрыть</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
 </body>
 </html>

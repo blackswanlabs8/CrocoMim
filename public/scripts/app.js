@@ -31,9 +31,6 @@ const CUSTOM_DICTIONARY_META = {
   icon: 'edit'
 };
 const CUSTOM_GENERATED_WORDS = 50;
-const FEEDBACK_SOURCE_AI = 'ai_generated';
-const FEEDBACK_SOURCE_CUSTOM = 'custom_manual';
-const FEEDBACK_SOURCE_DICTIONARY = 'dictionary';
 
 const ICON_SANITIZE_RE = /[^A-Za-zА-Яа-яЁё0-9]/g;
 
@@ -212,140 +209,6 @@ function resolveBackendUrl(path, config){
 
   console.warn('Некорректный backendBaseUrl в runtime-конфигурации', lastError);
   return normalizedPath || path;
-}
-
-function parseNextAvailableAt(value){
-  if (!value) return null;
-  const dt = value instanceof Date ? value : new Date(value);
-  return Number.isNaN(dt.getTime()) ? null : dt;
-}
-
-function formatNextAvailableAt(value, locale = 'ru-RU'){
-  const dt = parseNextAvailableAt(value);
-  if (!dt) return '';
-  try{
-    return new Intl.DateTimeFormat(locale, {
-      dateStyle: 'medium',
-      timeStyle: 'short'
-    }).format(dt);
-  }catch(err){
-    return dt.toLocaleString('ru-RU');
-  }
-}
-
-async function parseJsonSafely(response){
-  try{
-    return await response.json();
-  }catch(err){
-    return {};
-  }
-}
-
-function normalizeApiResult(response, payload){
-  const status = Number(response?.status) || 0;
-  const rawNextAvailableAt = payload?.next_available_at ?? null;
-  const parsedNextAvailableAt = parseNextAvailableAt(rawNextAvailableAt);
-  const normalizedNextAvailableAt = parsedNextAvailableAt ? parsedNextAvailableAt.toISOString() : null;
-  const formattedNextAvailableAt = parsedNextAvailableAt ? formatNextAvailableAt(parsedNextAvailableAt) : '';
-
-  const result = {
-    ok: Boolean(response?.ok && payload?.ok !== false),
-    status,
-    data: null,
-    error: null
-  };
-
-  if (status === 401){
-    result.ok = false;
-    result.error = {
-      code: 'auth_required',
-      message: 'Требуется повторный вход в систему.'
-    };
-    if (typeof window !== 'undefined' && typeof window.confirm === 'function'){
-      const goToLogin = window.confirm('Сессия истекла или отсутствует. Перейти на страницу входа?');
-      if (goToLogin){
-        window.location.href = './auth/index.html';
-      }
-    }
-    return result;
-  }
-
-  if (status === 429){
-    result.ok = false;
-    result.data = {
-      allowed: false,
-      next_available_at: normalizedNextAvailableAt,
-      next_available_at_formatted: formattedNextAvailableAt
-    };
-    result.error = {
-      code: 'rate_limited',
-      message: payload?.error || 'Слишком много запросов. Повторите позже.'
-    };
-    return result;
-  }
-
-  if (!result.ok){
-    result.error = {
-      code: payload?.code || 'request_failed',
-      message: payload?.error || `HTTP ${status}`
-    };
-    return result;
-  }
-
-  result.data = {
-    dictionary: payload?.dictionary ?? null,
-    count: Number.isFinite(payload?.count) ? payload.count : (Array.isArray(payload?.dictionary) ? payload.dictionary.length : null),
-    next_available_at: normalizedNextAvailableAt,
-    next_available_at_formatted: formattedNextAvailableAt,
-    allowed: payload?.allowed
-  };
-  return result;
-}
-
-async function apiLogin(username, password){
-  const runtimeConfig = await ensureRuntimeConfig();
-  const url = resolveBackendUrl('auth/login', runtimeConfig);
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password })
-  });
-  const payload = await parseJsonSafely(response);
-  return normalizeApiResult(response, payload);
-}
-
-async function apiDictStatus(token){
-  if (!token){
-    return normalizeApiResult({ status: 401, ok: false }, {});
-  }
-  const runtimeConfig = await ensureRuntimeConfig();
-  const url = resolveBackendUrl('dict/status', runtimeConfig);
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  });
-  const payload = await parseJsonSafely(response);
-  return normalizeApiResult(response, payload);
-}
-
-async function apiGenerateDictionary(token){
-  if (!token){
-    return normalizeApiResult({ status: 401, ok: false }, {});
-  }
-  const runtimeConfig = await ensureRuntimeConfig();
-  const url = resolveBackendUrl('generate-dictionary', runtimeConfig);
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    },
-    body: JSON.stringify({})
-  });
-  const payload = await parseJsonSafely(response);
-  return normalizeApiResult(response, payload);
 }
 
 function updateVersionBadge(text, options = {}){
@@ -1008,82 +871,6 @@ function setupDictionarySelector(state){
     state.dictPanel.setAttribute('aria-hidden', 'true');
   }
 }
-
-const AUTH_TOKEN_KEY = 'crocomim.auth.token';
-let authToken = '';
-
-function loadAuthToken(){
-  try{ authToken = localStorage.getItem(AUTH_TOKEN_KEY) || ''; }catch{ authToken = ''; }
-}
-function saveAuthToken(token){
-  authToken = typeof token === 'string' ? token : '';
-  try{
-    if (authToken){ localStorage.setItem(AUTH_TOKEN_KEY, authToken); }
-    else { localStorage.removeItem(AUTH_TOKEN_KEY); }
-  }catch{}
-}
-function clearAuthToken(){ saveAuthToken(''); updateAiAuthState('Требуется вход для AI-словаря.'); }
-function getAuthHeaders(base = {}){
-  const headers = { ...base };
-  if (authToken){ headers.Authorization = `Bearer ${authToken}`; }
-  return headers;
-}
-function openAuthModal(){
-  const modal = $('#authModal');
-  if (!modal) return;
-  modal.hidden = false;
-}
-function closeAuthModal(){ const modal = $('#authModal'); if (modal) modal.hidden = true; }
-function setAuthStatus(text, isError){
-  const el = $('#authStatus');
-  if (!el) return;
-  el.textContent = text || '';
-  el.classList.toggle('is-error', !!isError);
-}
-async function loginFromModal(username, password){
-  const runtimeConfig = await ensureRuntimeConfig();
-  const url = resolveBackendUrl('auth/login', runtimeConfig);
-  const response = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ username, password })});
-  const payload = await response.json().catch(()=>({}));
-  if (!response.ok || payload?.ok === false){
-    throw new Error(payload?.error || `Ошибка входа (HTTP ${response.status})`);
-  }
-  const token = payload?.session_token || payload?.token || '';
-  if (!token) throw new Error('Токен не получен');
-  saveAuthToken(token);
-}
-async function authFetch(url, options = {}){
-  if (!authToken){
-    updateAiAuthState('Требуется вход для AI-словаря.');
-    openAuthModal();
-    throw new Error('Требуется вход');
-  }
-  const response = await fetch(url, { ...options, headers: getAuthHeaders(options.headers || {}) });
-  if (response.status === 401){
-    clearAuthToken();
-    openAuthModal();
-    throw new Error('Сессия истекла. Войдите снова.');
-  }
-  return response;
-}
-function updateAiAuthState(text){
-  const el = $('#quickAiNextTime');
-  if (el && text) el.textContent = text;
-  const btn = $('#quickAiGenerateBtn');
-  if (btn) btn.disabled = !authToken;
-}
-async function refreshAiStatus(){
-  const runtimeConfig = await ensureRuntimeConfig();
-  const url = resolveBackendUrl('api/dict/status', runtimeConfig);
-  const response = await authFetch(url, { method:'GET' });
-  const payload = await response.json().catch(()=>({}));
-  const chip = $('#quickAiLimitChip');
-  const next = $('#quickAiNextTime');
-  if (chip) chip.textContent = `Лимит: ${payload?.limit?.used_today ?? 0}/${payload?.limit?.daily_limit ?? 1}`;
-  if (next) next.textContent = payload?.allowed ? 'Можно генерировать сейчас' : `Следующая генерация: ${payload?.next_available_at || 'позже'}`;
-}
-loadAuthToken();
-
 const backBtn = $('#btnBack');
 const profileBtn = $('#btnProfile');
 const helpBtn = $('#btnHelp');
@@ -1469,61 +1256,10 @@ if (helpBtn){
 if (profileBtn){
   profileBtn.addEventListener('click', event => {
     event.preventDefault();
-    openAuthModal();
+    window.location.href = './auth/index.html';
   });
 }
 
-
-const authForm = $('#authLoginForm');
-if (authForm){
-  authForm.addEventListener('submit', async event => {
-    event.preventDefault();
-    const username = String($('#authUsername')?.value || '').trim();
-    const password = String($('#authPassword')?.value || '');
-    setAuthStatus('Входим...');
-    try{
-      await loginFromModal(username, password);
-      setAuthStatus('Успешный вход');
-      closeAuthModal();
-      updateAiAuthState('Проверка лимита...');
-      refreshAiStatus().catch(()=>{});
-    }catch(err){
-      setAuthStatus(err?.message || 'Ошибка входа', true);
-    }
-  });
-}
-const authLogoutBtn = $('#authLogoutBtn');
-if (authLogoutBtn){
-  authLogoutBtn.addEventListener('click', () => {
-    clearAuthToken();
-    const list = $('#quickAiDictList');
-    if (list) list.innerHTML = '';
-    const result = $('#quickAiDictResult');
-    if (result) result.innerHTML = '<div class="muted">Требуется вход.</div><ol class="ai-dict-list" id="quickAiDictList"></ol>';
-    setAuthStatus('Вы вышли из аккаунта.');
-  });
-}
-document.querySelectorAll('[data-auth-close="true"]').forEach(el => el.addEventListener('click', closeAuthModal));
-const quickAiGenerateBtn = $('#quickAiGenerateBtn');
-if (quickAiGenerateBtn){
-  quickAiGenerateBtn.addEventListener('click', async () => {
-    try{
-      const runtimeConfig = await ensureRuntimeConfig();
-      const url = resolveBackendUrl('api/generate-dictionary', runtimeConfig);
-      const response = await authFetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ topic:'random', difficulty:'medium' }) });
-      const payload = await response.json().catch(()=>({}));
-      if (!response.ok || payload?.ok===false) throw new Error(payload?.error || 'Ошибка генерации');
-      const words = Array.isArray(payload?.dictionary) ? payload.dictionary : [];
-      const list = $('#quickAiDictList');
-      if (list){ list.innerHTML = words.map(w => `<li>${w}</li>`).join(''); }
-      refreshAiStatus().catch(()=>{});
-    }catch(err){
-      setAuthStatus(err?.message || 'Ошибка AI-генерации', true);
-    }
-  });
-}
-updateAiAuthState(authToken ? 'Проверка лимита...' : 'Требуется вход для AI-словаря.');
-if (authToken){ refreshAiStatus().catch(()=>{}); }
 $('#goTeam').onclick = () => {
   ensureTeamsSeed();
   renderTeams();
@@ -1548,9 +1284,6 @@ const qs = {
   customText: $('#quickCustomWords'),
   customGenerate: $('#quickGenerateDict'),
   customStatus: $('#quickCustomStatus'),
-  aiUseBtn: $('#quickAiUseBtn'),
-  aiDictionary: [],
-  customSource: FEEDBACK_SOURCE_CUSTOM,
   timerToggle: $('#quickTimerToggle'),
   time: 60,
   timeMinus: $('#quickTimeMinus'),
@@ -1693,7 +1426,6 @@ updateQuickPts();
 updateCustomBoxVisibility(qs);
 if (qs.customText){
   qs.customText.addEventListener('input', () => {
-    qs.customSource = FEEDBACK_SOURCE_CUSTOM;
     persistQuickSettings();
   });
 }
@@ -1704,14 +1436,6 @@ setupCustomGenerator(qs, {
   trigger: qs.customGenerate,
   persist: persistQuickSettings
 });
-if (qs.aiUseBtn){
-  qs.aiUseBtn.addEventListener('click', () => {
-    const applied = applyAiDictionaryToMode(qs, persistQuickSettings);
-    if (!applied){
-      alert('Сначала сгенерируйте AI-словарь');
-    }
-  });
-}
 
 // Quick game state
 const initialQuickStats = readJson(QUICK_STATS_KEY, {hitWords:[], missWords:[]}) || {hitWords:[], missWords:[]};
@@ -1943,8 +1667,7 @@ const parseCustomWords = (raw, options = {}) => {
         dictionaryId: CUSTOM_DICTIONARY_META.id,
         term,
         description: '',
-        about: '',
-        source: options.source || FEEDBACK_SOURCE_CUSTOM
+        about: ''
       };
       if (normalizedDifficulty && normalizedDifficulty !== 'mix'){
         entry.difficulty = normalizedDifficulty;
@@ -1959,44 +1682,6 @@ function setupCustomGenerator(state, options = {}){
   const statusEl = options.statusEl;
   const trigger = options.trigger;
   const persist = typeof options.persist === 'function' ? options.persist : null;
-  const generatorState = {
-    status: 'idle',
-    loading: false,
-    nextAvailableAt: null,
-    cooldownTimerId: null,
-    requestSeq: 0
-  };
-
-  const clearCooldownTimer = () => {
-    if (generatorState.cooldownTimerId){
-      clearInterval(generatorState.cooldownTimerId);
-    }
-    generatorState.cooldownTimerId = null;
-  };
-
-  const parseNextAvailableAt = value => {
-    if (!value) return null;
-    const ts = Date.parse(value);
-    return Number.isFinite(ts) ? ts : null;
-  };
-
-  const formatCooldownRemaining = targetTs => {
-    const diffSec = Math.max(0, Math.ceil((targetTs - Date.now()) / 1000));
-    const mins = Math.floor(diffSec / 60);
-    const secs = diffSec % 60;
-    if (mins > 0){
-      return `${mins} мин ${String(secs).padStart(2, '0')} сек`;
-    }
-    return `${secs} сек`;
-  };
-
-  const formatDateTime = targetTs => {
-    try{
-      return new Date(targetTs).toLocaleString('ru-RU');
-    }catch{
-      return '';
-    }
-  };
 
   const setStatus = (text, mode) => {
     if (!statusEl) return;
@@ -2007,94 +1692,12 @@ function setupCustomGenerator(state, options = {}){
     }
   };
 
-  const applyState = nextState => {
-    generatorState.status = nextState;
-    const isLoading = nextState === 'loading';
-    const isBlocked = nextState === 'loading' || nextState === 'cooldown' || nextState === 'unauthorized';
-    generatorState.loading = isLoading;
-    if (trigger){
-      trigger.disabled = isBlocked;
-      if (nextState === 'loading') trigger.textContent = 'Генерация…';
-      else trigger.textContent = 'Сгенерировать';
-    }
-  };
-
-  const enterCooldown = (nextAvailableTs) => {
-    if (!nextAvailableTs){
-      applyState('idle');
-      setStatus('');
-      clearCooldownTimer();
-      return;
-    }
-    generatorState.nextAvailableAt = nextAvailableTs;
-    applyState('cooldown');
-    clearCooldownTimer();
-
-    const tick = async () => {
-      const remain = generatorState.nextAvailableAt - Date.now();
-      if (remain <= 0){
-        clearCooldownTimer();
-        await refreshStatus();
-        return;
-      }
-      setStatus(`Доступно после ${formatDateTime(generatorState.nextAvailableAt)} (через ${formatCooldownRemaining(generatorState.nextAvailableAt)})`);
-    };
-
-    void tick();
-    generatorState.cooldownTimerId = setInterval(()=>{ void tick(); }, 1000);
-  };
-
-  const apiDictStatus = async () => {
-    const runtimeConfig = await ensureRuntimeConfig();
-    const url = resolveBackendUrl('dict/status', runtimeConfig);
-    const response = await fetch(url, { cache: 'no-store' });
-    if (response.status === 401){
-      return { unauthorized: true };
-    }
-    let payload = {};
-    try{ payload = await response.json(); }catch{ payload = {}; }
-    if (!response.ok){
-      throw new Error(payload?.error || `HTTP ${response.status}`);
-    }
-    return payload;
-  };
-
-  const refreshStatus = async () => {
-    const reqId = ++generatorState.requestSeq;
-    try{
-      const status = await apiDictStatus();
-      if (reqId !== generatorState.requestSeq) return;
-      if (status?.unauthorized){
-        clearCooldownTimer();
-        applyState('unauthorized');
-        setStatus('Нужна авторизация для генерации словаря', 'is-error');
-        return;
-      }
-
-      const allowed = status?.allowed !== false;
-      const nextTs = parseNextAvailableAt(status?.next_available_at);
-      if (!allowed){
-        enterCooldown(nextTs);
-        return;
-      }
-
-      clearCooldownTimer();
-      generatorState.nextAvailableAt = null;
-      applyState('idle');
-      setStatus('');
-    }catch(err){
-      applyState('idle');
-      setStatus(err?.message || 'Не удалось проверить статус генерации', 'is-error');
-    }
-  };
-
   const getDifficulty = () => {
     const level = typeof state?.difficulty === 'string' ? state.difficulty.toLowerCase() : '';
     return ['easy', 'medium', 'hard'].includes(level) ? level : 'medium';
   };
 
   const handleGenerate = async () => {
-    if (generatorState.loading) return;
     const topic = typeof topicInput?.value === 'string' ? topicInput.value.trim() : '';
     setStatus('');
     if (!topic){
@@ -2104,7 +1707,7 @@ function setupCustomGenerator(state, options = {}){
     }
 
     const difficulty = getDifficulty();
-    applyState('loading');
+    if (trigger) trigger.disabled = true;
     setStatus('Генерация словаря…');
 
     try{
@@ -2145,21 +1748,16 @@ function setupCustomGenerator(state, options = {}){
       if (wordsInput){
         wordsInput.value = words.join('\n');
       }
-      if (state){
-        state.aiDictionary = words.slice();
-      }
       setCustomSelection(state, true);
       if (state?.setDifficulty){
         state.setDifficulty(difficulty);
       }
       setStatus(`Сгенерировано слов: ${words.length}`, 'is-success');
       if (persist) persist();
-
-      const nextTs = parseNextAvailableAt(payload?.next_available_at);
-      enterCooldown(nextTs);
     }catch(err){
-      applyState('idle');
       setStatus(err?.message || 'Не удалось сгенерировать словарь', 'is-error');
+    }finally{
+      if (trigger) trigger.disabled = false;
     }
   };
 
@@ -2179,32 +1777,7 @@ function setupCustomGenerator(state, options = {}){
     });
   }
 
-  void refreshStatus();
-
   return { generate: handleGenerate, setStatus };
-}
-
-function applyAiDictionaryToMode(state, persist){
-  const aiWords = Array.isArray(state?.aiDictionary) ? state.aiDictionary.filter(item => typeof item === 'string' && item.trim()) : [];
-  if (!aiWords.length){
-    return false;
-  }
-  if (state.customText){
-    state.customText.value = aiWords.join('\n');
-  }
-  state.customSource = FEEDBACK_SOURCE_AI;
-  setCustomSelection(state, true);
-  if (state?.difficultyButtons?.[state.difficulty]?.disabled){
-    const fallback = DIFFICULTY_ORDER.find(level => state.difficultyButtons?.[level] && !state.difficultyButtons[level].disabled);
-    if (fallback && state.setDifficulty){
-      state.setDifficulty(fallback);
-    }
-  }
-  updateDictionarySummary(state);
-  if (typeof persist === 'function'){
-    persist();
-  }
-  return true;
 }
 
 function updateQuickTimerButton(){
@@ -2294,10 +1867,7 @@ async function startQuickGame(){
     let dictionaryEntriesCount = 0;
     let customEntriesCount = 0;
     if (includeCustom){
-      const customEntries = parseCustomWords(qs.customText?.value, {
-        difficulty,
-        source: qs.customSource === FEEDBACK_SOURCE_AI ? FEEDBACK_SOURCE_AI : FEEDBACK_SOURCE_CUSTOM
-      });
+      const customEntries = parseCustomWords(qs.customText?.value, { difficulty });
       customEntriesCount = customEntries.length;
       entries = entries.concat(customEntries);
     }
@@ -2581,9 +2151,6 @@ const ts = {
   customText: $('#teamCustomWords'),
   customGenerate: $('#teamGenerateDict'),
   customStatus: $('#teamCustomStatus'),
-  aiUseBtn: $('#teamAiUseBtn'),
-  aiDictionary: [],
-  customSource: FEEDBACK_SOURCE_CUSTOM,
   timerToggle: $('#teamTimerToggle'),
   time: 60,
   timeMinus: $('#teamTimeMinus'),
@@ -2722,7 +2289,6 @@ if (ts.ptsToggle){
 updatePtsUI();
 if (ts.customText){
   ts.customText.addEventListener('input', () => {
-    ts.customSource = FEEDBACK_SOURCE_CUSTOM;
     persistTeamSettings();
   });
 }
@@ -2733,14 +2299,6 @@ setupCustomGenerator(ts, {
   trigger: ts.customGenerate,
   persist: persistTeamSettings
 });
-if (ts.aiUseBtn){
-  ts.aiUseBtn.addEventListener('click', () => {
-    const applied = applyAiDictionaryToMode(ts, persistTeamSettings);
-    if (!applied){
-      alert('Сначала сгенерируйте AI-словарь');
-    }
-  });
-}
 
 ensureDictionaryIndex().then(() => {
   setupDictionarySelector(qs);
@@ -3223,10 +2781,7 @@ async function startTeamGame(){
     let dictionaryEntriesCount = 0;
     let customEntriesCount = 0;
     if (includeCustom){
-      const customEntries = parseCustomWords(ts.customText?.value, {
-        difficulty,
-        source: ts.customSource === FEEDBACK_SOURCE_AI ? FEEDBACK_SOURCE_AI : FEEDBACK_SOURCE_CUSTOM
-      });
+      const customEntries = parseCustomWords(ts.customText?.value, { difficulty });
       customEntriesCount = customEntries.length;
       entries = entries.concat(customEntries);
     }
@@ -3612,30 +3167,21 @@ function buildFeedbackContext(mode){
     appVersion: APP_VERSION,
     language: APP_LANGUAGE || 'ru'
   };
-  const detectSource = entry => {
-    const normalized = typeof entry?.source === 'string' ? entry.source.trim().toLowerCase() : '';
-    if (normalized) return normalized;
-    const dictId = typeof entry?.dictionaryId === 'string' ? entry.dictionaryId : '';
-    return dictId === CUSTOM_DICTIONARY_META.id ? FEEDBACK_SOURCE_CUSTOM : FEEDBACK_SOURCE_DICTIONARY;
-  };
   if (normalizedMode === 'quick'){
     const entry = qWords[qIndex] || null;
     context.termId = normalizeTermId(entry);
     context.termText = entry && typeof entry.term === 'string' ? entry.term : null;
     context.difficulty = deriveQuickDifficulty(entry);
-    context.source = detectSource(entry);
   }else if (normalizedMode === 'team'){
     const entry = tWords[tIndex] || null;
     context.termId = normalizeTermId(entry);
     context.termText = entry && typeof entry.term === 'string' ? entry.term : null;
     context.difficulty = deriveTeamDifficulty(entry);
-    context.source = detectSource(entry);
   }else{
     const entry = qWords[qIndex] || null;
     context.termText = entry && typeof entry.term === 'string' ? entry.term : null;
     context.termId = normalizeTermId(entry);
     context.difficulty = deriveQuickDifficulty(entry);
-    context.source = detectSource(entry);
   }
   return context;
 }
