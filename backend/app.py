@@ -18,8 +18,8 @@ from user_auth import (
     get_user_by_session,
     update_display_name,
     change_password,
-    check_generation_limit,
-    update_last_generation,
+    check_generation_limit_moscow_day,
+    mark_generation_success_moscow_day,
 )
 from services.llm_service import generate_dictionary as generate_dict_llm
 from services.llm_service import DictionaryGenerationError
@@ -226,19 +226,10 @@ def api_generate_dictionary():
     LOGGER.info("Dictionary generation request from user: %s", user_data["username"])
     
     # Проверка лимита генерации
-    limit_success, limit_message, can_generate = check_generation_limit(user_id, limit_hours=24)
+    limit_success, limit_message, can_generate, next_available_at = check_generation_limit_moscow_day(user_id)
     
     if not can_generate:
         LOGGER.info("Generation limit exceeded for user %s: %s", user_id, limit_message)
-        # Извлекаем время следующей доступной генерации из сообщения
-        next_available_at = None
-        if "следующая попытка доступна" in limit_message:
-            # Парсим время из сообщения вида "... следующая попытка доступна в YYYY-MM-DDTHH:MM:SS..."
-            import re
-            match = re.search(r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})', limit_message)
-            if match:
-                next_available_at = match.group(1)
-        
         return jsonify({
             "ok": False,
             "error": limit_message,
@@ -256,35 +247,26 @@ def api_generate_dictionary():
         LOGGER.warning("Request rejected: malformed JSON body")
         return jsonify({"ok": False, "error": "Malformed JSON"}), 400
     
-    difficulty_raw = (payload.get("difficulty") or "medium").strip().lower()
-    topic = (payload.get("topic") or "").strip()
-    
-    # Валидация сложности
-    allowed_difficulties = {"easy", "medium", "hard"}
-    if difficulty_raw not in allowed_difficulties:
-        LOGGER.warning("Invalid difficulty: %s", difficulty_raw)
-        return jsonify({
-            "ok": False,
-            "error": f"difficulty must be one of: {', '.join(sorted(allowed_difficulties))}"
-        }), 400
+    difficulty_raw = "medium"
+    topic = None
     
     try:
         # Генерация словаря через LLM сервис
         LOGGER.info("Generating dictionary for user %s: difficulty=%s, topic=%s", 
                    user_id, difficulty_raw, topic or "общая")
-        dictionary = generate_dict_llm(difficulty=difficulty_raw, topic=topic if topic else None)
-        
-        # Обновление времени последней генерации
-        update_success, update_message = update_last_generation(user_id)
-        
+        dictionary = generate_dict_llm(difficulty=difficulty_raw, topic=topic)
+
+        # Отмечаем только успешную генерацию (failed попытки не сгорают)
+        update_success, update_message, moscow_date = mark_generation_success_moscow_day(user_id)
+
         if not update_success:
-            LOGGER.warning("Failed to update last generation time for user %s: %s", user_id, update_message)
-            # Не прерываем ответ, но логируем предупреждение
+            LOGGER.warning("Failed to persist generation success for user %s: %s", user_id, update_message)
         
-        # Вычисление времени следующей доступной генерации
+        # Следующая доступная генерация — начало следующих суток по Москве
         from datetime import timedelta
-        next_available = datetime.now(timezone.utc) + timedelta(hours=24)
-        next_available_at = next_available.isoformat()
+        now_moscow = datetime.now(timezone.utc).astimezone(timezone(timedelta(hours=3)))
+        next_day_start = datetime.combine(now_moscow.date() + timedelta(days=1), datetime.min.time(), tzinfo=now_moscow.tzinfo)
+        next_available_at = next_day_start.astimezone(timezone.utc).isoformat()
         
         LOGGER.info("Dictionary generated successfully for user %s: %d words", user_id, len(dictionary))
         
@@ -352,23 +334,10 @@ def api_dict_status():
     LOGGER.info("Dict status check for user: %s", user_data["username"])
     
     # Проверка лимита генерации
-    limit_success, limit_message, can_generate = check_generation_limit(user_id, limit_hours=24)
+    limit_success, limit_message, can_generate, next_available_at = check_generation_limit_moscow_day(user_id)
     
     # Извлечение времени последней генерации из данных пользователя
     last_generation = user_data.get("last_dict_generation")
-    
-    # Вычисление времени следующей доступной генерации
-    next_available_at = None
-    if not can_generate and "следующая попытка доступна" in limit_message:
-        import re
-        match = re.search(r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})', limit_message)
-        if match:
-            next_available_at = match.group(1)
-    elif can_generate:
-        # Если генерация разрешена, следующая доступна сразу после текущей
-        from datetime import timedelta
-        next_available = datetime.now(timezone.utc) + timedelta(hours=24)
-        next_available_at = next_available.isoformat()
     
     LOGGER.info("Dict status for user %s: allowed=%s", user_id, can_generate)
     
