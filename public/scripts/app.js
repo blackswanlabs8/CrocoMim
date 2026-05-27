@@ -1,12 +1,12 @@
 // test
-// тест
-// Проверяем, что глобальный сервис словарей доступен до дальнейшей инициализации.
+// С‚РµСЃС‚
+// РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ РіР»РѕР±Р°Р»СЊРЅС‹Р№ СЃРµСЂРІРёСЃ СЃР»РѕРІР°СЂРµР№ РґРѕСЃС‚СѓРїРµРЅ РґРѕ РґР°Р»СЊРЅРµР№С€РµР№ РёРЅРёС†РёР°Р»РёР·Р°С†РёРё.
 const dictionaryService = (typeof globalThis !== 'undefined' && globalThis.DictionaryService)
   ? globalThis.DictionaryService
   : null;
 
 if (!dictionaryService){
-  console.error('Не удалось найти сервис словарей. Проверьте подключение public/scripts/dicts.js.');
+  console.error('РќРµ СѓРґР°Р»РѕСЃСЊ РЅР°Р№С‚Рё СЃРµСЂРІРёСЃ СЃР»РѕРІР°СЂРµР№. РџСЂРѕРІРµСЂСЊС‚Рµ РїРѕРґРєР»СЋС‡РµРЅРёРµ public/scripts/dicts.js.');
 }
 
 const dictionaryState = {
@@ -19,20 +19,20 @@ const dictionarySelectors = new Set();
 const DIFFICULTY_ORDER = ['easy','medium','hard'];
 const ALL_DIFFICULTIES = [...DIFFICULTY_ORDER, 'mix'];
 const DIFFICULTY_LABELS = {
-  easy: 'Лёгкий',
-  medium: 'Средний',
-  hard: 'Сложный',
-  mix: 'Микс'
+  easy: 'Р›С‘РіРєРёР№',
+  medium: 'РЎСЂРµРґРЅРёР№',
+  hard: 'РЎР»РѕР¶РЅС‹Р№',
+  mix: 'РњРёРєСЃ'
 };
 const CUSTOM_DICTIONARY_META = {
   id: 'custom',
-  title: 'Свой словарь',
-  description: 'Вставьте слова ниже',
+  title: 'РЎРІРѕР№ СЃР»РѕРІР°СЂСЊ',
+  description: 'Р’СЃС‚Р°РІСЊС‚Рµ СЃР»РѕРІР° РЅРёР¶Рµ',
   icon: 'edit'
 };
 const CUSTOM_GENERATED_WORDS = 50;
 
-const ICON_SANITIZE_RE = /[^A-Za-zА-Яа-яЁё0-9]/g;
+const ICON_SANITIZE_RE = /[^A-Za-zРђ-РЇР°-СЏРЃС‘0-9]/g;
 
 function getDictionaryIconText(meta){
   if (!meta) return '';
@@ -100,7 +100,7 @@ function ensureDictionaryIndex(){
         return dictionaryState.list;
       })
       .catch(err => {
-        console.error('Не удалось получить список словарей:', err);
+        console.error('РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ СЃРїРёСЃРѕРє СЃР»РѕРІР°СЂРµР№:', err);
         dictionaryState.list = [];
         dictionaryState.map = new Map();
         dictionaryState.ready = true;
@@ -115,14 +115,14 @@ function getDictionaryMeta(id){
 }
 
 async function loadDictionaryEntries(dictId, difficulty){
-  if (!dictionaryService) throw new Error('Сервис словарей недоступен.');
+  if (!dictionaryService) throw new Error('РЎРµСЂРІРёСЃ СЃР»РѕРІР°СЂРµР№ РЅРµРґРѕСЃС‚СѓРїРµРЅ.');
   await ensureDictionaryIndex();
   const normalizedDifficulty = difficulty || 'easy';
   try{
     const entries = await dictionaryService.getWords(dictId, normalizedDifficulty);
     return Array.isArray(entries) ? entries : [];
   }catch(err){
-    console.error(`Не удалось загрузить словарь ${dictId}/${normalizedDifficulty}:`, err);
+    console.error(`РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ СЃР»РѕРІР°СЂСЊ ${dictId}/${normalizedDifficulty}:`, err);
     throw err;
   }
 }
@@ -137,12 +137,12 @@ let tBreadcrumbContext = null;
 let qTimerId = null;
 let qTimerRunning = false;
 let tTimerId = null;
-const WORD_PLACEHOLDER = '—';
-const WORD_SECRET_PLACEHOLDER = '•••';
-const WORD_DESCRIPTION_FALLBACK = 'Описание недоступно';
-const WORD_DESCRIPTION_HIDDEN = 'Слово скрыто';
-const WORD_HELP_FALLBACK = 'Подсказка недоступна';
-// Версия приложения обновлена до 0.5.7, синхронизирована с бекендом.
+const WORD_PLACEHOLDER = 'вЂ”';
+const WORD_SECRET_PLACEHOLDER = 'вЂўвЂўвЂў';
+const WORD_DESCRIPTION_FALLBACK = 'РћРїРёСЃР°РЅРёРµ РЅРµРґРѕСЃС‚СѓРїРЅРѕ';
+const WORD_DESCRIPTION_HIDDEN = 'РЎР»РѕРІРѕ СЃРєСЂС‹С‚Рѕ';
+const WORD_HELP_FALLBACK = 'РџРѕРґСЃРєР°Р·РєР° РЅРµРґРѕСЃС‚СѓРїРЅР°';
+// Р’РµСЂСЃРёСЏ РїСЂРёР»РѕР¶РµРЅРёСЏ РѕР±РЅРѕРІР»РµРЅР° РґРѕ 0.5.7, СЃРёРЅС…СЂРѕРЅРёР·РёСЂРѕРІР°РЅР° СЃ Р±РµРєРµРЅРґРѕРј.
 const APP_VERSION = document.querySelector('meta[name="app-version"]')?.content || 'unknown';
 const APP_LANGUAGE = document.documentElement?.lang || 'ru';
 const versionBadgeEl = document.getElementById('versionBadge');
@@ -167,7 +167,7 @@ function ensureRuntimeConfig(){
   if (ready && typeof ready.then === 'function'){
     return ready
       .catch(err => {
-        console.warn('Runtime-конфигурация недоступна', err);
+        console.warn('Runtime-РєРѕРЅС„РёРіСѓСЂР°С†РёСЏ РЅРµРґРѕСЃС‚СѓРїРЅР°', err);
         return window.RUNTIME_CONFIG;
       })
       .then(() => normalizeConfig(window.RUNTIME_CONFIG));
@@ -207,24 +207,24 @@ function resolveBackendUrl(path, config){
     }
   }
 
-  console.warn('Некорректный backendBaseUrl в runtime-конфигурации', lastError);
+  console.warn('РќРµРєРѕСЂСЂРµРєС‚РЅС‹Р№ backendBaseUrl РІ runtime-РєРѕРЅС„РёРіСѓСЂР°С†РёРё', lastError);
   return normalizedPath || path;
 }
 
 function updateVersionBadge(text, options = {}){
   if (!versionBadgeEl) return;
   const safeText = typeof text === 'string' && text.trim() ? text.trim() : '';
-  versionBadgeEl.textContent = safeText || 'Версия недоступна';
+  versionBadgeEl.textContent = safeText || 'Р’РµСЂСЃРёСЏ РЅРµРґРѕСЃС‚СѓРїРЅР°';
   if (options.title){
     versionBadgeEl.title = options.title;
   }
 }
 
-// Отдельная функция для запроса версии нужна, чтобы показывать пользователю,
-// к какому бэкенду он подключён (например, после переключения окружения).
+// РћС‚РґРµР»СЊРЅР°СЏ С„СѓРЅРєС†РёСЏ РґР»СЏ Р·Р°РїСЂРѕСЃР° РІРµСЂСЃРёРё РЅСѓР¶РЅР°, С‡С‚РѕР±С‹ РїРѕРєР°Р·С‹РІР°С‚СЊ РїРѕР»СЊР·РѕРІР°С‚РµР»СЋ,
+// Рє РєР°РєРѕРјСѓ Р±СЌРєРµРЅРґСѓ РѕРЅ РїРѕРґРєР»СЋС‡С‘РЅ (РЅР°РїСЂРёРјРµСЂ, РїРѕСЃР»Рµ РїРµСЂРµРєР»СЋС‡РµРЅРёСЏ РѕРєСЂСѓР¶РµРЅРёСЏ).
 async function fetchBackendVersion(){
   try{
-    updateVersionBadge('Версия загружается…');
+    updateVersionBadge('Р’РµСЂСЃРёСЏ Р·Р°РіСЂСѓР¶Р°РµС‚СЃСЏвЂ¦');
     const runtimeConfig = await ensureRuntimeConfig();
     const url = resolveBackendUrl('version', runtimeConfig);
     const response = await fetch(url, { cache: 'no-store' });
@@ -257,14 +257,14 @@ async function fetchBackendVersion(){
 
     if (version){
       console.info(`[CrocoMim] Backend version resolved: ${version} (backend: ${backendLabel})`);
-      updateVersionBadge(`v${version}`, { title: `Версия: ${version}` });
+      updateVersionBadge(`v${version}`, { title: `Р’РµСЂСЃРёСЏ: ${version}` });
     }else{
       console.warn('[CrocoMim] Backend version response did not include a version string');
-      updateVersionBadge('Версия недоступна');
+      updateVersionBadge('Р’РµСЂСЃРёСЏ РЅРµРґРѕСЃС‚СѓРїРЅР°');
     }
   }catch(err){
-    console.error('[CrocoMim] Не удалось получить версию бэкенда', err);
-    updateVersionBadge('Версия недоступна');
+    console.error('[CrocoMim] РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ РІРµСЂСЃРёСЋ Р±СЌРєРµРЅРґР°', err);
+    updateVersionBadge('Р’РµСЂСЃРёСЏ РЅРµРґРѕСЃС‚СѓРїРЅР°');
   }
 }
 
@@ -302,7 +302,7 @@ function updateWordView(view, { entry, hidden, helpState }){
     view.helpBtn.classList.toggle('is-disabled', !hasHelp);
     const expanded = hasHelp && helpState?.open;
     view.helpBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-    view.helpBtn.setAttribute('title', hasHelp ? 'Помочь' : WORD_HELP_FALLBACK);
+    view.helpBtn.setAttribute('title', hasHelp ? 'РџРѕРјРѕС‡СЊ' : WORD_HELP_FALLBACK);
     if (!hasHelp && helpState){
       helpState.open = false;
     }
@@ -522,7 +522,7 @@ function ensureDictionarySummaryStructure(state){
     }
     toggle.type = 'button';
     toggle.classList.add('dict-summary-toggle');
-    toggle.textContent = 'Выбрать';
+    toggle.textContent = 'Р’С‹Р±СЂР°С‚СЊ';
     toggle.setAttribute('aria-haspopup', 'true');
     if (!toggle.dataset.boundToggle){
       toggle.addEventListener('click', () => {
@@ -563,7 +563,7 @@ function ensureDictionaryActions(state){
       okButton = document.createElement('button');
       okButton.type = 'button';
       okButton.className = 'btn ghost dict-ok-btn';
-      okButton.textContent = 'Ок';
+      okButton.textContent = 'РћРє';
       actions.appendChild(okButton);
     }
     if (!okButton.dataset.boundOk){
@@ -859,7 +859,7 @@ function setupDictionarySelector(state){
   }else{
     const empty = document.createElement('div');
     empty.className = 'dict-empty muted';
-    empty.textContent = 'Словари недоступны';
+    empty.textContent = 'РЎР»РѕРІР°СЂРё РЅРµРґРѕСЃС‚СѓРїРЅС‹';
     grid.appendChild(empty);
   }
   grid.appendChild(createCustomDictionaryCard(state));
@@ -884,30 +884,30 @@ const bodyEl = document.body;
 const helpOverlay = $('#helpOverlay');
 const helpDialog = helpOverlay ? helpOverlay.querySelector('.help-overlay__dialog') : null;
 const HELP_FALLBACK_TEXT = [
-  '🐊 CrocoMim — игра, где показываешь слова с помощью жестов и мимики, без слов! Крокодил и Пантомима.',
+  'рџђЉ CrocoMim вЂ” РёРіСЂР°, РіРґРµ РїРѕРєР°Р·С‹РІР°РµС€СЊ СЃР»РѕРІР° СЃ РїРѕРјРѕС‰СЊСЋ Р¶РµСЃС‚РѕРІ Рё РјРёРјРёРєРё, Р±РµР· СЃР»РѕРІ! РљСЂРѕРєРѕРґРёР» Рё РџР°РЅС‚РѕРјРёРјР°.',
   '',
-  '🎮 Режимы',
-  '• ⚡ Быстрый — один ведущий, счёт + таймер (опционально).',
-  '• 👥 Команда — по очереди, добавьте команды (игроки или другие названия) с таблицей очков.',
+  'рџЋ® Р РµР¶РёРјС‹',
+  'вЂў вљЎ Р‘С‹СЃС‚СЂС‹Р№ вЂ” РѕРґРёРЅ РІРµРґСѓС‰РёР№, СЃС‡С‘С‚ + С‚Р°Р№РјРµСЂ (РѕРїС†РёРѕРЅР°Р»СЊРЅРѕ).',
+  'вЂў рџ‘Ґ РљРѕРјР°РЅРґР° вЂ” РїРѕ РѕС‡РµСЂРµРґРё, РґРѕР±Р°РІСЊС‚Рµ РєРѕРјР°РЅРґС‹ (РёРіСЂРѕРєРё РёР»Рё РґСЂСѓРіРёРµ РЅР°Р·РІР°РЅРёСЏ) СЃ С‚Р°Р±Р»РёС†РµР№ РѕС‡РєРѕРІ.',
   '',
-  '📚 Слова',
-  '• 📖 Выбери словари → слова перемешаются в одну колоду.',
-  '• 🔁 Сложность: Лёгкий / Средний / Сложный / Микс (все уровни сложности смешаются).',
-  '• ✏️ Свой словарь — вставь слова через запятую или с новой строки.',
+  'рџ“љ РЎР»РѕРІР°',
+  'вЂў рџ“– Р’С‹Р±РµСЂРё СЃР»РѕРІР°СЂРё в†’ СЃР»РѕРІР° РїРµСЂРµРјРµС€Р°СЋС‚СЃСЏ РІ РѕРґРЅСѓ РєРѕР»РѕРґСѓ.',
+  'вЂў рџ”Ѓ РЎР»РѕР¶РЅРѕСЃС‚СЊ: Р›С‘РіРєРёР№ / РЎСЂРµРґРЅРёР№ / РЎР»РѕР¶РЅС‹Р№ / РњРёРєСЃ (РІСЃРµ СѓСЂРѕРІРЅРё СЃР»РѕР¶РЅРѕСЃС‚Рё СЃРјРµС€Р°СЋС‚СЃСЏ).',
+  'вЂў вњЏпёЏ РЎРІРѕР№ СЃР»РѕРІР°СЂСЊ вЂ” РІСЃС‚Р°РІСЊ СЃР»РѕРІР° С‡РµСЂРµР· Р·Р°РїСЏС‚СѓСЋ РёР»Рё СЃ РЅРѕРІРѕР№ СЃС‚СЂРѕРєРё.',
   '',
-  '🛠 Во время игры',
-  '• 💡 Подсказка — подсказка, как можно показать (если есть).',
-  '• 🌐 Значение — откроет Википедию с этим словом (если есть).',
+  'рџ›  Р’Рѕ РІСЂРµРјСЏ РёРіСЂС‹',
+  'вЂў рџ’Ў РџРѕРґСЃРєР°Р·РєР° вЂ” РїРѕРґСЃРєР°Р·РєР°, РєР°Рє РјРѕР¶РЅРѕ РїРѕРєР°Р·Р°С‚СЊ (РµСЃР»Рё РµСЃС‚СЊ).',
+  'вЂў рџЊђ Р—РЅР°С‡РµРЅРёРµ вЂ” РѕС‚РєСЂРѕРµС‚ Р’РёРєРёРїРµРґРёСЋ СЃ СЌС‚РёРј СЃР»РѕРІРѕРј (РµСЃР»Рё РµСЃС‚СЊ).',
   '',
-  '⚙ Настройки',
-  '• ⏱ Таймер: 30/60/90… сек.',
-  '• 🎯 Очки до победы.',
-  '• 🌗 Тема: светлая / тёмная.',
+  'вљ™ РќР°СЃС‚СЂРѕР№РєРё',
+  'вЂў вЏ± РўР°Р№РјРµСЂ: 30/60/90вЂ¦ СЃРµРє.',
+  'вЂў рџЋЇ РћС‡РєРё РґРѕ РїРѕР±РµРґС‹.',
+  'вЂў рџЊ— РўРµРјР°: СЃРІРµС‚Р»Р°СЏ / С‚С‘РјРЅР°СЏ.',
   '',
-  '❓ Справка',
-  'Нажми «?» в шапке — инструкция всегда рядом!',
+  'вќ“ РЎРїСЂР°РІРєР°',
+  'РќР°Р¶РјРё В«?В» РІ С€Р°РїРєРµ вЂ” РёРЅСЃС‚СЂСѓРєС†РёСЏ РІСЃРµРіРґР° СЂСЏРґРѕРј!',
   '',
-  '🎭 Жестикулируй! Угадывай! Получай удовольствие!'
+  'рџЋ­ Р–РµСЃС‚РёРєСѓР»РёСЂСѓР№! РЈРіР°РґС‹РІР°Р№! РџРѕР»СѓС‡Р°Р№ СѓРґРѕРІРѕР»СЊСЃС‚РІРёРµ!'
 ].join('\n');
 const helpState = { lastFocused:null, bodyOverflow:'' };
 const isHelpOpen = () => !!(helpOverlay && !helpOverlay.hidden);
@@ -1110,16 +1110,16 @@ if (themeMoonBtn){
 }
 
 const TEAM_ICONS = [
-  {id:'sun', emoji:'🌞', bg:'linear-gradient(135deg,#fde047,#f97316)', color:'#1f2937'},
-  {id:'rocket', emoji:'🚀', bg:'linear-gradient(135deg,#60a5fa,#2563eb)', color:'#0f172a'},
-  {id:'leaf', emoji:'🍀', bg:'linear-gradient(135deg,#86efac,#22c55e)', color:'#052e16'},
-  {id:'wave', emoji:'🐬', bg:'linear-gradient(135deg,#67e8f9,#0ea5e9)', color:'#0f172a'},
-  {id:'crown', emoji:'👑', bg:'linear-gradient(135deg,#fcd34d,#a855f7)', color:'#312e81'},
-  {id:'gamepad', emoji:'🎮', bg:'linear-gradient(135deg,#f472b6,#a855f7)', color:'#1e1b4b'},
-  {id:'bolt', emoji:'⚡', bg:'linear-gradient(135deg,#f97316,#ef4444)', color:'#111827'},
-  {id:'snow', emoji:'❄️', bg:'linear-gradient(135deg,#bfdbfe,#60a5fa)', color:'#1e3a8a'}
+  {id:'sun', emoji:'рџЊћ', bg:'linear-gradient(135deg,#fde047,#f97316)', color:'#1f2937'},
+  {id:'rocket', emoji:'рџљЂ', bg:'linear-gradient(135deg,#60a5fa,#2563eb)', color:'#0f172a'},
+  {id:'leaf', emoji:'рџЌЂ', bg:'linear-gradient(135deg,#86efac,#22c55e)', color:'#052e16'},
+  {id:'wave', emoji:'рџђ¬', bg:'linear-gradient(135deg,#67e8f9,#0ea5e9)', color:'#0f172a'},
+  {id:'crown', emoji:'рџ‘‘', bg:'linear-gradient(135deg,#fcd34d,#a855f7)', color:'#312e81'},
+  {id:'gamepad', emoji:'рџЋ®', bg:'linear-gradient(135deg,#f472b6,#a855f7)', color:'#1e1b4b'},
+  {id:'bolt', emoji:'вљЎ', bg:'linear-gradient(135deg,#f97316,#ef4444)', color:'#111827'},
+  {id:'snow', emoji:'вќ„пёЏ', bg:'linear-gradient(135deg,#bfdbfe,#60a5fa)', color:'#1e3a8a'}
 ];
-const defaultTeamName = idx => `Команда ${idx+1}`;
+const defaultTeamName = idx => `РљРѕРјР°РЅРґР° ${idx+1}`;
 const makeTeam = (name, icon) => ({name, icon, points:0, hit:0, miss:0, hitWords:[], missWords:[]});
 const getTeamIcon = id => TEAM_ICONS.find(icon=>icon.id===id) || TEAM_ICONS[0];
 function sanitizeTeam(team, idx){
@@ -1235,7 +1235,7 @@ backBtn.onclick = () => {
   const leavingQuick = screen==='viewQuickGame';
   const leavingTeam = screen==='viewTeamGame';
   if (leavingQuick || leavingTeam){
-    if (!confirm('Выйти в меню? Текущая партия будет завершена.')) return;
+    if (!confirm('Р’С‹Р№С‚Рё РІ РјРµРЅСЋ? РўРµРєСѓС‰Р°СЏ РїР°СЂС‚РёСЏ Р±СѓРґРµС‚ Р·Р°РІРµСЂС€РµРЅР°.')) return;
   }
   stopQuickTimer();
   if (typeof tTimerId !== 'undefined'){ clearInterval(tTimerId); tTimerId=null; }
@@ -1364,7 +1364,7 @@ qs.onDifficultyChange = level => {
   qs.difficulty = level;
   persistQuickSettings();
 };
-const upQuickTime = () => qs.timeLabel.textContent = qs.time+' с';
+const upQuickTime = () => qs.timeLabel.textContent = qs.time+' СЃ';
 const upQuickPts = () => qs.ptsLabel.textContent = qs.pts;
 upQuickTime();
 upQuickPts();
@@ -1584,7 +1584,7 @@ function applyQuickSession(session){
   updateCustomBoxVisibility(qs);
   updateQuickCounters();
   updateQuickWordView();
-  if (qUI.hideBtn) qUI.hideBtn.textContent = qHide ? 'Показать слово' : 'Скрыть слово';
+  if (qUI.hideBtn) qUI.hideBtn.textContent = qHide ? 'РџРѕРєР°Р·Р°С‚СЊ СЃР»РѕРІРѕ' : 'РЎРєСЂС‹С‚СЊ СЃР»РѕРІРѕ';
   if (qTimerId){
     clearInterval(qTimerId);
     qTimerId = null;
@@ -1648,10 +1648,10 @@ updateQuickWordView();
 
 const pad = n => String(n).padStart(2,'0');
 const formatWordList = list => {
-  if (!Array.isArray(list) || !list.length) return '—';
+  if (!Array.isArray(list) || !list.length) return 'вЂ”';
   const items = list.map(item => typeof item === 'string' ? item : (item && typeof item.term === 'string' ? item.term : ''))
     .filter(Boolean);
-  return items.length ? items.join(', ') : '—';
+  return items.length ? items.join(', ') : 'вЂ”';
 };
 const parseCustomWords = (raw, options = {}) => {
   const input = typeof raw === 'string' ? raw : '';
@@ -1697,6 +1697,31 @@ function setupCustomGenerator(state, options = {}){
     return ['easy', 'medium', 'hard'].includes(level) ? level : 'medium';
   };
 
+  const getSessionToken = () => {
+    try{
+      return localStorage.getItem('session_token') || '';
+    }catch(err){
+      return '';
+    }
+  };
+
+  const formatNextAvailable = (raw) => {
+    if (!raw || typeof raw !== 'string') return '';
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) return raw;
+    try{
+      return new Intl.DateTimeFormat('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(date);
+    }catch(err){
+      return raw;
+    }
+  };
+
   const handleGenerate = async () => {
     const topic = typeof topicInput?.value === 'string' ? topicInput.value.trim() : '';
     setStatus('');
@@ -1706,16 +1731,32 @@ function setupCustomGenerator(state, options = {}){
       return;
     }
 
+    const sessionToken = getSessionToken();
+    if (!sessionToken){
+      setStatus('Войдите в аккаунт для AI-генерации', 'is-error');
+      return;
+    }
+
     const difficulty = getDifficulty();
-    if (trigger) trigger.disabled = true;
-    setStatus('Генерация словаря…');
+    const defaultTriggerText = trigger?.dataset?.defaultText || trigger?.textContent || 'Сгенерировать';
+    if (trigger){
+      if (!trigger.dataset.defaultText){
+        trigger.dataset.defaultText = defaultTriggerText;
+      }
+      trigger.disabled = true;
+      trigger.textContent = 'Генерация...';
+    }
+    setStatus('Генерация словаря...');
 
     try{
       const runtimeConfig = await ensureRuntimeConfig();
-      const url = resolveBackendUrl('generate-dictionary', runtimeConfig);
+      const url = resolveBackendUrl('api/generate-dictionary', runtimeConfig);
       const response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionToken}`
+        },
         body: JSON.stringify({ topic, difficulty, words: CUSTOM_GENERATED_WORDS })
       });
 
@@ -1733,12 +1774,28 @@ function setupCustomGenerator(state, options = {}){
       };
 
       if (!response.ok || payload?.ok === false){
+        if (response.status === 401){
+          throw new Error('Войдите в аккаунт для AI-генерации');
+        }
+        if (response.status === 429){
+          const nextAt = formatNextAvailable(payload?.next_available_at);
+          if (nextAt){
+            throw new Error(`Лимит генерации исчерпан до ${nextAt}`);
+          }
+          throw new Error('Лимит генерации исчерпан');
+        }
+        if (response.status === 500 || response.status === 502){
+          throw new Error('Временная ошибка генерации, попробуйте позже');
+        }
         const detail = aggregatedError();
         throw new Error(detail || `Не удалось сгенерировать словарь (HTTP ${response.status})`);
       }
 
-      const words = Array.isArray(payload?.words)
-        ? payload.words.filter(item => typeof item === 'string' && item.trim())
+      const wordsSource = Array.isArray(payload?.dictionary)
+        ? payload.dictionary
+        : (Array.isArray(payload?.words) ? payload.words : []);
+      const words = Array.isArray(wordsSource)
+        ? wordsSource.filter(item => typeof item === 'string' && item.trim())
         : [];
 
       if (!words.length){
@@ -1757,7 +1814,10 @@ function setupCustomGenerator(state, options = {}){
     }catch(err){
       setStatus(err?.message || 'Не удалось сгенерировать словарь', 'is-error');
     }finally{
-      if (trigger) trigger.disabled = false;
+      if (trigger){
+        trigger.disabled = false;
+        trigger.textContent = trigger.dataset.defaultText || defaultTriggerText;
+      }
     }
   };
 
@@ -1779,7 +1839,6 @@ function setupCustomGenerator(state, options = {}){
 
   return { generate: handleGenerate, setStatus };
 }
-
 function updateQuickTimerButton(){
   const restartBtn = document.getElementById('qRestartTimer');
   if (!restartBtn) return;
@@ -1788,7 +1847,7 @@ function updateQuickTimerButton(){
     return;
   }
   restartBtn.style.display = '';
-  restartBtn.textContent = qTimerRunning ? 'Перезапустить таймер' : 'Запустить таймер';
+  restartBtn.textContent = qTimerRunning ? 'РџРµСЂРµР·Р°РїСѓСЃС‚РёС‚СЊ С‚Р°Р№РјРµСЂ' : 'Р—Р°РїСѓСЃС‚РёС‚СЊ С‚Р°Р№РјРµСЂ';
 }
 
 function stopQuickTimer(){
@@ -1849,7 +1908,7 @@ function restartQuickTimer(){
 }
 
 function showWordStats(title, hitList, missList){
-  alert(`${title}\n\nУгаданные (${hitList.length}):\n${formatWordList(hitList)}\n\nПропущенные (${missList.length}):\n${formatWordList(missList)}`);
+  alert(`${title}\n\nРЈРіР°РґР°РЅРЅС‹Рµ (${hitList.length}):\n${formatWordList(hitList)}\n\nРџСЂРѕРїСѓС‰РµРЅРЅС‹Рµ (${missList.length}):\n${formatWordList(missList)}`);
 }
 
 async function startQuickGame(){
@@ -1859,7 +1918,7 @@ async function startQuickGame(){
     const selectedIds = Array.from(qs.selectedDictionaries || []);
     const includeCustom = !!qs.customSelected;
     if (!selectedIds.length && !includeCustom){
-      alert('Выберите хотя бы один словарь');
+      alert('Р’С‹Р±РµСЂРёС‚Рµ С…РѕС‚СЏ Р±С‹ РѕРґРёРЅ СЃР»РѕРІР°СЂСЊ');
       return;
     }
     const difficulty = qs.difficulty || 'easy';
@@ -1885,7 +1944,7 @@ async function startQuickGame(){
             id: entry.id || `${dictId}_${difficulty}_${idx+1}`
           }));
         }catch(err){
-          console.error(`Не удалось загрузить словарь ${dictId}/${difficulty}:`, err);
+          console.error(`РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ СЃР»РѕРІР°СЂСЊ ${dictId}/${difficulty}:`, err);
           return [];
         }
       }));
@@ -1897,11 +1956,11 @@ async function startQuickGame(){
     entries = entries.filter(entry => entry && typeof entry.term === 'string' && entry.term.trim().length);
     if (!entries.length){
       if (!includeCustom && selectedIds.length && dictionaryEntriesCount === 0){
-        alert('Для выбранных словарей на этом уровне сложности нет слов. Попробуйте изменить сложность или набор словарей.');
+        alert('Р”Р»СЏ РІС‹Р±СЂР°РЅРЅС‹С… СЃР»РѕРІР°СЂРµР№ РЅР° СЌС‚РѕРј СѓСЂРѕРІРЅРµ СЃР»РѕР¶РЅРѕСЃС‚Рё РЅРµС‚ СЃР»РѕРІ. РџРѕРїСЂРѕР±СѓР№С‚Рµ РёР·РјРµРЅРёС‚СЊ СЃР»РѕР¶РЅРѕСЃС‚СЊ РёР»Рё РЅР°Р±РѕСЂ СЃР»РѕРІР°СЂРµР№.');
       }else if (includeCustom && customEntriesCount === 0 && dictionaryEntriesCount === 0){
-        alert('Добавьте хотя бы одно слово');
+        alert('Р”РѕР±Р°РІСЊС‚Рµ С…РѕС‚СЏ Р±С‹ РѕРґРЅРѕ СЃР»РѕРІРѕ');
       }else{
-        alert('Добавьте хотя бы одно слово');
+        alert('Р”РѕР±Р°РІСЊС‚Рµ С…РѕС‚СЏ Р±С‹ РѕРґРЅРѕ СЃР»РѕРІРѕ');
       }
       return;
     }
@@ -1915,7 +1974,7 @@ async function startQuickGame(){
     persistQuickStats();
     updateQuickCounters();
     updateQuickWordView();
-    if (qUI.hideBtn) qUI.hideBtn.textContent = 'Скрыть слово';
+    if (qUI.hideBtn) qUI.hideBtn.textContent = 'РЎРєСЂС‹С‚СЊ СЃР»РѕРІРѕ';
 
     // timer
     stopQuickTimer();
@@ -1946,7 +2005,7 @@ function nextWord(){
   qHide=false;
   qHelpState.open = false;
   updateQuickWordView();
-  if (qUI.hideBtn) qUI.hideBtn.textContent = 'Скрыть слово';
+  if (qUI.hideBtn) qUI.hideBtn.textContent = 'РЎРєСЂС‹С‚СЊ СЃР»РѕРІРѕ';
   persistQuickSession();
 }
 
@@ -1960,7 +2019,7 @@ qUI.hitBtn.onclick = ()=>{
   if (qTarget!==null && qHit>=qTarget){
     stopQuickTimer();
     playAlarm();
-    alert('Вы достигли цели!');
+    alert('Р’С‹ РґРѕСЃС‚РёРіР»Рё С†РµР»Рё!');
     clearQuickSession();
     show('viewMenu');
     return;
@@ -1981,7 +2040,7 @@ qUI.hideBtn.onclick = ()=>{
     qHelpState.open = false;
   }
   updateQuickWordView();
-  qUI.hideBtn.textContent = qHide ? 'Показать слово' : 'Скрыть слово';
+  qUI.hideBtn.textContent = qHide ? 'РџРѕРєР°Р·Р°С‚СЊ СЃР»РѕРІРѕ' : 'РЎРєСЂС‹С‚СЊ СЃР»РѕРІРѕ';
   persistQuickSession();
 };
 if (qUI.restartTimerBtn){
@@ -1994,7 +2053,7 @@ qUI.meaningBtn.onclick = ()=>{
 };
 if (qUI.statsBtn){
   qUI.statsBtn.onclick = ()=>{
-    showWordStats('Быстрый режим', qHitWords, qMissWords);
+    showWordStats('Р‘С‹СЃС‚СЂС‹Р№ СЂРµР¶РёРј', qHitWords, qMissWords);
   };
 }
 
@@ -2028,14 +2087,14 @@ function renderTeams(){
       <div class="team-body">
         <div class="team-name"></div>
         <form class="team-edit" data-team-form>
-          <label class="visually-hidden" for="teamName-${index}">Название команды</label>
+          <label class="visually-hidden" for="teamName-${index}">РќР°Р·РІР°РЅРёРµ РєРѕРјР°РЅРґС‹</label>
           <input class="input team-edit-input" id="teamName-${index}" name="teamName" type="text" maxlength="40" autocomplete="off">
           <div class="team-edit-actions">
-            <button class="btn btn-small" type="submit">Сохранить</button>
-            <button class="btn ghost btn-small" type="button" data-cancel>Отмена</button>
+            <button class="btn btn-small" type="submit">РЎРѕС…СЂР°РЅРёС‚СЊ</button>
+            <button class="btn ghost btn-small" type="button" data-cancel>РћС‚РјРµРЅР°</button>
           </div>
         </form>
-        <button class="team-delete" type="button" title="Удалить команду" data-index="${index}">🗑️</button>
+        <button class="team-delete" type="button" title="РЈРґР°Р»РёС‚СЊ РєРѕРјР°РЅРґСѓ" data-index="${index}">рџ—‘пёЏ</button>
       </div>`;
     const nameLabel = card.querySelector('.team-name');
     const editForm = card.querySelector('[data-team-form]');
@@ -2049,10 +2108,10 @@ function renderTeams(){
         nameLabel.dataset.editable = 'true';
         nameLabel.setAttribute('role', 'button');
         nameLabel.setAttribute('tabindex', '0');
-        nameLabel.setAttribute('title', `Редактировать название команды «${currentName}»`);
+        nameLabel.setAttribute('title', `Р РµРґР°РєС‚РёСЂРѕРІР°С‚СЊ РЅР°Р·РІР°РЅРёРµ РєРѕРјР°РЅРґС‹ В«${currentName}В»`);
       }
       if (avatarBtn){
-        avatarBtn.setAttribute('aria-label', `Редактировать название команды «${currentName}»`);
+        avatarBtn.setAttribute('aria-label', `Р РµРґР°РєС‚РёСЂРѕРІР°С‚СЊ РЅР°Р·РІР°РЅРёРµ РєРѕРјР°РЅРґС‹ В«${currentName}В»`);
       }
     };
     const exitEditMode = focusTarget => {
@@ -2117,9 +2176,9 @@ function renderTeams(){
     }
     const deleteBtn = card.querySelector('.team-delete');
     if (deleteBtn){
-      deleteBtn.setAttribute('aria-label', `Удалить команду «${team.name || defaultTeamName(index)}»`);
+      deleteBtn.setAttribute('aria-label', `РЈРґР°Р»РёС‚СЊ РєРѕРјР°РЅРґСѓ В«${team.name || defaultTeamName(index)}В»`);
       deleteBtn.onclick = () => {
-        if (!confirm(`Удалить команду «${team.name || defaultTeamName(index)}»?`)) return;
+        if (!confirm(`РЈРґР°Р»РёС‚СЊ РєРѕРјР°РЅРґСѓ В«${team.name || defaultTeamName(index)}В»?`)) return;
         teams.splice(index, 1);
         renderTeams();
         persistTeams();
@@ -2228,7 +2287,7 @@ ts.onDifficultyChange = level => {
   ts.difficulty = level;
   persistTeamSettings();
 };
-const upTeamTime = () => ts.timeLabel.textContent = ts.time+' с';
+const upTeamTime = () => ts.timeLabel.textContent = ts.time+' СЃ';
 const upPts = () => ts.ptsLabel.textContent = ts.pts;
 upTeamTime(); upPts();
 if (ts.timerToggle){
@@ -2550,7 +2609,7 @@ function showTeamResumePrompt(){
     tUI.endRound.style.display = 'none';
   }
   if (tUI.status){
-    tUI.status.textContent = 'Игра была приостановлена. Нажмите «Продолжить игру».';
+    tUI.status.textContent = 'РРіСЂР° Р±С‹Р»Р° РїСЂРёРѕСЃС‚Р°РЅРѕРІР»РµРЅР°. РќР°Р¶РјРёС‚Рµ В«РџСЂРѕРґРѕР»Р¶РёС‚СЊ РёРіСЂСѓВ».';
   }
 }
 
@@ -2613,7 +2672,7 @@ function applyTeamSession(session){
   renderScore();
   updateTurnHeader();
   updateTeamWordView();
-  if (tUI.hideBtn) tUI.hideBtn.textContent = tHide ? 'Показать слово' : 'Скрыть слово';
+  if (tUI.hideBtn) tUI.hideBtn.textContent = tHide ? 'РџРѕРєР°Р·Р°С‚СЊ СЃР»РѕРІРѕ' : 'РЎРєСЂС‹С‚СЊ СЃР»РѕРІРѕ';
   if (tTimerId){
     clearInterval(tTimerId);
     tTimerId = null;
@@ -2682,9 +2741,9 @@ function renderScore(){
         <span class="team-chip-icon">${iconDef.emoji}</span>
         ${escapeHtml(team.name || defaultTeamName(idx))}
       </div>
-      <div class="chip">Угадано: ${team.hit}</div>
-      <div class="chip">Пропущено: ${team.miss}</div>
-      ${teamPointsEnabled ? `<div class="chip">Очки: ${team.points}</div>` : ''}`;
+      <div class="chip">РЈРіР°РґР°РЅРѕ: ${team.hit}</div>
+      <div class="chip">РџСЂРѕРїСѓС‰РµРЅРѕ: ${team.miss}</div>
+      ${teamPointsEnabled ? `<div class="chip">РћС‡РєРё: ${team.points}</div>` : ''}`;
     tUI.table.appendChild(row);
   });
 }
@@ -2739,7 +2798,7 @@ function resetWordView(){
   tIndex = Math.min(tIndex, tWords.length ? tWords.length - 1 : -1);
   tHelpState.open = false;
   updateTeamWordView();
-  if (tUI.hideBtn) tUI.hideBtn.textContent = 'Скрыть слово';
+  if (tUI.hideBtn) tUI.hideBtn.textContent = 'РЎРєСЂС‹С‚СЊ СЃР»РѕРІРѕ';
 }
 
 function advanceWord(){
@@ -2748,7 +2807,7 @@ function advanceWord(){
   tHide = false;
   tHelpState.open = false;
   updateTeamWordView();
-  if (tUI.hideBtn) tUI.hideBtn.textContent = 'Скрыть слово';
+  if (tUI.hideBtn) tUI.hideBtn.textContent = 'РЎРєСЂС‹С‚СЊ СЃР»РѕРІРѕ';
   persistTeamSession();
 }
 
@@ -2759,21 +2818,21 @@ function setStatus(text){
 function preRoundMessage(name, initial){
   if (!name) return;
   if (initial){
-    setStatus(`Команда «${name}», приготовьтесь и нажмите «Начать раунд».`);
+    setStatus(`РљРѕРјР°РЅРґР° В«${name}В», РїСЂРёРіРѕС‚РѕРІСЊС‚РµСЃСЊ Рё РЅР°Р¶РјРёС‚Рµ В«РќР°С‡Р°С‚СЊ СЂР°СѓРЅРґВ».`);
   }else{
-    setStatus(`Ход завершён. Передайте устройство команде «${name}» и нажмите «Начать раунд».`);
+    setStatus(`РҐРѕРґ Р·Р°РІРµСЂС€С‘РЅ. РџРµСЂРµРґР°Р№С‚Рµ СѓСЃС‚СЂРѕР№СЃС‚РІРѕ РєРѕРјР°РЅРґРµ В«${name}В» Рё РЅР°Р¶РјРёС‚Рµ В«РќР°С‡Р°С‚СЊ СЂР°СѓРЅРґВ».`);
   }
 }
 
 async function startTeamGame(){
-  if (teams.length<2){ alert('Нужно минимум 2 команды'); return; }
+  if (teams.length<2){ alert('РќСѓР¶РЅРѕ РјРёРЅРёРјСѓРј 2 РєРѕРјР°РЅРґС‹'); return; }
   if (ts.start) ts.start.disabled = true;
   try{
     await ensureDictionaryIndex();
     const selectedIds = Array.from(ts.selectedDictionaries || []);
     const includeCustom = !!ts.customSelected;
     if (!selectedIds.length && !includeCustom){
-      alert('Выберите хотя бы один словарь');
+      alert('Р’С‹Р±РµСЂРёС‚Рµ С…РѕС‚СЏ Р±С‹ РѕРґРёРЅ СЃР»РѕРІР°СЂСЊ');
       return;
     }
     const difficulty = ts.difficulty || 'easy';
@@ -2799,7 +2858,7 @@ async function startTeamGame(){
             id: entry.id || `${dictId}_${difficulty}_${idx+1}`
           }));
         }catch(err){
-          console.error(`Не удалось загрузить словарь ${dictId}/${difficulty}:`, err);
+          console.error(`РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ СЃР»РѕРІР°СЂСЊ ${dictId}/${difficulty}:`, err);
           return [];
         }
       }));
@@ -2811,11 +2870,11 @@ async function startTeamGame(){
     entries = entries.filter(entry => entry && typeof entry.term === 'string' && entry.term.trim().length);
     if (!entries.length){
       if (!includeCustom && selectedIds.length && dictionaryEntriesCount === 0){
-        alert('Для выбранных словарей на этом уровне сложности нет слов. Попробуйте изменить сложность или набор словарей.');
+        alert('Р”Р»СЏ РІС‹Р±СЂР°РЅРЅС‹С… СЃР»РѕРІР°СЂРµР№ РЅР° СЌС‚РѕРј СѓСЂРѕРІРЅРµ СЃР»РѕР¶РЅРѕСЃС‚Рё РЅРµС‚ СЃР»РѕРІ. РџРѕРїСЂРѕР±СѓР№С‚Рµ РёР·РјРµРЅРёС‚СЊ СЃР»РѕР¶РЅРѕСЃС‚СЊ РёР»Рё РЅР°Р±РѕСЂ СЃР»РѕРІР°СЂРµР№.');
       }else if (includeCustom && customEntriesCount === 0 && dictionaryEntriesCount === 0){
-        alert('Добавьте хотя бы одно слово');
+        alert('Р”РѕР±Р°РІСЊС‚Рµ С…РѕС‚СЏ Р±С‹ РѕРґРЅРѕ СЃР»РѕРІРѕ');
       }else{
-        alert('Добавьте хотя бы одно слово');
+        alert('Р”РѕР±Р°РІСЊС‚Рµ С…РѕС‚СЏ Р±С‹ РѕРґРЅРѕ СЃР»РѕРІРѕ');
       }
       return;
     }
@@ -2883,7 +2942,7 @@ function beginRound(){
     tUI.endRound.disabled=false;
   }
   const currentName = teams[turn]?.name || defaultTeamName(turn);
-  setStatus(`Ход команды «${currentName}»`);
+  setStatus(`РҐРѕРґ РєРѕРјР°РЅРґС‹ В«${currentName}В»`);
   clearInterval(tTimerId); tTimerId=null;
   if (teamTimerEnabled){
     startTeamTimerCountdown(ts.time);
@@ -2898,7 +2957,7 @@ function handleTimerEnd(){
   if (!roundActive || timerExpired) return;
   timerExpired=true;
   playAlarm();
-  setStatus('Время вышло! Завершите объяснение и нажмите «Закончить».');
+  setStatus('Р’СЂРµРјСЏ РІС‹С€Р»Рѕ! Р—Р°РІРµСЂС€РёС‚Рµ РѕР±СЉСЏСЃРЅРµРЅРёРµ Рё РЅР°Р¶РјРёС‚Рµ В«Р—Р°РєРѕРЅС‡РёС‚СЊВ».');
   if (tUI.next) tUI.next.disabled = true;
   persistTeamSession();
 }
@@ -2941,7 +3000,7 @@ function declareWinner(team){
   clearInterval(tTimerId); tTimerId=null;
   roundActive=false;
   timerExpired=false;
-  alert('Победа: ' + team.name);
+  alert('РџРѕР±РµРґР°: ' + team.name);
   clearTeamSession();
   show('viewMenu');
 }
@@ -2964,7 +3023,7 @@ tUI.hideBtn.onclick = ()=>{
     tHelpState.open = false;
   }
   updateTeamWordView();
-  tUI.hideBtn.textContent = tHide ? 'Показать слово' : 'Скрыть слово';
+  tUI.hideBtn.textContent = tHide ? 'РџРѕРєР°Р·Р°С‚СЊ СЃР»РѕРІРѕ' : 'РЎРєСЂС‹С‚СЊ СЃР»РѕРІРѕ';
   persistTeamSession();
 };
 tUI.meaning.onclick = ()=>{
@@ -2977,16 +3036,16 @@ tUI.meaning.onclick = ()=>{
 if (tUI.statsBtn){
   tUI.statsBtn.onclick = ()=>{
     if (!teams.length){
-      alert('Статистика пока пуста');
+      alert('РЎС‚Р°С‚РёСЃС‚РёРєР° РїРѕРєР° РїСѓСЃС‚Р°');
       return;
     }
     const blocks = teams.map((team, idx)=>{
       const name = team.name || defaultTeamName(idx);
       const hitList = Array.isArray(team.hitWords) ? team.hitWords : [];
       const missList = Array.isArray(team.missWords) ? team.missWords : [];
-      return `Команда «${name}»\nУгаданные (${hitList.length}):\n${formatWordList(hitList)}\n\nПропущенные (${missList.length}):\n${formatWordList(missList)}`;
+      return `РљРѕРјР°РЅРґР° В«${name}В»\nРЈРіР°РґР°РЅРЅС‹Рµ (${hitList.length}):\n${formatWordList(hitList)}\n\nРџСЂРѕРїСѓС‰РµРЅРЅС‹Рµ (${missList.length}):\n${formatWordList(missList)}`;
     });
-    alert(`Статистика команд\n\n${blocks.join('\n\n')}`);
+    alert(`РЎС‚Р°С‚РёСЃС‚РёРєР° РєРѕРјР°РЅРґ\n\n${blocks.join('\n\n')}`);
   };
 }
 
@@ -3044,7 +3103,7 @@ function getDictionaryLabelById(dictId){
   if (dictId === CUSTOM_DICTIONARY_META.id){
     const customTitle = typeof CUSTOM_DICTIONARY_META?.title === 'string' && CUSTOM_DICTIONARY_META.title.trim()
       ? CUSTOM_DICTIONARY_META.title.trim()
-      : 'Свой словарь';
+      : 'РЎРІРѕР№ СЃР»РѕРІР°СЂСЊ';
     return customTitle;
   }
   const meta = getDictionaryMeta(dictId);
@@ -3066,7 +3125,7 @@ function buildWordBreadcrumb(entry, context){
       dictionaryText = getDictionaryLabelById(CUSTOM_DICTIONARY_META.id);
     }
   }
-  const dictionaryPrefix = dictionaryText ? 'Словарь' : '';
+  const dictionaryPrefix = dictionaryText ? 'РЎР»РѕРІР°СЂСЊ' : '';
 
   const entryDiff = typeof entry.difficulty === 'string' ? entry.difficulty.trim().toLowerCase() : '';
   const contextDiff = typeof context?.difficulty === 'string' ? context.difficulty.trim().toLowerCase() : '';
@@ -3083,7 +3142,7 @@ function buildWordBreadcrumb(entry, context){
     dictionaryText,
     dictionaryPrefix,
     difficultyText,
-    difficultyPrefix: difficultyText ? 'Сложность' : ''
+    difficultyPrefix: difficultyText ? 'РЎР»РѕР¶РЅРѕСЃС‚СЊ' : ''
   };
 }
 function refreshQuickBreadcrumbs(){
@@ -3106,7 +3165,7 @@ function applyWordBreadcrumbs(ui, data){
   }
   const parts = [];
   if (data.dictionaryText){
-    const label = data.dictionaryPrefix || 'Словарь';
+    const label = data.dictionaryPrefix || 'РЎР»РѕРІР°СЂСЊ';
     parts.push(`
       <span class="crumb">
         <span class="crumb-label">${escapeHtml(label)}:</span>
@@ -3114,14 +3173,14 @@ function applyWordBreadcrumbs(ui, data){
       </span>`);
   }
   if (data.difficultyText){
-    const label = data.difficultyPrefix || 'Сложность';
+    const label = data.difficultyPrefix || 'РЎР»РѕР¶РЅРѕСЃС‚СЊ';
     parts.push(`
       <span class="crumb">
         <span class="crumb-label">${escapeHtml(label)}:</span>
         <span class="crumb-value">${escapeHtml(data.difficultyText)}</span>
       </span>`);
   }
-  const separator = '<span class="crumb-separator">•</span>';
+  const separator = '<span class="crumb-separator">вЂў</span>';
   ui.breadcrumbs.innerHTML = parts.join(separator);
   if (wrap) wrap.hidden = false;
 }
@@ -3246,7 +3305,7 @@ function restoreInitialView(){
         tUI.startRound.disabled=false;
       }
       if (tUI.tBox) tUI.tBox.style.display = teamTimerEnabled ? 'inline-flex' : 'none';
-      setStatus('Нажмите «Начать раунд», чтобы начать игру.');
+      setStatus('РќР°Р¶РјРёС‚Рµ В«РќР°С‡Р°С‚СЊ СЂР°СѓРЅРґВ», С‡С‚РѕР±С‹ РЅР°С‡Р°С‚СЊ РёРіСЂСѓ.');
     }
     show(stored);
     return;

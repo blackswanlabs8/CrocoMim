@@ -39,3 +39,8 @@
 2026-05-27 16:03:59,928 [INFO] app - Login failed: Пользователь не найден
 2026-05-27 16:03:59,928 [INFO] app - Received /auth/login request
 2026-05-27 16:03:59,929 [INFO] app - Login failed: Пользователь не найден
+2026-05-27 16:22:22,776 [INFO] app - Logging configured. Writing to C:\Users\user\Documents\GitHub\CrocoMim\data\backend.log
+2026-05-27 16:22:22,791 [INFO] app - Received /api/generate-dictionary request
+2026-05-27 16:22:22,791 [WARNING] app - No session token provided for dictionary generation
+2026-05-27 16:22:22,792 [INFO] app - Received /auth/login request
+2026-05-27 16:22:22,793 [INFO] app - Login failed: Неверный пароль
