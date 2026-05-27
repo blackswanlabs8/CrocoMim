@@ -212,8 +212,24 @@ async function getCurrentUser() {
             return { success: true, message: 'Данные получены', user: data.user };
         } else {
             if (response.status === 401) {
-                removeSessionToken();
-                removeSessionUser();
+                const errorMessage = String(data?.error || '').toLowerCase();
+                const isDefinitelyInvalidSession = errorMessage.includes('сессия не найдена')
+                    || errorMessage.includes('сессия истекла')
+                    || errorMessage.includes('токен сессии не предоставлен');
+                if (isDefinitelyInvalidSession) {
+                    removeSessionToken();
+                    removeSessionUser();
+                } else {
+                    const cachedUser = getSessionUser();
+                    if (cachedUser) {
+                        return {
+                            success: true,
+                            message: 'Показаны локально сохраненные данные пользователя',
+                            user: cachedUser,
+                            cached: true
+                        };
+                    }
+                }
             }
             return { success: false, message: data.error || 'Ошибка получения данных' };
         }
@@ -309,5 +325,8 @@ window.AuthAPI = {
     isAuthenticated,
     getSessionToken,
     saveSessionToken,
-    removeSessionToken
+    removeSessionToken,
+    getSessionUser,
+    saveSessionUser,
+    removeSessionUser
 };

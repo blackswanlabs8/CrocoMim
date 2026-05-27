@@ -47,11 +47,21 @@ def _load_users() -> Dict[str, Any]:
         return {"users": {}}
 
 
+
+
+def _atomic_write_json(path: Path, data: Dict[str, Any]) -> None:
+    """Атомарно сохранить JSON, чтобы избежать частично записанных файлов."""
+    temp_path = path.with_suffix(path.suffix + '.tmp')
+    with temp_path.open('w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+        f.flush()
+        os.fsync(f.fileno())
+    temp_path.replace(path)
+
 def _save_users(data: Dict[str, Any]) -> None:
     """Сохранить пользователей в файл."""
     users_file = _get_users_file_path()
-    with users_file.open("w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    _atomic_write_json(users_file, data)
 
 
 def _load_sessions() -> Dict[str, Any]:
@@ -70,8 +80,7 @@ def _load_sessions() -> Dict[str, Any]:
 def _save_sessions(data: Dict[str, Any]) -> None:
     """Сохранить сессии в файл."""
     sessions_file = _get_sessions_file_path()
-    with sessions_file.open("w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    _atomic_write_json(sessions_file, data)
 
 
 def _hash_password(password: str, salt: Optional[str] = None) -> Tuple[str, str]:

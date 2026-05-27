@@ -559,22 +559,31 @@
         
         // Инициализация
         async function init() {
-            if (!AuthAPI.isAuthenticated()) {
-                showAuthForms();
-                return;
-            }
+            try {
+                if (!AuthAPI.isAuthenticated()) {
+                    showAuthForms();
+                    return;
+                }
 
-            const cachedUser = AuthAPI.getSessionUser();
-            if (cachedUser) {
-                currentUser = cachedUser;
-                showProfile();
-            }
+                const getCachedUser = typeof AuthAPI.getSessionUser === 'function'
+                    ? AuthAPI.getSessionUser
+                    : null;
+                const cachedUser = getCachedUser ? getCachedUser() : null;
 
-            const result = await AuthAPI.getCurrentUser();
-            if (result.success) {
-                currentUser = result.user;
-                showProfile();
-            } else if (!cachedUser) {
+                if (cachedUser) {
+                    currentUser = cachedUser;
+                    showProfile();
+                }
+
+                const result = await AuthAPI.getCurrentUser();
+                if (result.success) {
+                    currentUser = result.user;
+                    showProfile();
+                } else if (!cachedUser) {
+                    showAuthForms();
+                }
+            } catch (error) {
+                console.error('Auth init failed:', error);
                 showAuthForms();
             }
         }
