@@ -309,5 +309,8 @@ window.AuthAPI = {
     isAuthenticated,
     getSessionToken,
     saveSessionToken,
-    removeSessionToken
+    removeSessionToken,
+    getSessionUser,
+    saveSessionUser,
+    removeSessionUser
 };
