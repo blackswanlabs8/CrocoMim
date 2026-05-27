@@ -31,6 +31,9 @@ const CUSTOM_DICTIONARY_META = {
   icon: 'edit'
 };
 const CUSTOM_GENERATED_WORDS = 50;
+const FEEDBACK_SOURCE_AI = 'ai_generated';
+const FEEDBACK_SOURCE_CUSTOM = 'custom_manual';
+const FEEDBACK_SOURCE_DICTIONARY = 'dictionary';
 
 const ICON_SANITIZE_RE = /[^A-Za-zА-Яа-яЁё0-9]/g;
 
@@ -1284,6 +1287,9 @@ const qs = {
   customText: $('#quickCustomWords'),
   customGenerate: $('#quickGenerateDict'),
   customStatus: $('#quickCustomStatus'),
+  aiUseBtn: $('#quickAiUseBtn'),
+  aiDictionary: [],
+  customSource: FEEDBACK_SOURCE_CUSTOM,
   timerToggle: $('#quickTimerToggle'),
   time: 60,
   timeMinus: $('#quickTimeMinus'),
@@ -1426,6 +1432,7 @@ updateQuickPts();
 updateCustomBoxVisibility(qs);
 if (qs.customText){
   qs.customText.addEventListener('input', () => {
+    qs.customSource = FEEDBACK_SOURCE_CUSTOM;
     persistQuickSettings();
   });
 }
@@ -1436,6 +1443,14 @@ setupCustomGenerator(qs, {
   trigger: qs.customGenerate,
   persist: persistQuickSettings
 });
+if (qs.aiUseBtn){
+  qs.aiUseBtn.addEventListener('click', () => {
+    const applied = applyAiDictionaryToMode(qs, persistQuickSettings);
+    if (!applied){
+      alert('Сначала сгенерируйте AI-словарь');
+    }
+  });
+}
 
 // Quick game state
 const initialQuickStats = readJson(QUICK_STATS_KEY, {hitWords:[], missWords:[]}) || {hitWords:[], missWords:[]};
@@ -1667,7 +1682,8 @@ const parseCustomWords = (raw, options = {}) => {
         dictionaryId: CUSTOM_DICTIONARY_META.id,
         term,
         description: '',
-        about: ''
+        about: '',
+        source: options.source || FEEDBACK_SOURCE_CUSTOM
       };
       if (normalizedDifficulty && normalizedDifficulty !== 'mix'){
         entry.difficulty = normalizedDifficulty;
@@ -1748,6 +1764,9 @@ function setupCustomGenerator(state, options = {}){
       if (wordsInput){
         wordsInput.value = words.join('\n');
       }
+      if (state){
+        state.aiDictionary = words.slice();
+      }
       setCustomSelection(state, true);
       if (state?.setDifficulty){
         state.setDifficulty(difficulty);
@@ -1778,6 +1797,29 @@ function setupCustomGenerator(state, options = {}){
   }
 
   return { generate: handleGenerate, setStatus };
+}
+
+function applyAiDictionaryToMode(state, persist){
+  const aiWords = Array.isArray(state?.aiDictionary) ? state.aiDictionary.filter(item => typeof item === 'string' && item.trim()) : [];
+  if (!aiWords.length){
+    return false;
+  }
+  if (state.customText){
+    state.customText.value = aiWords.join('\n');
+  }
+  state.customSource = FEEDBACK_SOURCE_AI;
+  setCustomSelection(state, true);
+  if (state?.difficultyButtons?.[state.difficulty]?.disabled){
+    const fallback = DIFFICULTY_ORDER.find(level => state.difficultyButtons?.[level] && !state.difficultyButtons[level].disabled);
+    if (fallback && state.setDifficulty){
+      state.setDifficulty(fallback);
+    }
+  }
+  updateDictionarySummary(state);
+  if (typeof persist === 'function'){
+    persist();
+  }
+  return true;
 }
 
 function updateQuickTimerButton(){
@@ -1867,7 +1909,10 @@ async function startQuickGame(){
     let dictionaryEntriesCount = 0;
     let customEntriesCount = 0;
     if (includeCustom){
-      const customEntries = parseCustomWords(qs.customText?.value, { difficulty });
+      const customEntries = parseCustomWords(qs.customText?.value, {
+        difficulty,
+        source: qs.customSource === FEEDBACK_SOURCE_AI ? FEEDBACK_SOURCE_AI : FEEDBACK_SOURCE_CUSTOM
+      });
       customEntriesCount = customEntries.length;
       entries = entries.concat(customEntries);
     }
@@ -2151,6 +2196,9 @@ const ts = {
   customText: $('#teamCustomWords'),
   customGenerate: $('#teamGenerateDict'),
   customStatus: $('#teamCustomStatus'),
+  aiUseBtn: $('#teamAiUseBtn'),
+  aiDictionary: [],
+  customSource: FEEDBACK_SOURCE_CUSTOM,
   timerToggle: $('#teamTimerToggle'),
   time: 60,
   timeMinus: $('#teamTimeMinus'),
@@ -2289,6 +2337,7 @@ if (ts.ptsToggle){
 updatePtsUI();
 if (ts.customText){
   ts.customText.addEventListener('input', () => {
+    ts.customSource = FEEDBACK_SOURCE_CUSTOM;
     persistTeamSettings();
   });
 }
@@ -2299,6 +2348,14 @@ setupCustomGenerator(ts, {
   trigger: ts.customGenerate,
   persist: persistTeamSettings
 });
+if (ts.aiUseBtn){
+  ts.aiUseBtn.addEventListener('click', () => {
+    const applied = applyAiDictionaryToMode(ts, persistTeamSettings);
+    if (!applied){
+      alert('Сначала сгенерируйте AI-словарь');
+    }
+  });
+}
 
 ensureDictionaryIndex().then(() => {
   setupDictionarySelector(qs);
@@ -2781,7 +2838,10 @@ async function startTeamGame(){
     let dictionaryEntriesCount = 0;
     let customEntriesCount = 0;
     if (includeCustom){
-      const customEntries = parseCustomWords(ts.customText?.value, { difficulty });
+      const customEntries = parseCustomWords(ts.customText?.value, {
+        difficulty,
+        source: ts.customSource === FEEDBACK_SOURCE_AI ? FEEDBACK_SOURCE_AI : FEEDBACK_SOURCE_CUSTOM
+      });
       customEntriesCount = customEntries.length;
       entries = entries.concat(customEntries);
     }
@@ -3167,21 +3227,30 @@ function buildFeedbackContext(mode){
     appVersion: APP_VERSION,
     language: APP_LANGUAGE || 'ru'
   };
+  const detectSource = entry => {
+    const normalized = typeof entry?.source === 'string' ? entry.source.trim().toLowerCase() : '';
+    if (normalized) return normalized;
+    const dictId = typeof entry?.dictionaryId === 'string' ? entry.dictionaryId : '';
+    return dictId === CUSTOM_DICTIONARY_META.id ? FEEDBACK_SOURCE_CUSTOM : FEEDBACK_SOURCE_DICTIONARY;
+  };
   if (normalizedMode === 'quick'){
     const entry = qWords[qIndex] || null;
     context.termId = normalizeTermId(entry);
     context.termText = entry && typeof entry.term === 'string' ? entry.term : null;
     context.difficulty = deriveQuickDifficulty(entry);
+    context.source = detectSource(entry);
   }else if (normalizedMode === 'team'){
     const entry = tWords[tIndex] || null;
     context.termId = normalizeTermId(entry);
     context.termText = entry && typeof entry.term === 'string' ? entry.term : null;
     context.difficulty = deriveTeamDifficulty(entry);
+    context.source = detectSource(entry);
   }else{
     const entry = qWords[qIndex] || null;
     context.termText = entry && typeof entry.term === 'string' ? entry.term : null;
     context.termId = normalizeTermId(entry);
     context.difficulty = deriveQuickDifficulty(entry);
+    context.source = detectSource(entry);
   }
   return context;
 }
