@@ -1816,6 +1816,44 @@ function setupCustomGenerator(state, options = {}){
   const statusEl = options.statusEl;
   const trigger = options.trigger;
   const persist = typeof options.persist === 'function' ? options.persist : null;
+  const generatorState = {
+    status: 'idle',
+    loading: false,
+    nextAvailableAt: null,
+    cooldownTimerId: null,
+    requestSeq: 0
+  };
+
+  const clearCooldownTimer = () => {
+    if (generatorState.cooldownTimerId){
+      clearInterval(generatorState.cooldownTimerId);
+    }
+    generatorState.cooldownTimerId = null;
+  };
+
+  const parseNextAvailableAt = value => {
+    if (!value) return null;
+    const ts = Date.parse(value);
+    return Number.isFinite(ts) ? ts : null;
+  };
+
+  const formatCooldownRemaining = targetTs => {
+    const diffSec = Math.max(0, Math.ceil((targetTs - Date.now()) / 1000));
+    const mins = Math.floor(diffSec / 60);
+    const secs = diffSec % 60;
+    if (mins > 0){
+      return `${mins} мин ${String(secs).padStart(2, '0')} сек`;
+    }
+    return `${secs} сек`;
+  };
+
+  const formatDateTime = targetTs => {
+    try{
+      return new Date(targetTs).toLocaleString('ru-RU');
+    }catch{
+      return '';
+    }
+  };
 
   const setStatus = (text, mode) => {
     if (!statusEl) return;
@@ -1826,12 +1864,94 @@ function setupCustomGenerator(state, options = {}){
     }
   };
 
+  const applyState = nextState => {
+    generatorState.status = nextState;
+    const isLoading = nextState === 'loading';
+    const isBlocked = nextState === 'loading' || nextState === 'cooldown' || nextState === 'unauthorized';
+    generatorState.loading = isLoading;
+    if (trigger){
+      trigger.disabled = isBlocked;
+      if (nextState === 'loading') trigger.textContent = 'Генерация…';
+      else trigger.textContent = 'Сгенерировать';
+    }
+  };
+
+  const enterCooldown = (nextAvailableTs) => {
+    if (!nextAvailableTs){
+      applyState('idle');
+      setStatus('');
+      clearCooldownTimer();
+      return;
+    }
+    generatorState.nextAvailableAt = nextAvailableTs;
+    applyState('cooldown');
+    clearCooldownTimer();
+
+    const tick = async () => {
+      const remain = generatorState.nextAvailableAt - Date.now();
+      if (remain <= 0){
+        clearCooldownTimer();
+        await refreshStatus();
+        return;
+      }
+      setStatus(`Доступно после ${formatDateTime(generatorState.nextAvailableAt)} (через ${formatCooldownRemaining(generatorState.nextAvailableAt)})`);
+    };
+
+    void tick();
+    generatorState.cooldownTimerId = setInterval(()=>{ void tick(); }, 1000);
+  };
+
+  const apiDictStatus = async () => {
+    const runtimeConfig = await ensureRuntimeConfig();
+    const url = resolveBackendUrl('dict/status', runtimeConfig);
+    const response = await fetch(url, { cache: 'no-store' });
+    if (response.status === 401){
+      return { unauthorized: true };
+    }
+    let payload = {};
+    try{ payload = await response.json(); }catch{ payload = {}; }
+    if (!response.ok){
+      throw new Error(payload?.error || `HTTP ${response.status}`);
+    }
+    return payload;
+  };
+
+  const refreshStatus = async () => {
+    const reqId = ++generatorState.requestSeq;
+    try{
+      const status = await apiDictStatus();
+      if (reqId !== generatorState.requestSeq) return;
+      if (status?.unauthorized){
+        clearCooldownTimer();
+        applyState('unauthorized');
+        setStatus('Нужна авторизация для генерации словаря', 'is-error');
+        return;
+      }
+
+      const allowed = status?.allowed !== false;
+      const nextTs = parseNextAvailableAt(status?.next_available_at);
+      if (!allowed){
+        enterCooldown(nextTs);
+        return;
+      }
+
+      clearCooldownTimer();
+      generatorState.nextAvailableAt = null;
+      applyState('idle');
+      setStatus('');
+    }catch(err){
+      applyState('idle');
+      setStatus(err?.message || 'Не удалось проверить статус генерации', 'is-error');
+    }
+  };
+
   const getDifficulty = () => {
     const level = typeof state?.difficulty === 'string' ? state.difficulty.toLowerCase() : '';
     return ['easy', 'medium', 'hard'].includes(level) ? level : 'medium';
   };
 
   const handleGenerate = async () => {
+    if (generatorState.loading) return;
     const topic = typeof topicInput?.value === 'string' ? topicInput.value.trim() : '';
     setStatus('');
     if (!topic){
@@ -1841,7 +1961,7 @@ function setupCustomGenerator(state, options = {}){
     }
 
     const difficulty = getDifficulty();
-    if (trigger) trigger.disabled = true;
+    applyState('loading');
     setStatus('Генерация словаря…');
 
     try{
@@ -1879,19 +1999,19 @@ function setupCustomGenerator(state, options = {}){
         throw new Error('Сервис вернул пустой список слов');
       }
 
-      if (wordsInput){
-        wordsInput.value = words.join('\n');
-      }
+      if (wordsInput){ wordsInput.value = words.slice(0, 30).join('\n'); }
       setCustomSelection(state, true);
       if (state?.setDifficulty){
         state.setDifficulty(difficulty);
       }
       setStatus(`Сгенерировано слов: ${words.length}`, 'is-success');
       if (persist) persist();
+
+      const nextTs = parseNextAvailableAt(payload?.next_available_at);
+      enterCooldown(nextTs);
     }catch(err){
+      applyState('idle');
       setStatus(err?.message || 'Не удалось сгенерировать словарь', 'is-error');
-    }finally{
-      if (trigger) trigger.disabled = false;
     }
   };
 
@@ -1910,6 +2030,8 @@ function setupCustomGenerator(state, options = {}){
       if (persist) persist();
     });
   }
+
+  void refreshStatus();
 
   return { generate: handleGenerate, setStatus };
 }
