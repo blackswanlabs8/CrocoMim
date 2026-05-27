@@ -211,6 +211,140 @@ function resolveBackendUrl(path, config){
   return normalizedPath || path;
 }
 
+function parseNextAvailableAt(value){
+  if (!value) return null;
+  const dt = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(dt.getTime()) ? null : dt;
+}
+
+function formatNextAvailableAt(value, locale = 'ru-RU'){
+  const dt = parseNextAvailableAt(value);
+  if (!dt) return '';
+  try{
+    return new Intl.DateTimeFormat(locale, {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    }).format(dt);
+  }catch(err){
+    return dt.toLocaleString('ru-RU');
+  }
+}
+
+async function parseJsonSafely(response){
+  try{
+    return await response.json();
+  }catch(err){
+    return {};
+  }
+}
+
+function normalizeApiResult(response, payload){
+  const status = Number(response?.status) || 0;
+  const rawNextAvailableAt = payload?.next_available_at ?? null;
+  const parsedNextAvailableAt = parseNextAvailableAt(rawNextAvailableAt);
+  const normalizedNextAvailableAt = parsedNextAvailableAt ? parsedNextAvailableAt.toISOString() : null;
+  const formattedNextAvailableAt = parsedNextAvailableAt ? formatNextAvailableAt(parsedNextAvailableAt) : '';
+
+  const result = {
+    ok: Boolean(response?.ok && payload?.ok !== false),
+    status,
+    data: null,
+    error: null
+  };
+
+  if (status === 401){
+    result.ok = false;
+    result.error = {
+      code: 'auth_required',
+      message: 'Требуется повторный вход в систему.'
+    };
+    if (typeof window !== 'undefined' && typeof window.confirm === 'function'){
+      const goToLogin = window.confirm('Сессия истекла или отсутствует. Перейти на страницу входа?');
+      if (goToLogin){
+        window.location.href = './auth/index.html';
+      }
+    }
+    return result;
+  }
+
+  if (status === 429){
+    result.ok = false;
+    result.data = {
+      allowed: false,
+      next_available_at: normalizedNextAvailableAt,
+      next_available_at_formatted: formattedNextAvailableAt
+    };
+    result.error = {
+      code: 'rate_limited',
+      message: payload?.error || 'Слишком много запросов. Повторите позже.'
+    };
+    return result;
+  }
+
+  if (!result.ok){
+    result.error = {
+      code: payload?.code || 'request_failed',
+      message: payload?.error || `HTTP ${status}`
+    };
+    return result;
+  }
+
+  result.data = {
+    dictionary: payload?.dictionary ?? null,
+    count: Number.isFinite(payload?.count) ? payload.count : (Array.isArray(payload?.dictionary) ? payload.dictionary.length : null),
+    next_available_at: normalizedNextAvailableAt,
+    next_available_at_formatted: formattedNextAvailableAt,
+    allowed: payload?.allowed
+  };
+  return result;
+}
+
+async function apiLogin(username, password){
+  const runtimeConfig = await ensureRuntimeConfig();
+  const url = resolveBackendUrl('auth/login', runtimeConfig);
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password })
+  });
+  const payload = await parseJsonSafely(response);
+  return normalizeApiResult(response, payload);
+}
+
+async function apiDictStatus(token){
+  if (!token){
+    return normalizeApiResult({ status: 401, ok: false }, {});
+  }
+  const runtimeConfig = await ensureRuntimeConfig();
+  const url = resolveBackendUrl('dict/status', runtimeConfig);
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+  const payload = await parseJsonSafely(response);
+  return normalizeApiResult(response, payload);
+}
+
+async function apiGenerateDictionary(token){
+  if (!token){
+    return normalizeApiResult({ status: 401, ok: false }, {});
+  }
+  const runtimeConfig = await ensureRuntimeConfig();
+  const url = resolveBackendUrl('generate-dictionary', runtimeConfig);
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({})
+  });
+  const payload = await parseJsonSafely(response);
+  return normalizeApiResult(response, payload);
+}
+
 function updateVersionBadge(text, options = {}){
   if (!versionBadgeEl) return;
   const safeText = typeof text === 'string' && text.trim() ? text.trim() : '';
