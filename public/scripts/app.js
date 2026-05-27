@@ -32,7 +32,7 @@ const CUSTOM_DICTIONARY_META = {
 };
 const CUSTOM_GENERATED_WORDS = 50;
 
-const ICON_SANITIZE_RE = /[^A-Za-zРђ-РЇР°-СЏРЃС‘0-9]/g;
+const ICON_SANITIZE_RE = /[^A-Za-z\\u0400-\\u04FF0-9]/g;
 
 function getDictionaryIconText(meta){
   if (!meta) return '';
