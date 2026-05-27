@@ -226,8 +226,14 @@ async function fetchBackendVersion(){
   try{
     updateVersionBadge('Р’РµСЂСЃРёСЏ Р·Р°РіСЂСѓР¶Р°РµС‚СЃСЏвЂ¦');
     const runtimeConfig = await ensureRuntimeConfig();
-    const url = resolveBackendUrl('version', runtimeConfig);
-    const response = await fetch(url, { cache: 'no-store' });
+    const primaryUrl = resolveBackendUrl('version', runtimeConfig);
+    const fallbackUrl = primaryUrl.includes('/test/api/')
+      ? primaryUrl.replace('/test/api/', '/api/')
+      : primaryUrl;
+    let response = await fetch(primaryUrl, { cache: 'no-store' });
+    if (!response.ok && fallbackUrl !== primaryUrl){
+      response = await fetch(fallbackUrl, { cache: 'no-store' });
+    }
     if (!response.ok){
       throw new Error(`HTTP ${response.status}`);
     }
@@ -1750,8 +1756,11 @@ function setupCustomGenerator(state, options = {}){
 
     try{
       const runtimeConfig = await ensureRuntimeConfig();
-      const url = resolveBackendUrl('api/generate-dictionary', runtimeConfig);
-      const response = await fetch(url, {
+      const primaryUrl = resolveBackendUrl('generate-dictionary', runtimeConfig);
+      const fallbackUrl = primaryUrl.includes('/test/api/')
+        ? primaryUrl.replace('/test/api/', '/api/')
+        : primaryUrl;
+      let response = await fetch(primaryUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1759,6 +1768,16 @@ function setupCustomGenerator(state, options = {}){
         },
         body: JSON.stringify({ topic, difficulty, words: CUSTOM_GENERATED_WORDS })
       });
+      if (!response.ok && fallbackUrl !== primaryUrl){
+        response = await fetch(fallbackUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionToken}`
+          },
+          body: JSON.stringify({ topic, difficulty, words: CUSTOM_GENERATED_WORDS })
+        });
+      }
 
       let payload = {};
       try{
