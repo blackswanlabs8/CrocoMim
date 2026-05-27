@@ -236,11 +236,11 @@ def login_user(username: str, password: str) -> Tuple[bool, str, Optional[Dict[s
     
     # Возвращаем данные пользователя без чувствительной информации
     user_data = {
-        "id": user["id"],
-        "username": user["username"],
-        "display_name": user["display_name"],
-        "email": user["email"],
-        "created_at": user["created_at"]
+        "id": user.get("id", ""),
+        "username": user.get("username", ""),
+        "display_name": user.get("display_name") or user.get("username", ""),
+        "email": user.get("email", ""),
+        "created_at": user.get("created_at")
     }
     
     return True, "Вход выполнен успешно", user_data, session_token
@@ -306,12 +306,12 @@ def get_user_by_session(session_token: str) -> Tuple[bool, str, Optional[Dict[st
     
     # Возвращаем данные пользователя без чувствительной информации
     user_data = {
-        "id": user["id"],
-        "username": user["username"],
-        "display_name": user["display_name"],
-        "email": user["email"],
-        "created_at": user["created_at"],
-        "updated_at": user["updated_at"]
+        "id": user.get("id", ""),
+        "username": user.get("username", ""),
+        "display_name": user.get("display_name") or user.get("username", ""),
+        "email": user.get("email", ""),
+        "created_at": user.get("created_at"),
+        "updated_at": user.get("updated_at")
     }
     
     return True, "Пользователь найден", user_data
@@ -347,12 +347,12 @@ def update_display_name(user_id: str, display_name: str) -> Tuple[bool, str, Opt
     
     user = users_data["users"][user_id]
     user_data = {
-        "id": user["id"],
-        "username": user["username"],
-        "display_name": user["display_name"],
-        "email": user["email"],
-        "created_at": user["created_at"],
-        "updated_at": user["updated_at"]
+        "id": user.get("id", ""),
+        "username": user.get("username", ""),
+        "display_name": user.get("display_name") or user.get("username", ""),
+        "email": user.get("email", ""),
+        "created_at": user.get("created_at"),
+        "updated_at": user.get("updated_at")
     }
     
     return True, "Отображаемое имя успешно обновлено", user_data

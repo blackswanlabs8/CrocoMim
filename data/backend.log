@@ -10,3 +10,32 @@
 2026-05-22 09:57:28,343 [INFO] app - Logging configured. Writing to /workspace/data/backend.log
 2026-05-22 09:57:34,429 [INFO] app - Logging configured. Writing to /workspace/data/backend.log
 2026-05-22 10:01:45,904 [INFO] app - Logging configured. Writing to /workspace/data/backend.log
+2026-05-27 16:02:59,345 [INFO] app - Logging configured. Writing to C:\Users\user\Documents\GitHub\CrocoMim\data\backend.log
+2026-05-27 16:02:59,404 [INFO] app - /healthz endpoint called
+2026-05-27 16:02:59,405 [INFO] app - /healthz endpoint called
+2026-05-27 16:02:59,405 [INFO] app - /healthz endpoint called
+2026-05-27 16:02:59,406 [INFO] app - /version endpoint called from 127.0.0.1 with version 0.6.0
+2026-05-27 16:02:59,406 [INFO] app - /version endpoint called from 127.0.0.1 with version 0.6.0
+2026-05-27 16:02:59,407 [INFO] app - /version endpoint called from 127.0.0.1 with version 0.6.0
+2026-05-27 16:02:59,408 [INFO] app - Received /auth/login request
+2026-05-27 16:02:59,408 [INFO] app - Login failed: Введите имя пользователя и пароль
+2026-05-27 16:02:59,409 [INFO] app - Received /auth/login request
+2026-05-27 16:02:59,409 [INFO] app - Login failed: Введите имя пользователя и пароль
+2026-05-27 16:02:59,409 [INFO] app - Received /auth/login request
+2026-05-27 16:02:59,410 [INFO] app - Login failed: Введите имя пользователя и пароль
+2026-05-27 16:03:09,598 [INFO] app - Logging configured. Writing to C:\Users\user\Documents\GitHub\CrocoMim\data\backend.log
+2026-05-27 16:03:09,612 [INFO] app - Received /auth/login request
+2026-05-27 16:03:09,613 [INFO] app - Login failed: Пользователь не найден
+2026-05-27 16:03:09,614 [INFO] app - Received /auth/login request
+2026-05-27 16:03:09,614 [INFO] app - Login failed: Пользователь не найден
+2026-05-27 16:03:09,615 [INFO] app - Received /auth/login request
+2026-05-27 16:03:09,616 [INFO] app - Login failed: Пользователь не найден
+2026-05-27 16:03:59,898 [INFO] app - Logging configured. Writing to C:\Users\user\Documents\GitHub\CrocoMim\data\backend.log
+2026-05-27 16:03:59,920 [INFO] app - /healthz endpoint called
+2026-05-27 16:03:59,921 [INFO] app - /healthz endpoint called
+2026-05-27 16:03:59,922 [INFO] app - /version endpoint called from 127.0.0.1 with version 0.6.0
+2026-05-27 16:03:59,922 [INFO] app - /version endpoint called from 127.0.0.1 with version 0.6.0
+2026-05-27 16:03:59,923 [INFO] app - Received /auth/login request
+2026-05-27 16:03:59,928 [INFO] app - Login failed: Пользователь не найден
+2026-05-27 16:03:59,928 [INFO] app - Received /auth/login request
+2026-05-27 16:03:59,929 [INFO] app - Login failed: Пользователь не найден

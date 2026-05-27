@@ -8,10 +8,21 @@
     <script>
         // Инициализируем RUNTIME_CONFIG и RUNTIME_FLAGS перед загрузкой auth.js
         (function(target){
-            const loc = target.location || { origin: '', href: '' };
-            const href = typeof loc.href === 'string' ? loc.href : '';
-            const inTestPath = href.includes('/test/');
-            const env = inTestPath ? 'test' : 'prod';
+            const loc = target.location || { origin: '', href: '', pathname: '', search: '' };
+            const inTestPath = !!(loc && /\/test(\/|$)/.test(loc.pathname || ''));
+            const queryEnv = (() => {
+                if (!loc || !loc.search) return null;
+                const param = new URLSearchParams(loc.search).get('env');
+                if (!param) return null;
+                const value = param.trim().toLowerCase();
+                if (value === 'test' || value === 'prod' || value === 'production') {
+                    return value;
+                }
+                return null;
+            })();
+            const env = queryEnv
+                ? (queryEnv === 'test' ? 'test' : 'prod')
+                : (inTestPath ? 'test' : 'prod');
             const runtimeFlags = {
                 env,
                 testMode: env === 'test',

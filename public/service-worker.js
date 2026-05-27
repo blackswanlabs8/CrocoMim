@@ -1,5 +1,5 @@
 // тест
-const CACHE_NAME = 'crocomim-static-v10';
+const CACHE_NAME = 'crocomim-static-v11';
 const DICTS_CACHE = 'crocomim-dicts-runtime-v3';
 const DICTS_INDEX_PATH = './dicts/index.json';
 const ASSETS = [

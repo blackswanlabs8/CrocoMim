@@ -677,6 +677,42 @@ def api_change_password():
     return jsonify({"ok": True, "message": message}), 200
 
 
+def _register_prefixed_routes() -> None:
+    """Expose the same Flask handlers behind production and test API prefixes."""
+    aliases = [
+        ("/api/healthz", "GET", healthz),
+        ("/test/api/healthz", "GET", healthz),
+        ("/api/version", "GET", version),
+        ("/test/api/version", "GET", version),
+        ("/api/feedback", "POST", submit_feedback),
+        ("/test/api/feedback", "POST", submit_feedback),
+        ("/api/auth/register", "POST", api_register),
+        ("/test/api/auth/register", "POST", api_register),
+        ("/api/auth/login", "POST", api_login),
+        ("/test/api/auth/login", "POST", api_login),
+        ("/api/auth/logout", "POST", api_logout),
+        ("/test/api/auth/logout", "POST", api_logout),
+        ("/api/auth/me", "GET", api_get_current_user),
+        ("/test/api/auth/me", "GET", api_get_current_user),
+        ("/api/auth/profile", "PUT", api_update_profile),
+        ("/test/api/auth/profile", "PUT", api_update_profile),
+        ("/api/auth/change-password", "POST", api_change_password),
+        ("/test/api/auth/change-password", "POST", api_change_password),
+        ("/test/api/generate-dictionary", "POST", api_generate_dictionary),
+        ("/test/api/dict/status", "GET", api_dict_status),
+    ]
+    for index, (rule, method, view_func) in enumerate(aliases):
+        app.add_url_rule(
+            rule,
+            endpoint=f"{view_func.__name__}_alias_{index}",
+            view_func=view_func,
+            methods=[method],
+        )
+
+
+_register_prefixed_routes()
+
+
 if __name__ == "__main__":
     LOGGER.info("Starting Flask app. Version=%s", APP_VERSION)
     host = os.environ.get("HOST", "0.0.0.0")
