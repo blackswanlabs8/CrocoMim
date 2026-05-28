@@ -303,10 +303,10 @@ def api_dict_status():
     # Проверка авторизации
     auth_header = request.headers.get("Authorization", "")
     session_token = None
-    
+
     if auth_header.startswith("Bearer "):
         session_token = auth_header[7:]
-    
+
     if not session_token:
         LOGGER.warning("No session token provided for dict status")
         return jsonify({"ok": False, "error": "Требуется авторизация"}), 401
