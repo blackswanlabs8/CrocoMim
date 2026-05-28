@@ -253,6 +253,47 @@ def debug_clear_active_sessions() -> Any:
     })
 
 
+@app.route("/debug/auth-check", methods=["GET"])
+def debug_auth_check() -> Any:
+    """Development endpoint: checks whether auth token arrives and validates."""
+    auth_header = request.headers.get("Authorization", "")
+    has_authorization_header = bool(auth_header)
+    bearer_prefix_valid = auth_header.startswith("Bearer ")
+    session_token = auth_header[7:] if bearer_prefix_valid else ""
+
+    sessions_data = _load_sessions()
+    sessions_map = sessions_data.get("sessions", {})
+    token_present_in_file = session_token in sessions_map if session_token else False
+
+    validation_success = False
+    validation_message = "Токен сессии не предоставлен"
+    user_data = None
+    if session_token:
+        validation_success, validation_message, user_data = get_user_by_session(session_token)
+
+    return jsonify({
+        "ok": True,
+        "debug": True,
+        "warning": "Development endpoint. Exposes incoming auth details.",
+        "path": request.path,
+        "method": request.method,
+        "has_authorization_header": has_authorization_header,
+        "bearer_prefix_valid": bearer_prefix_valid,
+        "authorization_header_length": len(auth_header),
+        "token_length": len(session_token),
+        "token_preview": (
+            f"{session_token[:16]}...{session_token[-8:]}" if len(session_token) > 24 else session_token
+        ),
+        "token_present_in_sessions_file": token_present_in_file,
+        "sessions_file": str(_get_sessions_file_path()),
+        "sessions_file_exists": _get_sessions_file_path().exists(),
+        "sessions_total": len(sessions_map),
+        "validation_success": validation_success,
+        "validation_message": validation_message,
+        "validated_user": user_data if validation_success else None,
+    })
+
+
 @app.route("/generate-dictionary", methods=["POST"])
 def api_generate_dictionary():
     """
