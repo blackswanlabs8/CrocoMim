@@ -19,9 +19,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 # Конфигурация OpenRouter API
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENROUTER_API_KEY = "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"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-OPENROUTER_MODEL = "meta-llama/llama-3.1-8b-instruct:free"
+OPENROUTER_MODEL = "openai/gpt-4o-mini"
 
 # Таймауты и повторные попытки
 DEFAULT_TIMEOUT = 60
