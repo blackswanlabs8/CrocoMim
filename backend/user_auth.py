@@ -236,11 +236,11 @@ def login_user(username: str, password: str) -> Tuple[bool, str, Optional[Dict[s
     
     # Возвращаем данные пользователя без чувствительной информации
     user_data = {
-        "id": user.get("id", ""),
-        "username": user.get("username", ""),
-        "display_name": user.get("display_name") or user.get("username", ""),
-        "email": user.get("email", ""),
-        "created_at": user.get("created_at")
+        "id": user["id"],
+        "username": user["username"],
+        "display_name": user["display_name"],
+        "email": user["email"],
+        "created_at": user["created_at"]
     }
     
     return True, "Вход выполнен успешно", user_data, session_token
@@ -306,12 +306,12 @@ def get_user_by_session(session_token: str) -> Tuple[bool, str, Optional[Dict[st
     
     # Возвращаем данные пользователя без чувствительной информации
     user_data = {
-        "id": user.get("id", ""),
-        "username": user.get("username", ""),
-        "display_name": user.get("display_name") or user.get("username", ""),
-        "email": user.get("email", ""),
-        "created_at": user.get("created_at"),
-        "updated_at": user.get("updated_at")
+        "id": user["id"],
+        "username": user["username"],
+        "display_name": user["display_name"],
+        "email": user["email"],
+        "created_at": user["created_at"],
+        "updated_at": user["updated_at"]
     }
     
     return True, "Пользователь найден", user_data
@@ -347,12 +347,12 @@ def update_display_name(user_id: str, display_name: str) -> Tuple[bool, str, Opt
     
     user = users_data["users"][user_id]
     user_data = {
-        "id": user.get("id", ""),
-        "username": user.get("username", ""),
-        "display_name": user.get("display_name") or user.get("username", ""),
-        "email": user.get("email", ""),
-        "created_at": user.get("created_at"),
-        "updated_at": user.get("updated_at")
+        "id": user["id"],
+        "username": user["username"],
+        "display_name": user["display_name"],
+        "email": user["email"],
+        "created_at": user["created_at"],
+        "updated_at": user["updated_at"]
     }
     
     return True, "Отображаемое имя успешно обновлено", user_data
@@ -433,48 +433,6 @@ def get_user_by_id(user_id: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
     
     return True, "Пользователь найден", user_data
 
-
-
-def check_generation_limit_moscow_day(user_id: str) -> Tuple[bool, str, bool, Optional[str]]:
-    """Проверить лимит 1 успешная AI-генерация в день по времени Москвы."""
-    if not user_id:
-        return False, "ID пользователя не предоставлен", False, None
-
-    users_data = _load_users()
-    if user_id not in users_data["users"]:
-        return False, "Пользователь не найден", False, None
-
-    user = users_data["users"][user_id]
-    now_moscow = datetime.now(timezone.utc).astimezone(timezone(timedelta(hours=3)))
-    today_moscow = now_moscow.date().isoformat()
-
-    last_success_date = user.get("last_ai_generation_moscow_date")
-    if last_success_date == today_moscow:
-        next_day_start = datetime.combine(now_moscow.date() + timedelta(days=1), datetime.min.time(), tzinfo=now_moscow.tzinfo)
-        next_utc = next_day_start.astimezone(timezone.utc).isoformat()
-        return True, "Сегодня AI-словарь уже сгенерирован", False, next_utc
-
-    return True, "Генерация доступна", True, None
-
-
-def mark_generation_success_moscow_day(user_id: str) -> Tuple[bool, str, Optional[str]]:
-    """Зафиксировать успешную AI-генерацию на текущую московскую дату."""
-    if not user_id:
-        return False, "ID пользователя не предоставлен", None
-
-    users_data = _load_users()
-    if user_id not in users_data["users"]:
-        return False, "Пользователь не найден", None
-
-    now_utc = datetime.now(timezone.utc)
-    now_moscow = now_utc.astimezone(timezone(timedelta(hours=3)))
-    moscow_date = now_moscow.date().isoformat()
-
-    users_data["users"][user_id]["last_ai_generation_moscow_date"] = moscow_date
-    users_data["users"][user_id]["last_dict_generation"] = now_utc.isoformat()
-    users_data["users"][user_id]["updated_at"] = now_utc.isoformat()
-    _save_users(users_data)
-    return True, "Успешная AI-генерация сохранена", moscow_date
 
 def check_generation_limit(user_id: str, limit_hours: int = 24) -> Tuple[bool, str, bool]:
     """

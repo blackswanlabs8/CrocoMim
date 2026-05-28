@@ -3,13 +3,8 @@ import sys
 import traceback
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parent
-PROJECT_DIR = BASE_DIR.parent
-DEFAULT_DATA_DIR = PROJECT_DIR / "data"
-os.environ.setdefault("DATA_DIR", str(DEFAULT_DATA_DIR))
-
 # Путь к файлу отладочного лога
-DEBUG_LOG = os.environ.get("WSGI_DEBUG_LOG", str(DEFAULT_DATA_DIR / "wsgi-debug.log"))
+DEBUG_LOG = "/home/evrocleani/domains/crocomim.ru/public_html/data/wsgi-debug.log"
 
 def log(msg: str) -> None:
     """Пишем отладочные сообщения в файл."""
@@ -33,18 +28,18 @@ try:
         log(f"Could not disable user site: {e!r}")
 
     # Путь к твоему виртуальному окружению
-    VENV_SITE = os.environ.get("CROCOMIM_VENV_SITE", "").strip()
+    VENV_SITE = "/home/evrocleani/venvs/crocomim/lib/python3.13/site-packages"
 
     # Добавляем venv в sys.path
-    if VENV_SITE and VENV_SITE not in sys.path:
+    if VENV_SITE not in sys.path:
         sys.path.insert(0, VENV_SITE)
     log(f"sys.path: {sys.path!r}")
 
     # Папка с app.py
-    app_dir = str(BASE_DIR)
-    if app_dir not in sys.path:
-        sys.path.insert(0, app_dir)
-    log(f"BASE_DIR: {app_dir}")
+    BASE_DIR = os.path.dirname(__file__)
+    # adf
+    sys.path.insert(0, BASE_DIR)
+    log(f"BASE_DIR: {BASE_DIR}")
 
     # Пробуем импортировать Flask
     try:

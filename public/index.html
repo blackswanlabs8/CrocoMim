@@ -414,6 +414,7 @@
       // Если тестовая версия развёрнута на отдельном домене (например, test.example.com),
       // pathname может быть просто "/", и проверка выше не сработает. В этом случае
       // дополнительно смотрим на hostname, чтобы не пропустить тестовый бэкенд.
+      const inTestHost = !!(loc && /^test[.-]/i.test(loc.hostname));
       const queryEnv = (() => {
         if (!loc || !loc.search) return null;
         const param = new URLSearchParams(loc.search).get('env');
@@ -427,7 +428,7 @@
 
       const env = queryEnv
         ? (queryEnv === 'test' ? 'test' : 'prod')
-        : 'prod';
+        : ((inTestPath || inTestHost) ? 'test' : 'prod');
       const runtimeFlags = {
         env,
         testMode: env === 'test',
@@ -453,8 +454,8 @@
       target.RUNTIME_CONFIG_READY = Promise.resolve(runtime);
     })(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : undefined));
   </script>
-  <script src="./scripts/dicts.js?v=2026-05-27-api"></script>
-  <script src="./scripts/feedback.js?v=2026-05-27-api"></script>
-  <script src="./scripts/app.js?v=2026-05-27-api"></script>
+  <script src="./scripts/dicts.js"></script>
+  <script src="./scripts/feedback.js"></script>
+  <script src="./scripts/app.js"></script>
 </body>
 </html>
