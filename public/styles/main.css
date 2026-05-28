@@ -267,6 +267,7 @@ body{
 .dict-summary-toggle{
   flex-shrink:0;
   display:inline-flex;
+  font-family:ui-sans-serif, system-ui, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Noto Color Emoji;
   align-items:center;
   justify-content:center;
   width:100%;
