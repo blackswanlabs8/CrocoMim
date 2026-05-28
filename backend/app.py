@@ -22,6 +22,7 @@ from user_auth import (
     _get_data_dir,
     _get_sessions_file_path,
     _load_sessions,
+    _save_sessions,
     _is_session_expired,
 )
 from services.llm_service import generate_dictionary as generate_dict_llm
@@ -221,6 +222,34 @@ def debug_sessions() -> Any:
         "active_sessions": active_count,
         "expired_sessions": len(session_items) - active_count,
         "sessions": session_items,
+    })
+
+
+@app.route("/debug/sessions/clear-active", methods=["GET", "POST"])
+def debug_clear_active_sessions() -> Any:
+    """Development endpoint: removes all active sessions from storage."""
+    sessions_data = _load_sessions()
+    sessions_map = sessions_data.get("sessions", {})
+
+    removed_tokens: List[str] = []
+    kept_sessions: Dict[str, Any] = {}
+
+    for token, payload in sessions_map.items():
+        if _is_session_expired(payload):
+            kept_sessions[token] = payload
+        else:
+            removed_tokens.append(token)
+
+    sessions_data["sessions"] = kept_sessions
+    _save_sessions(sessions_data)
+
+    return jsonify({
+        "ok": True,
+        "debug": True,
+        "warning": "Development endpoint. Active sessions were deleted without authentication.",
+        "removed_active_sessions": len(removed_tokens),
+        "removed_tokens": removed_tokens,
+        "remaining_sessions": len(kept_sessions),
     })
 
 
