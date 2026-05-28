@@ -19,6 +19,11 @@ from user_auth import (
     change_password,
     check_generation_limit,
     update_last_generation,
+    _get_data_dir,
+    _get_sessions_file_path,
+    _load_sessions,
+    _save_sessions,
+    _is_session_expired,
 )
 from services.llm_service import generate_dictionary as generate_dict_llm
 from services.llm_service import DictionaryGenerationError
@@ -159,7 +164,139 @@ def version() -> Any:
     return jsonify({"version": APP_VERSION})
 
 
-@app.route("/api/generate-dictionary", methods=["POST"])
+@app.route("/debug/sessions", methods=["GET"])
+def debug_sessions() -> Any:
+    """Development endpoint: dumps session storage for debugging."""
+    data_dir = _get_data_dir()
+    sessions_path = _get_sessions_file_path()
+    sessions_data = _load_sessions()
+    sessions_map = sessions_data.get("sessions", {})
+    now = datetime.now(timezone.utc)
+
+    session_items: List[Dict[str, Any]] = []
+    for token, payload in sessions_map.items():
+        created_at = payload.get("created_at")
+        expires_at = payload.get("expires_at")
+        is_expired = _is_session_expired(payload)
+
+        created_dt = None
+        expires_dt = None
+        if isinstance(created_at, str):
+            try:
+                created_dt = datetime.fromisoformat(created_at)
+            except ValueError:
+                created_dt = None
+        if isinstance(expires_at, str):
+            try:
+                expires_dt = datetime.fromisoformat(expires_at)
+            except ValueError:
+                expires_dt = None
+
+        age_seconds = (now - created_dt).total_seconds() if created_dt else None
+        ttl_seconds = (expires_dt - now).total_seconds() if expires_dt else None
+        token_preview = f"{token[:16]}...{token[-8:]}" if len(token) > 24 else token
+
+        session_items.append({
+            "token": token,
+            "token_preview": token_preview,
+            "user_id": payload.get("user_id"),
+            "created_at": created_at,
+            "expires_at": expires_at,
+            "is_expired": is_expired,
+            "is_active": not is_expired,
+            "age_seconds": age_seconds,
+            "ttl_seconds": ttl_seconds,
+        })
+
+    active_count = sum(1 for item in session_items if item["is_active"])
+
+    return jsonify({
+        "ok": True,
+        "debug": True,
+        "warning": "Development endpoint. Exposes full session tokens.",
+        "server_time_utc": now.isoformat(),
+        "data_dir": str(data_dir),
+        "sessions_file": str(sessions_path),
+        "sessions_file_exists": sessions_path.exists(),
+        "total_sessions": len(session_items),
+        "active_sessions": active_count,
+        "expired_sessions": len(session_items) - active_count,
+        "sessions": session_items,
+    })
+
+
+@app.route("/debug/sessions/clear-active", methods=["GET", "POST"])
+def debug_clear_active_sessions() -> Any:
+    """Development endpoint: removes all active sessions from storage."""
+    sessions_data = _load_sessions()
+    sessions_map = sessions_data.get("sessions", {})
+
+    removed_tokens: List[str] = []
+    kept_sessions: Dict[str, Any] = {}
+
+    for token, payload in sessions_map.items():
+        if _is_session_expired(payload):
+            kept_sessions[token] = payload
+        else:
+            removed_tokens.append(token)
+
+    sessions_data["sessions"] = kept_sessions
+    _save_sessions(sessions_data)
+
+    return jsonify({
+        "ok": True,
+        "debug": True,
+        "warning": "Development endpoint. Active sessions were deleted without authentication.",
+        "removed_active_sessions": len(removed_tokens),
+        "removed_tokens": removed_tokens,
+        "remaining_sessions": len(kept_sessions),
+    })
+
+
+@app.route("/debug/auth-check", methods=["GET"])
+def debug_auth_check() -> Any:
+    """Development endpoint: checks whether auth token arrives and validates."""
+    auth_header = request.headers.get("Authorization", "")
+    has_authorization_header = bool(auth_header)
+    bearer_prefix_valid = auth_header.startswith("Bearer ")
+    session_token = auth_header[7:] if bearer_prefix_valid else ""
+
+    sessions_data = _load_sessions()
+    sessions_map = sessions_data.get("sessions", {})
+    token_present_in_file = session_token in sessions_map if session_token else False
+
+    validation_success = False
+    validation_message = "Токен сессии не предоставлен"
+    user_data = None
+    if session_token:
+        validation_success, validation_message, user_data = get_user_by_session(session_token)
+
+    return jsonify({
+        "ok": True,
+        "debug": True,
+        "warning": "Development endpoint. Exposes incoming auth details.",
+        "path": request.path,
+        "method": request.method,
+        "raw_authorization_header": auth_header,
+        "all_request_headers": {k: v for k, v in request.headers.items()},
+        "has_authorization_header": has_authorization_header,
+        "bearer_prefix_valid": bearer_prefix_valid,
+        "authorization_header_length": len(auth_header),
+        "token_length": len(session_token),
+        "token_preview": (
+            f"{session_token[:16]}...{session_token[-8:]}" if len(session_token) > 24 else session_token
+        ),
+        "token_present_in_sessions_file": token_present_in_file,
+        "sessions_file": str(_get_sessions_file_path()),
+        "sessions_file_exists": _get_sessions_file_path().exists(),
+        "sessions_total": len(sessions_map),
+        "validation_success": validation_success,
+        "validation_message": validation_message,
+        "validated_user": user_data if validation_success else None,
+    })
+
+
+@app.route("/generate-dictionary", methods=["POST"])
 def api_generate_dictionary():
     """
     Генерация словаря через OpenRouter API с проверкой лимитов.
@@ -172,7 +309,7 @@ def api_generate_dictionary():
         allowed: Флаг доступности генерации
         next_available_at: Время следующей доступной генерации (UTC)
     """
-    LOGGER.info("Received /api/generate-dictionary request")
+    LOGGER.info("Received /generate-dictionary request")
     
     # Проверка авторизации
     auth_header = request.headers.get("Authorization", "")
@@ -286,7 +423,7 @@ def api_generate_dictionary():
         }), 500
 
 
-@app.route("/api/dict/status", methods=["GET"])
+@app.route("/dict/status", methods=["GET"])
 def api_dict_status():
     """
     Проверка статуса лимита генерации словаря для текущего пользователя.
@@ -298,15 +435,15 @@ def api_dict_status():
         next_available_at: Время следующей доступной генерации (UTC)
         last_generation: Время последней генерации (если есть)
     """
-    LOGGER.info("Received /api/dict/status request")
+    LOGGER.info("Received /dict/status request")
     
     # Проверка авторизации
     auth_header = request.headers.get("Authorization", "")
     session_token = None
-    
+
     if auth_header.startswith("Bearer "):
         session_token = auth_header[7:]
-    
+
     if not session_token:
         LOGGER.warning("No session token provided for dict status")
         return jsonify({"ok": False, "error": "Требуется авторизация"}), 401
