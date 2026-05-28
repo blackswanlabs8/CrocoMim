@@ -253,7 +253,7 @@ def debug_clear_active_sessions() -> Any:
     })
 
 
-@app.route("/api/generate-dictionary", methods=["POST"])
+@app.route("/generate-dictionary", methods=["POST"])
 def api_generate_dictionary():
     """
     Генерация словаря через OpenRouter API с проверкой лимитов.
@@ -266,7 +266,7 @@ def api_generate_dictionary():
         allowed: Флаг доступности генерации
         next_available_at: Время следующей доступной генерации (UTC)
     """
-    LOGGER.info("Received /api/generate-dictionary request")
+    LOGGER.info("Received /generate-dictionary request")
     
     # Проверка авторизации
     auth_header = request.headers.get("Authorization", "")
