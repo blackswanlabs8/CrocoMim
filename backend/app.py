@@ -277,6 +277,8 @@ def debug_auth_check() -> Any:
         "warning": "Development endpoint. Exposes incoming auth details.",
         "path": request.path,
         "method": request.method,
+        "raw_authorization_header": auth_header,
+        "all_request_headers": {k: v for k, v in request.headers.items()},
         "has_authorization_header": has_authorization_header,
         "bearer_prefix_valid": bearer_prefix_valid,
         "authorization_header_length": len(auth_header),
