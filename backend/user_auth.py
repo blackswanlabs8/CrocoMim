@@ -317,6 +317,27 @@ def get_user_by_session(session_token: str) -> Tuple[bool, str, Optional[Dict[st
     return True, "Пользователь найден", user_data
 
 
+def get_user_by_id(user_id: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+    """Получить данные пользователя по ID."""
+    if not user_id:
+        return False, "ID пользователя не предоставлен", None
+
+    users_data = _load_users()
+    if user_id not in users_data["users"]:
+        return False, "Пользователь не найден", None
+
+    user = users_data["users"][user_id]
+    user_data = {
+        "id": user["id"],
+        "username": user["username"],
+        "display_name": user["display_name"],
+        "email": user["email"],
+        "created_at": user["created_at"],
+        "updated_at": user["updated_at"]
+    }
+    return True, "Пользователь найден", user_data
+
+
 def update_display_name(user_id: str, display_name: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
     """
     Обновить отображаемое имя пользователя.

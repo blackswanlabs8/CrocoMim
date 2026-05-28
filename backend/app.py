@@ -5,9 +5,9 @@ import logging
 import os
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, session
 
 from smtp_send import send_email
 from user_auth import (
@@ -15,6 +15,7 @@ from user_auth import (
     login_user,
     logout_user,
     get_user_by_session,
+    get_user_by_id,
     update_display_name,
     change_password,
     check_generation_limit,
@@ -34,6 +35,10 @@ DEFAULT_FEEDBACK_FILE = "feedback.log"
 DEFAULT_LOG_FILE = "backend.log"
 
 app = Flask(__name__)
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-key-change-me")
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = os.environ.get("SESSION_COOKIE_SECURE", "false").lower() == "true"
 
 
 # Версия приложения фиксируется здесь, чтобы проще отслеживать сборки.
@@ -162,6 +167,13 @@ def version() -> Any:
         "/version endpoint called from %s with version %s", request.remote_addr, APP_VERSION
     )
     return jsonify({"version": APP_VERSION})
+
+
+def _get_current_session_user() -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+    user_id = session.get("user_id")
+    if not user_id:
+        return False, "Требуется авторизация", None
+    return get_user_by_id(user_id)
 
 
 @app.route("/debug/sessions", methods=["GET"])
@@ -301,7 +313,7 @@ def api_generate_dictionary():
     """
     Генерация словаря через OpenRouter API с проверкой лимитов.
     
-    Требует авторизации через Bearer токен.
+    Требует авторизации через Flask session cookie.
     Лимит: 1 генерация в 24 часа на пользователя.
     
     Returns:
@@ -311,19 +323,8 @@ def api_generate_dictionary():
     """
     LOGGER.info("Received /generate-dictionary request")
     
-    # Проверка авторизации
-    auth_header = request.headers.get("Authorization", "")
-    session_token = None
-    
-    if auth_header.startswith("Bearer "):
-        session_token = auth_header[7:]
-    
-    if not session_token:
-        LOGGER.warning("No session token provided for dictionary generation")
-        return jsonify({"ok": False, "error": "Требуется авторизация"}), 401
-    
-    # Получение данных пользователя
-    success, message, user_data = get_user_by_session(session_token)
+    # Проверка авторизации через сессию Flask
+    success, message, user_data = _get_current_session_user()
     
     if not success:
         LOGGER.info("Dictionary generation - auth failed: %s", message)
@@ -428,7 +429,7 @@ def api_dict_status():
     """
     Проверка статуса лимита генерации словаря для текущего пользователя.
     
-    Требует авторизации через Bearer токен.
+    Требует авторизации через Flask session cookie.
     
     Returns:
         allowed: Флаг доступности генерации
@@ -437,19 +438,8 @@ def api_dict_status():
     """
     LOGGER.info("Received /dict/status request")
     
-    # Проверка авторизации
-    auth_header = request.headers.get("Authorization", "")
-    session_token = None
-
-    if auth_header.startswith("Bearer "):
-        session_token = auth_header[7:]
-
-    if not session_token:
-        LOGGER.warning("No session token provided for dict status")
-        return jsonify({"ok": False, "error": "Требуется авторизация"}), 401
-    
-    # Получение данных пользователя
-    success, message, user_data = get_user_by_session(session_token)
+    # Проверка авторизации через сессию Flask
+    success, message, user_data = _get_current_session_user()
     
     if not success:
         LOGGER.info("Dict status - auth failed: %s", message)
@@ -649,6 +639,8 @@ def api_login():
         LOGGER.info("Login failed: %s", message)
         return jsonify({"ok": False, "error": message}), 401
     
+    session["user_id"] = user_data["id"]
+    session.permanent = True
     LOGGER.info("User logged in successfully: %s", username)
     return jsonify({
         "ok": True,
@@ -662,25 +654,9 @@ def api_logout():
     """Выход пользователя."""
     LOGGER.info("Received /auth/logout request")
     
-    # Получаем токен из заголовка Authorization или из тела запроса
-    auth_header = request.headers.get("Authorization", "")
-    session_token = None
-    
-    if auth_header.startswith("Bearer "):
-        session_token = auth_header[7:]
-    elif request.is_json:
-        payload = request.get_json(silent=True)
-        if isinstance(payload, dict):
-            session_token = payload.get("session_token")
-    
-    success, message = logout_user(session_token or "")
-    
-    if not success:
-        LOGGER.info("Logout failed: %s", message)
-        return jsonify({"ok": False, "error": message}), 400
-    
+    session.pop("user_id", None)
     LOGGER.info("User logged out successfully")
-    return jsonify({"ok": True, "message": message}), 200
+    return jsonify({"ok": True, "message": "Выход выполнен успешно"}), 200
 
 
 @app.route("/auth/me", methods=["GET"])
@@ -688,18 +664,7 @@ def api_get_current_user():
     """Получить данные текущего пользователя."""
     LOGGER.info("Received /auth/me request")
     
-    # Получаем токен из заголовка Authorization
-    auth_header = request.headers.get("Authorization", "")
-    session_token = None
-    
-    if auth_header.startswith("Bearer "):
-        session_token = auth_header[7:]
-    
-    if not session_token:
-        LOGGER.warning("No session token provided")
-        return jsonify({"ok": False, "error": "Требуется авторизация"}), 401
-    
-    success, message, user_data = get_user_by_session(session_token)
+    success, message, user_data = _get_current_session_user()
     
     if not success:
         LOGGER.info("Get current user failed: %s", message)
@@ -714,19 +679,7 @@ def api_update_profile():
     """Обновить профиль пользователя (отображаемое имя)."""
     LOGGER.info("Received /auth/profile request")
     
-    # Получаем токен из заголовка Authorization
-    auth_header = request.headers.get("Authorization", "")
-    session_token = None
-    
-    if auth_header.startswith("Bearer "):
-        session_token = auth_header[7:]
-    
-    if not session_token:
-        LOGGER.warning("No session token provided")
-        return jsonify({"ok": False, "error": "Требуется авторизация"}), 401
-    
-    # Проверяем сессию и получаем пользователя
-    success, message, user_data = get_user_by_session(session_token)
+    success, message, user_data = _get_current_session_user()
     
     if not success:
         LOGGER.info("Profile update - auth failed: %s", message)
@@ -762,19 +715,7 @@ def api_change_password():
     """Изменить пароль пользователя."""
     LOGGER.info("Received /auth/change-password request")
     
-    # Получаем токен из заголовка Authorization
-    auth_header = request.headers.get("Authorization", "")
-    session_token = None
-    
-    if auth_header.startswith("Bearer "):
-        session_token = auth_header[7:]
-    
-    if not session_token:
-        LOGGER.warning("No session token provided")
-        return jsonify({"ok": False, "error": "Требуется авторизация"}), 401
-    
-    # Проверяем сессию и получаем пользователя
-    success, message, user_data = get_user_by_session(session_token)
+    success, message, user_data = _get_current_session_user()
     
     if not success:
         LOGGER.info("Change password - auth failed: %s", message)
