@@ -477,66 +477,6 @@ def api_dict_status():
     }), 200
 
 
-@app.route("/generate-dictionary", methods=["POST"])
-def generate_dictionary():
-    LOGGER.info("Received /generate-dictionary request")
-
-    if not request.is_json:
-        LOGGER.warning("Request rejected: body is not JSON")
-        return jsonify({"ok": False, "error": "Expected JSON body"}), 400
-
-    payload = request.get_json(silent=True)
-    if not isinstance(payload, dict):
-        LOGGER.warning("Request rejected: malformed JSON body")
-        return jsonify({"ok": False, "error": "Malformed JSON"}), 400
-
-    topic = (payload.get("topic") or "").strip()
-    difficulty_raw = (payload.get("difficulty") or "medium").strip().lower()
-    errors: List[str] = []
-    if len(topic) < 3:
-        errors.append("topic must contain at least 3 characters")
-    allowed_difficulties = {"easy", "medium", "hard"}
-    if difficulty_raw not in allowed_difficulties:
-        errors.append(f"difficulty must be one of: {', '.join(sorted(allowed_difficulties))}")
-
-    if errors:
-        LOGGER.info("Validation failed for /generate-dictionary: %s", errors)
-        return jsonify({"ok": False, "errors": errors}), 400
-
-    try:
-        generated = generate_dict_llm(difficulty=difficulty_raw, topic=topic)
-    except DictionaryGenerationError as exc:  # pragma: no cover - network or external errors
-        LOGGER.exception("Failed to generate dictionary")
-        return jsonify({"ok": False, "error": f"Failed to generate dictionary: {exc}"}), 500
-    except ValueError as exc:
-        LOGGER.info("Validation failed for /generate-dictionary: %s", exc)
-        return jsonify({"ok": False, "error": str(exc)}), 400
-
-    if not isinstance(generated, list):  # pragma: no cover - unexpected return type
-        LOGGER.error("Generator returned unsupported type: %s", type(generated))
-        return jsonify({"ok": False, "error": "Generator returned unsupported format"}), 500
-
-    normalized_words = [
-        item.get("word", "").strip()
-        for item in generated
-        if isinstance(item, dict) and isinstance(item.get("word"), str) and item.get("word").strip()
-    ]
-    LOGGER.info(
-        "Generated dictionary for topic '%s' with %d words",
-        topic,
-        len(normalized_words),
-    )
-    return jsonify(
-        {
-            "ok": True,
-            "topic": topic,
-            "difficulty": difficulty_raw,
-            "count": len(normalized_words),
-            "words": normalized_words,
-        }
-    )
-
-
 @app.route("/feedback", methods=["POST"])
 def submit_feedback():
     LOGGER.info("Received /feedback request")
