@@ -19,7 +19,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 # Конфигурация OpenRouter API
-OPENROUTER_API_KEY = "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"
+OPENROUTER_API_KEY = "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"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 OPENROUTER_MODEL = "openai/gpt-4o-mini"
 
