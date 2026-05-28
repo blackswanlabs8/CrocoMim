@@ -19,6 +19,10 @@ from user_auth import (
     change_password,
     check_generation_limit,
     update_last_generation,
+    _get_data_dir,
+    _get_sessions_file_path,
+    _load_sessions,
+    _is_session_expired,
 )
 from services.llm_service import generate_dictionary as generate_dict_llm
 from services.llm_service import DictionaryGenerationError
@@ -157,6 +161,67 @@ def version() -> Any:
         "/version endpoint called from %s with version %s", request.remote_addr, APP_VERSION
     )
     return jsonify({"version": APP_VERSION})
+
+
+@app.route("/debug/sessions", methods=["GET"])
+def debug_sessions() -> Any:
+    """Development endpoint: dumps session storage for debugging."""
+    data_dir = _get_data_dir()
+    sessions_path = _get_sessions_file_path()
+    sessions_data = _load_sessions()
+    sessions_map = sessions_data.get("sessions", {})
+    now = datetime.now(timezone.utc)
+
+    session_items: List[Dict[str, Any]] = []
+    for token, payload in sessions_map.items():
+        created_at = payload.get("created_at")
+        expires_at = payload.get("expires_at")
+        is_expired = _is_session_expired(payload)
+
+        created_dt = None
+        expires_dt = None
+        if isinstance(created_at, str):
+            try:
+                created_dt = datetime.fromisoformat(created_at)
+            except ValueError:
+                created_dt = None
+        if isinstance(expires_at, str):
+            try:
+                expires_dt = datetime.fromisoformat(expires_at)
+            except ValueError:
+                expires_dt = None
+
+        age_seconds = (now - created_dt).total_seconds() if created_dt else None
+        ttl_seconds = (expires_dt - now).total_seconds() if expires_dt else None
+        token_preview = f"{token[:16]}...{token[-8:]}" if len(token) > 24 else token
+
+        session_items.append({
+            "token": token,
+            "token_preview": token_preview,
+            "user_id": payload.get("user_id"),
+            "created_at": created_at,
+            "expires_at": expires_at,
+            "is_expired": is_expired,
+            "is_active": not is_expired,
+            "age_seconds": age_seconds,
+            "ttl_seconds": ttl_seconds,
+        })
+
+    active_count = sum(1 for item in session_items if item["is_active"])
+
+    return jsonify({
+        "ok": True,
+        "debug": True,
+        "warning": "Development endpoint. Exposes full session tokens.",
+        "server_time_utc": now.isoformat(),
+        "data_dir": str(data_dir),
+        "sessions_file": str(sessions_path),
+        "sessions_file_exists": sessions_path.exists(),
+        "total_sessions": len(session_items),
+        "active_sessions": active_count,
+        "expired_sessions": len(session_items) - active_count,
+        "sessions": session_items,
+    })
 
 
 @app.route("/api/generate-dictionary", methods=["POST"])
