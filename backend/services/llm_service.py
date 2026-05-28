@@ -167,8 +167,8 @@ def call_openrouter(
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://crocomim.app",  # Требуется OpenRouter
-        "X-Title": "CrocoMim Dictionary Generator",
+        "HTTP-Referer": "https://crocomim.app",
+        "X-OpenRouter-Title": "CrocoMim Dictionary Generator",
     }
     
     payload = {
