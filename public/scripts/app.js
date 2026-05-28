@@ -522,6 +522,8 @@ function ensureDictionarySummaryStructure(state){
     }
     toggle.type = 'button';
     toggle.classList.add('dict-summary-toggle');
+    // На всякий случай снимаем иконный шрифт: у кнопки должен быть обычный текст с кириллицей.
+    toggle.classList.remove('material-symbols-rounded');
     toggle.textContent = 'Выбрать';
     toggle.setAttribute('aria-haspopup', 'true');
     if (!toggle.dataset.boundToggle){
