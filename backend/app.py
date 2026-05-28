@@ -286,7 +286,7 @@ def api_generate_dictionary():
         }), 500
 
 
-@app.route("/api/dict/status", methods=["GET"])
+@app.route("/dict/status", methods=["GET"])
 def api_dict_status():
     """
     Проверка статуса лимита генерации словаря для текущего пользователя.
@@ -298,15 +298,15 @@ def api_dict_status():
         next_available_at: Время следующей доступной генерации (UTC)
         last_generation: Время последней генерации (если есть)
     """
-    LOGGER.info("Received /api/dict/status request")
+    LOGGER.info("Received /dict/status request")
     
     # Проверка авторизации
     auth_header = request.headers.get("Authorization", "")
     session_token = None
-    
+
     if auth_header.startswith("Bearer "):
         session_token = auth_header[7:]
-    
+
     if not session_token:
         LOGGER.warning("No session token provided for dict status")
         return jsonify({"ok": False, "error": "Требуется авторизация"}), 401
