@@ -30,7 +30,9 @@ const CUSTOM_DICTIONARY_META = {
   description: 'Вставьте слова ниже',
   icon: 'edit'
 };
-const CUSTOM_GENERATED_WORDS = 50;
+const CUSTOM_GENERATED_WORDS = 30;
+const USER_DICTIONARY_ID_PREFIX = 'user:';
+const userDictionaryCache = new Map();
 
 const ICON_SANITIZE_RE = /[^A-Za-zА-Яа-яЁё0-9]/g;
 
@@ -80,21 +82,91 @@ function createDictionaryIconElement(meta, className){
   return span;
 }
 
-function ensureDictionaryIndex(){
-  if (!dictionaryService){
-    dictionaryState.ready = true;
-    dictionaryState.list = [];
-    dictionaryState.map = new Map();
-    if (!dictionaryState.promise){
-      dictionaryState.promise = Promise.resolve([]);
+function isUserDictionaryId(id){
+  return typeof id === 'string' && id.startsWith(USER_DICTIONARY_ID_PREFIX);
+}
+
+function toUserDictionaryClientId(id){
+  return `${USER_DICTIONARY_ID_PREFIX}${id}`;
+}
+
+function fromUserDictionaryClientId(id){
+  return isUserDictionaryId(id) ? id.slice(USER_DICTIONARY_ID_PREFIX.length) : '';
+}
+
+function normalizeUserDictionaryMeta(raw){
+  if (!raw || typeof raw !== 'object') return null;
+  const sourceId = raw.id;
+  if (sourceId === null || sourceId === undefined || sourceId === '') return null;
+  const difficulty = typeof raw.difficulty === 'string' && raw.difficulty.trim() ? raw.difficulty.trim().toLowerCase() : 'easy';
+  const title = typeof raw.title === 'string' && raw.title.trim() ? raw.title.trim() : `Мой словарь #${sourceId}`;
+  const count = Number(raw.items_count);
+  return {
+    id: toUserDictionaryClientId(sourceId),
+    sourceId: String(sourceId),
+    title,
+    description: `Мой словарь${Number.isFinite(count) ? ` · ${count} слов` : ''}`,
+    icon: '',
+    iconText: 'М',
+    isUserDictionary: true,
+    topic: typeof raw.topic === 'string' ? raw.topic : '',
+    visibility: typeof raw.visibility === 'string' ? raw.visibility : 'private',
+    status: typeof raw.status === 'string' ? raw.status : 'draft',
+    source: typeof raw.source === 'string' ? raw.source : 'manual',
+    difficulties: { [difficulty]: { label: DIFFICULTY_LABELS[difficulty] || difficulty, path: '' } }
+  };
+}
+
+async function fetchUserDictionaries(){
+  try{
+    const runtimeConfig = await ensureRuntimeConfig();
+    const url = resolveBackendUrl('user/dictionaries', runtimeConfig);
+    const response = await fetch(url, { cache: 'no-store', credentials: 'include' });
+    if (response.status === 401) return [];
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || payload?.ok === false){
+      throw new Error(payload?.error || `HTTP ${response.status}`);
     }
-    return dictionaryState.promise;
+    return Array.isArray(payload?.dictionaries) ? payload.dictionaries.map(normalizeUserDictionaryMeta).filter(Boolean) : [];
+  }catch(err){
+    console.warn('Не удалось загрузить пользовательские словари:', err);
+    return [];
   }
+}
+
+function refreshDictionarySelectors(){
+  dictionarySelectors.forEach(state => {
+    if (!state?.dictGrid) return;
+    const selected = Array.from(state.selectedDictionaries || []);
+    setupDictionarySelector(state);
+    setDictionarySelection(state, selected, { emit:false, skipPersist:true });
+  });
+}
+
+function resetDictionaryIndex(){
+  dictionaryState.promise = null;
+  dictionaryState.ready = false;
+}
+
+async function reloadDictionaryIndex(){
+  resetDictionaryIndex();
+  const list = await ensureDictionaryIndex();
+  refreshDictionarySelectors();
+  return list;
+}
+
+function ensureDictionaryIndex(){
   if (!dictionaryState.promise){
     dictionaryState.promise = Promise.resolve()
-      .then(()=> dictionaryService.getDictionaries())
-      .then(list => {
-        dictionaryState.list = Array.isArray(list) ? list : [];
+      .then(async () => {
+        const [builtInList, userList] = await Promise.all([
+          dictionaryService ? dictionaryService.getDictionaries() : Promise.resolve([]),
+          fetchUserDictionaries()
+        ]);
+        dictionaryState.list = [
+          ...(Array.isArray(builtInList) ? builtInList : []),
+          ...(Array.isArray(userList) ? userList : [])
+        ];
         dictionaryState.map = new Map(dictionaryState.list.map(item => [item.id, item]));
         dictionaryState.ready = true;
         return dictionaryState.list;
@@ -114,10 +186,43 @@ function getDictionaryMeta(id){
   return dictionaryState.map.get(id) || null;
 }
 
+async function loadUserDictionaryEntries(dictId){
+  const sourceId = fromUserDictionaryClientId(dictId);
+  if (!sourceId) return [];
+  if (!userDictionaryCache.has(sourceId)){
+    userDictionaryCache.set(sourceId, (async () => {
+      const runtimeConfig = await ensureRuntimeConfig();
+      const url = resolveBackendUrl(`user/dictionaries/${encodeURIComponent(sourceId)}`, runtimeConfig);
+      const response = await fetch(url, { cache: 'no-store', credentials: 'include' });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload?.ok === false){
+        throw new Error(payload?.error || `HTTP ${response.status}`);
+      }
+      const dictionary = payload?.dictionary || {};
+      const items = Array.isArray(dictionary.items) ? dictionary.items : [];
+      return items.map((entry, idx) => ({
+        dictionaryId: dictId,
+        difficulty: dictionary.difficulty || '',
+        id: entry.id || `${dictId}_${idx+1}`,
+        term: entry.term || '',
+        description: entry.description || '',
+        about: entry.about || ''
+      }));
+    })().catch(err => {
+      userDictionaryCache.delete(sourceId);
+      throw err;
+    }));
+  }
+  return userDictionaryCache.get(sourceId);
+}
+
 async function loadDictionaryEntries(dictId, difficulty){
-  if (!dictionaryService) throw new Error('Сервис словарей недоступен.');
   await ensureDictionaryIndex();
   const normalizedDifficulty = difficulty || 'easy';
+  if (isUserDictionaryId(dictId)){
+    return loadUserDictionaryEntries(dictId);
+  }
+  if (!dictionaryService) throw new Error('Сервис словарей недоступен.');
   try{
     const entries = await dictionaryService.getWords(dictId, normalizedDifficulty);
     return Array.isArray(entries) ? entries : [];
@@ -1283,6 +1388,7 @@ const qs = {
   customTopic: $('#quickCustomTopic'),
   customText: $('#quickCustomWords'),
   customGenerate: $('#quickGenerateDict'),
+  customSave: $('#quickSaveDict'),
   customStatus: $('#quickCustomStatus'),
   timerToggle: $('#quickTimerToggle'),
   time: 60,
@@ -1434,6 +1540,7 @@ setupCustomGenerator(qs, {
   wordsInput: qs.customText,
   statusEl: qs.customStatus,
   trigger: qs.customGenerate,
+  saveTrigger: qs.customSave,
   persist: persistQuickSettings
 });
 
@@ -1676,11 +1783,82 @@ const parseCustomWords = (raw, options = {}) => {
     });
 };
 
+function buildCustomItemsForSaving(raw, options = {}){
+  return parseCustomWords(raw, options).map(entry => ({
+    term: entry.term,
+    description: entry.description || `Пользовательское слово: ${entry.term}`,
+    about: entry.about || 'Покажите это слово жестами, мимикой или действием.'
+  }));
+}
+
+async function saveCustomDictionary(state, options = {}){
+  const statusEl = options.statusEl || state?.customStatus;
+  const setStatus = (text, mode) => {
+    if (!statusEl) return;
+    statusEl.textContent = text || '';
+    statusEl.classList.remove('is-error', 'is-success');
+    if (mode) statusEl.classList.add(mode);
+  };
+  const difficulty = typeof state?.difficulty === 'string' && DIFFICULTY_ORDER.includes(state.difficulty) ? state.difficulty : 'medium';
+  const topic = typeof state?.customTopic?.value === 'string' && state.customTopic.value.trim()
+    ? state.customTopic.value.trim()
+    : 'Пользовательский словарь';
+  const items = buildCustomItemsForSaving(state?.customText?.value, { difficulty });
+  if (!items.length){
+    setStatus('Добавьте хотя бы одно слово для сохранения', 'is-error');
+    return null;
+  }
+  const title = window.prompt('Название словаря', `${topic} — ${DIFFICULTY_LABELS[difficulty] || difficulty}`);
+  if (title === null) return null;
+  const normalizedTitle = title.trim();
+  if (!normalizedTitle){
+    setStatus('Название словаря обязательно', 'is-error');
+    return null;
+  }
+
+  try{
+    setStatus('Сохраняем словарь…');
+    const runtimeConfig = await ensureRuntimeConfig();
+    const url = resolveBackendUrl('user/dictionaries', runtimeConfig);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        title: normalizedTitle,
+        topic,
+        difficulty,
+        visibility: 'private',
+        status: 'draft',
+        source: 'manual',
+        items
+      })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || payload?.ok === false){
+      throw new Error(payload?.error || `HTTP ${response.status}`);
+    }
+    userDictionaryCache.clear();
+    await reloadDictionaryIndex();
+    const savedId = payload?.dictionary?.id;
+    if (savedId !== undefined && savedId !== null){
+      setDictionarySelection(state, [toUserDictionaryClientId(savedId)], { skipPersist:false });
+      setCustomSelection(state, false, { skipPersist:false });
+    }
+    setStatus('Словарь сохранён в «Мои словари»', 'is-success');
+    return payload.dictionary || null;
+  }catch(err){
+    setStatus(err?.message || 'Не удалось сохранить словарь', 'is-error');
+    return null;
+  }
+}
+
 function setupCustomGenerator(state, options = {}){
   const topicInput = options.topicInput;
   const wordsInput = options.wordsInput;
   const statusEl = options.statusEl;
   const trigger = options.trigger;
+  const saveTrigger = options.saveTrigger;
   const persist = typeof options.persist === 'function' ? options.persist : null;
 
   const setStatus = (text, mode) => {
@@ -1716,6 +1894,7 @@ function setupCustomGenerator(state, options = {}){
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ topic, difficulty, words: CUSTOM_GENERATED_WORDS })
       });
 
@@ -1737,9 +1916,12 @@ function setupCustomGenerator(state, options = {}){
         throw new Error(detail || `Не удалось сгенерировать словарь (HTTP ${response.status})`);
       }
 
+      const generatedItems = Array.isArray(payload?.dictionary)
+        ? payload.dictionary
+        : (Array.isArray(payload?.items) ? payload.items : []);
       const words = Array.isArray(payload?.words)
         ? payload.words.filter(item => typeof item === 'string' && item.trim())
-        : [];
+        : generatedItems.map(item => typeof item === 'string' ? item : item?.term).filter(Boolean);
 
       if (!words.length){
         throw new Error('Сервис вернул пустой список слов');
@@ -1752,7 +1934,15 @@ function setupCustomGenerator(state, options = {}){
       if (state?.setDifficulty){
         state.setDifficulty(difficulty);
       }
-      setStatus(`Сгенерировано слов: ${words.length}`, 'is-success');
+      if (payload?.saved_dictionary?.id){
+        userDictionaryCache.clear();
+        await reloadDictionaryIndex();
+        setDictionarySelection(state, [toUserDictionaryClientId(payload.saved_dictionary.id)], { skipPersist:false });
+        setCustomSelection(state, false, { skipPersist:false });
+        setStatus(`Сгенерировано и сохранено слов: ${words.length}`, 'is-success');
+      }else{
+        setStatus(`Сгенерировано слов: ${words.length}`, 'is-success');
+      }
       if (persist) persist();
     }catch(err){
       setStatus(err?.message || 'Не удалось сгенерировать словарь', 'is-error');
@@ -1763,6 +1953,9 @@ function setupCustomGenerator(state, options = {}){
 
   if (trigger){
     trigger.addEventListener('click', handleGenerate);
+  }
+  if (saveTrigger){
+    saveTrigger.addEventListener('click', () => saveCustomDictionary(state, { statusEl }));
   }
   if (topicInput){
     topicInput.addEventListener('keydown', evt => {
@@ -2150,6 +2343,7 @@ const ts = {
   customTopic: $('#teamCustomTopic'),
   customText: $('#teamCustomWords'),
   customGenerate: $('#teamGenerateDict'),
+  customSave: $('#teamSaveDict'),
   customStatus: $('#teamCustomStatus'),
   timerToggle: $('#teamTimerToggle'),
   time: 60,
@@ -2297,6 +2491,7 @@ setupCustomGenerator(ts, {
   wordsInput: ts.customText,
   statusEl: ts.customStatus,
   trigger: ts.customGenerate,
+  saveTrigger: ts.customSave,
   persist: persistTeamSettings
 });
 
