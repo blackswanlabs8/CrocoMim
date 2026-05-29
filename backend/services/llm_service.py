@@ -4,6 +4,7 @@ Provides functionality to generate vocabulary lists with translations, examples,
 """
 
 import json
+import logging
 import os
 import re
 import time
@@ -13,6 +14,8 @@ from typing import Dict, List, Optional, Tuple, Any
 
 import requests
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 # Загрузка переменных окружения из .env файла
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -163,12 +166,15 @@ def call_openrouter(
     """
     if not OPENROUTER_API_KEY:
         raise RuntimeError("OPENROUTER_API_KEY не задан в переменных окружения")
+
+    if retries < 1:
+        raise ValueError("retries должен быть >= 1")
     
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://crocomim.app",  # Требуется OpenRouter
-        "X-Title": "CrocoMim Dictionary Generator",
+        "HTTP-Referer": "https://crocomim.app",
+        "X-OpenRouter-Title": "CrocoMim Dictionary Generator",
     }
     
     payload = {
@@ -184,35 +190,51 @@ def call_openrouter(
     last_error: Optional[Exception] = None
     
     for attempt in range(1, retries + 1):
+        response: Optional[requests.Response] = None
+
         try:
             response = requests.post(
                 f"{OPENROUTER_BASE_URL}/chat/completions",
                 headers=headers,
-                data=json.dumps(payload),
+                json=payload,
                 timeout=timeout,
             )
             
             if response.status_code == 200:
-                return response.json()
-            
-            error_msg = f"HTTP {response.status_code}: {response.text[:200]}"
-            print(f"Попытка {attempt}: {error_msg}")
-            
-            # При ошибках 4xx не повторяем (кроме 429 - rate limit)
-            if 400 <= response.status_code < 500 and response.status_code != 429:
-                raise RuntimeError(error_msg)
+                try:
+                    return response.json()
+                except ValueError as e:
+                    last_error = e
+                    logger.warning("Попытка %s: не удалось разобрать JSON - %s", attempt, e)
+            else:
+                error_msg = f"HTTP {response.status_code}: {response.text[:500]}"
+                last_error = RuntimeError(error_msg)
+                logger.warning("Попытка %s: %s", attempt, error_msg)
+
+                # При ошибках 4xx не повторяем (кроме 429 - rate limit)
+                if 400 <= response.status_code < 500 and response.status_code != 429:
+                    raise RuntimeError(error_msg)
                 
         except requests.Timeout:
             last_error = requests.Timeout(f"Timeout after {timeout}s on attempt {attempt}")
-            print(f"Попытка {attempt}: {last_error}")
+            logger.warning("Попытка %s: %s", attempt, last_error)
         except requests.RequestException as e:
             last_error = e
-            print(f"Попытка {attempt}: Сетевая ошибка - {e}")
+            logger.warning("Попытка %s: Сетевая ошибка - %s", attempt, e)
         
         # Экспоненциальная задержка перед следующей попыткой
         if attempt < retries:
-            delay = RETRY_DELAY_BASE ** attempt
-            print(f"Ожидание {delay:.1f}с перед следующей попыткой...")
+            retry_after = None
+            if response is not None:
+                retry_after_header = response.headers.get("Retry-After")
+                if retry_after_header:
+                    try:
+                        retry_after = float(retry_after_header)
+                    except ValueError:
+                        retry_after = None
+
+            delay = retry_after if retry_after is not None else min(RETRY_DELAY_BASE ** attempt, 30)
+            logger.warning("Ожидание %.1fс перед следующей попыткой...", delay)
             time.sleep(delay)
     
     raise RuntimeError(f"Не удалось получить ответ от OpenRouter после {retries} попыток. Последняя ошибка: {last_error}")
