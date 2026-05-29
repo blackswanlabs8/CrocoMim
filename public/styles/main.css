@@ -1389,3 +1389,108 @@ body.theme-dark {
 body.theme-light {
   margin-top:0;
 }
+
+/* User dictionaries */
+.user-dictionaries__header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.user-dictionaries__list{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.user-dictionary-card{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding:12px;
+  border:1px solid var(--panel-border);
+  border-radius:14px;
+  background:var(--panel);
+}
+.user-dictionary-card__head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+}
+.user-dictionary-card__title{
+  color:var(--text-strong);
+}
+.user-dictionary-card__status{
+  flex-shrink:0;
+  padding:3px 8px;
+  border-radius:999px;
+  background:var(--panel-2);
+  border:1px solid var(--panel-border);
+  color:var(--muted);
+  font-size:12px;
+}
+.user-dictionary-card__meta{
+  font-size:13px;
+  line-height:1.4;
+}
+.dictionary-actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.dictionary-editor__meta{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:8px;
+}
+.dictionary-editor__row{
+  display:grid;
+  grid-template-columns:minmax(120px, 1fr) minmax(160px, 1.2fr) minmax(160px, 1.2fr) auto;
+  gap:8px;
+  align-items:end;
+  padding:10px;
+  border:1px solid var(--panel-border);
+  border-radius:14px;
+  background:var(--panel);
+}
+.dictionary-editor__field{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.dictionary-editor__remove{
+  align-self:end;
+}
+@media (max-width: 720px){
+  .dictionary-editor__meta,
+  .dictionary-editor__row{
+    grid-template-columns:1fr;
+  }
+}
+
+.auth-required-notice{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px;
+  border:1px solid var(--panel-border);
+  border-radius:14px;
+  background:var(--panel-soft);
+  color:var(--text);
+}
+.auth-required-notice[hidden]{ display:none; }
+.auth-required-notice__text{ flex:1 1 auto; color:var(--text-strong); }
+.auth-required-notice__actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+@media (max-width: 560px){
+  .auth-required-notice{
+    align-items:stretch;
+    flex-direction:column;
+  }
+  .auth-required-notice__actions{ justify-content:flex-start; }
+}

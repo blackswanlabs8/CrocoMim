@@ -119,16 +119,11 @@ function normalizeUserDictionaryMeta(raw){
 
 async function fetchUserDictionaries(){
   try{
-    const runtimeConfig = await ensureRuntimeConfig();
-    const url = resolveBackendUrl('user/dictionaries', runtimeConfig);
-    const response = await fetch(url, { cache: 'no-store', credentials: 'include' });
-    if (response.status === 401) return [];
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok || payload?.ok === false){
-      throw new Error(payload?.error || `HTTP ${response.status}`);
-    }
-    return Array.isArray(payload?.dictionaries) ? payload.dictionaries.map(normalizeUserDictionaryMeta).filter(Boolean) : [];
+    if (!window.DictionaryApi?.listUserDictionaries) return [];
+    const dictionaries = await window.DictionaryApi.listUserDictionaries();
+    return Array.isArray(dictionaries) ? dictionaries.map(normalizeUserDictionaryMeta).filter(Boolean) : [];
   }catch(err){
+    if (err?.status === 401) return [];
     console.warn('Не удалось загрузить пользовательские словари:', err);
     return [];
   }
@@ -191,23 +186,14 @@ async function loadUserDictionaryEntries(dictId){
   if (!sourceId) return [];
   if (!userDictionaryCache.has(sourceId)){
     userDictionaryCache.set(sourceId, (async () => {
-      const runtimeConfig = await ensureRuntimeConfig();
-      const url = resolveBackendUrl(`user/dictionaries/${encodeURIComponent(sourceId)}`, runtimeConfig);
-      const response = await fetch(url, { cache: 'no-store', credentials: 'include' });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || payload?.ok === false){
-        throw new Error(payload?.error || `HTTP ${response.status}`);
+      if (!window.DictionaryApi?.getUserDictionary){
+        throw new Error('API пользовательских словарей недоступен.');
       }
-      const dictionary = payload?.dictionary || {};
-      const items = Array.isArray(dictionary.items) ? dictionary.items : [];
-      return items.map((entry, idx) => ({
+      const dictionary = await window.DictionaryApi.getUserDictionary(sourceId);
+      return window.DictionaryApi.normalizeDictionaryItems(dictionary.items, {
         dictionaryId: dictId,
-        difficulty: dictionary.difficulty || '',
-        id: entry.id || `${dictId}_${idx+1}`,
-        term: entry.term || '',
-        description: entry.description || '',
-        about: entry.about || ''
-      }));
+        difficulty: dictionary.difficulty || ''
+      });
     })().catch(err => {
       userDictionaryCache.delete(sourceId);
       throw err;
@@ -314,6 +300,31 @@ function resolveBackendUrl(path, config){
 
   console.warn('Некорректный backendBaseUrl в runtime-конфигурации', lastError);
   return normalizedPath || path;
+}
+
+function showAuthRequired(){
+  const noticeId = 'authRequiredNotice';
+  let notice = document.getElementById(noticeId);
+  if (!notice){
+    notice = document.createElement('div');
+    notice.id = noticeId;
+    notice.className = 'auth-required-notice';
+    notice.setAttribute('role', 'status');
+    notice.setAttribute('aria-live', 'polite');
+    notice.innerHTML = `
+      <div class="auth-required-notice__text">Войдите или зарегистрируйтесь, чтобы пользоваться личными словарями.</div>
+      <div class="auth-required-notice__actions">
+        <a class="btn ghost" href="./auth/index.html">Войти</a>
+        <button class="btn ghost" type="button" data-auth-notice-close>Закрыть</button>
+      </div>
+    `;
+    const host = document.getElementById('viewMenu') || document.querySelector('.app') || document.body;
+    host.prepend(notice);
+    notice.querySelector('[data-auth-notice-close]')?.addEventListener('click', () => {
+      notice.hidden = true;
+    });
+  }
+  notice.hidden = false;
 }
 
 function updateVersionBadge(text, options = {}){
@@ -1770,15 +1781,13 @@ const parseCustomWords = (raw, options = {}) => {
     .filter(Boolean)
     .map((term, idx) => {
       const entry = {
-        id: `custom_${idx+1}`,
         dictionaryId: CUSTOM_DICTIONARY_META.id,
+        difficulty: normalizedDifficulty || 'custom',
+        id: `custom_${idx+1}`,
         term,
         description: '',
         about: ''
       };
-      if (normalizedDifficulty && normalizedDifficulty !== 'mix'){
-        entry.difficulty = normalizedDifficulty;
-      }
       return entry;
     });
 };
@@ -1818,26 +1827,18 @@ async function saveCustomDictionary(state, options = {}){
 
   try{
     setStatus('Сохраняем словарь…');
-    const runtimeConfig = await ensureRuntimeConfig();
-    const url = resolveBackendUrl('user/dictionaries', runtimeConfig);
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        title: normalizedTitle,
-        topic,
-        difficulty,
-        visibility: 'private',
-        status: 'draft',
-        source: 'manual',
-        items
-      })
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok || payload?.ok === false){
-      throw new Error(payload?.error || `HTTP ${response.status}`);
+    if (!window.DictionaryApi?.createUserDictionary){
+      throw new Error('API сохранения словарей недоступен.');
     }
+    const payload = await window.DictionaryApi.createUserDictionary({
+      title: normalizedTitle,
+      topic,
+      difficulty,
+      visibility: 'private',
+      status: 'draft',
+      source: 'manual',
+      items
+    });
     userDictionaryCache.clear();
     await reloadDictionaryIndex();
     const savedId = payload?.dictionary?.id;
@@ -1848,130 +1849,37 @@ async function saveCustomDictionary(state, options = {}){
     setStatus('Словарь сохранён в «Мои словари»', 'is-success');
     return payload.dictionary || null;
   }catch(err){
+    if (err?.status === 401) showAuthRequired(err);
     setStatus(err?.message || 'Не удалось сохранить словарь', 'is-error');
     return null;
   }
 }
 
 function setupCustomGenerator(state, options = {}){
-  const topicInput = options.topicInput;
-  const wordsInput = options.wordsInput;
-  const statusEl = options.statusEl;
-  const trigger = options.trigger;
-  const saveTrigger = options.saveTrigger;
-  const persist = typeof options.persist === 'function' ? options.persist : null;
-
-  const setStatus = (text, mode) => {
-    if (!statusEl) return;
-    statusEl.textContent = text || '';
-    statusEl.classList.remove('is-error', 'is-success');
-    if (mode){
-      statusEl.classList.add(mode);
-    }
-  };
-
-  const getDifficulty = () => {
-    const level = typeof state?.difficulty === 'string' ? state.difficulty.toLowerCase() : '';
-    return ['easy', 'medium', 'hard'].includes(level) ? level : 'medium';
-  };
-
-  const handleGenerate = async () => {
-    const topic = typeof topicInput?.value === 'string' ? topicInput.value.trim() : '';
-    setStatus('');
-    if (!topic){
-      setStatus('Введите тему словаря', 'is-error');
-      if (topicInput) topicInput.focus();
-      return;
-    }
-
-    const difficulty = getDifficulty();
-    if (trigger) trigger.disabled = true;
-    setStatus('Генерация словаря…');
-
-    try{
-      const runtimeConfig = await ensureRuntimeConfig();
-      const url = resolveBackendUrl('generate-dictionary', runtimeConfig);
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ topic, difficulty, words: CUSTOM_GENERATED_WORDS })
-      });
-
-      let payload = {};
-      try{
-        payload = await response.json();
-      }catch(err){
-        payload = {};
-      }
-
-      const aggregatedError = () => {
-        if (payload?.error) return String(payload.error);
-        if (Array.isArray(payload?.errors) && payload.errors.length) return payload.errors.join('; ');
-        return '';
-      };
-
-      if (!response.ok || payload?.ok === false){
-        const detail = aggregatedError();
-        throw new Error(detail || `Не удалось сгенерировать словарь (HTTP ${response.status})`);
-      }
-
-      const generatedItems = Array.isArray(payload?.dictionary)
-        ? payload.dictionary
-        : (Array.isArray(payload?.items) ? payload.items : []);
-      const words = Array.isArray(payload?.words)
-        ? payload.words.filter(item => typeof item === 'string' && item.trim())
-        : generatedItems.map(item => typeof item === 'string' ? item : item?.term).filter(Boolean);
-
-      if (!words.length){
-        throw new Error('Сервис вернул пустой список слов');
-      }
-
-      if (wordsInput){
-        wordsInput.value = words.join('\n');
-      }
-      setCustomSelection(state, true);
-      if (state?.setDifficulty){
-        state.setDifficulty(difficulty);
-      }
-      if (payload?.saved_dictionary?.id){
-        userDictionaryCache.clear();
-        await reloadDictionaryIndex();
-        setDictionarySelection(state, [toUserDictionaryClientId(payload.saved_dictionary.id)], { skipPersist:false });
-        setCustomSelection(state, false, { skipPersist:false });
-        setStatus(`Сгенерировано и сохранено слов: ${words.length}`, 'is-success');
-      }else{
-        setStatus(`Сгенерировано слов: ${words.length}`, 'is-success');
-      }
-      if (persist) persist();
-    }catch(err){
-      setStatus(err?.message || 'Не удалось сгенерировать словарь', 'is-error');
-    }finally{
-      if (trigger) trigger.disabled = false;
-    }
-  };
-
-  if (trigger){
-    trigger.addEventListener('click', handleGenerate);
+  const feature = window.DictionaryGeneratorFeature;
+  if (!feature?.setupCustomGenerator){
+    console.error('Модуль генератора словаря недоступен.');
+    return null;
   }
-  if (saveTrigger){
-    saveTrigger.addEventListener('click', () => saveCustomDictionary(state, { statusEl }));
+  const controller = feature.setupCustomGenerator(state, {
+    ...options,
+    api: window.DictionaryApi,
+    wordsCount: CUSTOM_GENERATED_WORDS,
+    setCustomSelection,
+    onAuthRequired: showAuthRequired,
+    onSavedDictionary: async savedId => {
+      userDictionaryCache.clear();
+      await reloadDictionaryIndex();
+      setDictionarySelection(state, [toUserDictionaryClientId(savedId)], { skipPersist:false });
+      setCustomSelection(state, false, { skipPersist:false });
+    }
+  });
+  if (options.saveTrigger){
+    options.saveTrigger.addEventListener('click', () => saveCustomDictionary(state, { statusEl: options.statusEl }));
   }
-  if (topicInput){
-    topicInput.addEventListener('keydown', evt => {
-      if (evt.key === 'Enter'){
-        evt.preventDefault();
-        handleGenerate();
-      }
-    });
-    topicInput.addEventListener('input', () => {
-      setStatus('');
-      if (persist) persist();
-    });
-  }
-
-  return { generate: handleGenerate, setStatus };
+  return controller;
 }
+
 
 function updateQuickTimerButton(){
   const restartBtn = document.getElementById('qRestartTimer');
@@ -2078,6 +1986,7 @@ async function startQuickGame(){
             id: entry.id || `${dictId}_${difficulty}_${idx+1}`
           }));
         }catch(err){
+          if (err?.status === 401) showAuthRequired(err);
           console.error(`Не удалось загрузить словарь ${dictId}/${difficulty}:`, err);
           return [];
         }
@@ -2994,6 +2903,7 @@ async function startTeamGame(){
             id: entry.id || `${dictId}_${difficulty}_${idx+1}`
           }));
         }catch(err){
+          if (err?.status === 401) showAuthRequired(err);
           console.error(`Не удалось загрузить словарь ${dictId}/${difficulty}:`, err);
           return [];
         }
@@ -3418,6 +3328,45 @@ function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.rand
 // initial
 setupFeedbackIntegration();
 fetchBackendVersion();
+initDictionaryFeatures();
+
+
+function initDictionaryFeatures(){
+  const editor = window.DictionaryEditorFeature?.init({
+    rootId: 'dictionaryEditor',
+    api: window.DictionaryApi,
+    onAuthRequired: showAuthRequired,
+    onChanged: async () => {
+      userDictionaryCache.clear();
+      await reloadDictionaryIndex();
+      if (window.UserDictionariesFeature?.load) await window.UserDictionariesFeature.load();
+    }
+  });
+
+  window.UserDictionariesFeature?.init({
+    rootId: 'userDictionaries',
+    api: window.DictionaryApi,
+    onAuthRequired: showAuthRequired,
+    onChanged: async () => {
+      userDictionaryCache.clear();
+      await reloadDictionaryIndex();
+    },
+    onPlay: dict => {
+      const id = toUserDictionaryClientId(dict.id);
+      const difficulty = typeof dict.difficulty === 'string' && dict.difficulty ? dict.difficulty : 'medium';
+      setDictionarySelection(qs, [id], { skipPersist:false });
+      setCustomSelection(qs, false, { skipPersist:false });
+      if (qs.setDifficulty) qs.setDifficulty(difficulty);
+      startQuickGame().catch(err => console.error(err));
+    },
+    onOpen: dict => {
+      if (editor?.open) editor.open(dict.id);
+    },
+    onEdit: dict => {
+      if (editor?.open) editor.open(dict.id);
+    }
+  });
+}
 
 function restoreInitialView(){
   const stored = readScreenPref();
