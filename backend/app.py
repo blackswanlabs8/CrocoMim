@@ -47,6 +47,27 @@ APP_VERSION = "0.6.0"
 LOGGER = logging.getLogger(__name__)
 
 
+def _read_bool_env(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _read_int_env(name: str, default: int) -> int:
+    try:
+        return int(os.environ.get(name, str(default)))
+    except (TypeError, ValueError):
+        return default
+
+
+# Временный флаг лимита генерации словарей.
+# Сейчас лимит отключён по умолчанию; чтобы быстро включить обратно, задайте
+# DICT_GENERATION_LIMIT_ENABLED=true и перезапустите backend.
+DICT_GENERATION_LIMIT_ENABLED = _read_bool_env("DICT_GENERATION_LIMIT_ENABLED", default=False)
+DICT_GENERATION_LIMIT_HOURS = _read_int_env("DICT_GENERATION_LIMIT_HOURS", 24)
+
+
 # Блок ниже оставляем рядом с константами, чтобы логгер был готов прежде, чем
 # запустятся любые обработчики Flask — это заметно упрощает расследование ошибок.
 
@@ -333,26 +354,35 @@ def api_generate_dictionary():
     user_id = user_data["id"]
     LOGGER.info("Dictionary generation request from user: %s", user_data["username"])
     
-    # Проверка лимита генерации
-    limit_success, limit_message, can_generate = check_generation_limit(user_id, limit_hours=24)
-    
-    if not can_generate:
-        LOGGER.info("Generation limit exceeded for user %s: %s", user_id, limit_message)
-        # Извлекаем время следующей доступной генерации из сообщения
-        next_available_at = None
-        if "следующая попытка доступна" in limit_message:
-            # Парсим время из сообщения вида "... следующая попытка доступна в YYYY-MM-DDTHH:MM:SS..."
-            import re
-            match = re.search(r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})', limit_message)
-            if match:
-                next_available_at = match.group(1)
-        
-        return jsonify({
-            "ok": False,
-            "error": limit_message,
-            "allowed": False,
-            "next_available_at": next_available_at
-        }), 429
+    # Проверка лимита генерации временно управляется флагом окружения.
+    # Чтобы снова включить ограничение 1 генерация в сутки, задайте
+    # DICT_GENERATION_LIMIT_ENABLED=true.
+    if DICT_GENERATION_LIMIT_ENABLED:
+        limit_success, limit_message, can_generate = check_generation_limit(
+            user_id,
+            limit_hours=DICT_GENERATION_LIMIT_HOURS,
+        )
+
+        if not can_generate:
+            LOGGER.info("Generation limit exceeded for user %s: %s", user_id, limit_message)
+            # Извлекаем время следующей доступной генерации из сообщения
+            next_available_at = None
+            if "следующая попытка доступна" in limit_message:
+                # Парсим время из сообщения вида "... следующая попытка доступна в YYYY-MM-DDTHH:MM:SS..."
+                import re
+                match = re.search(r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})', limit_message)
+                if match:
+                    next_available_at = match.group(1)
+
+            return jsonify({
+                "ok": False,
+                "error": limit_message,
+                "allowed": False,
+                "limit_enabled": True,
+                "next_available_at": next_available_at
+            }), 429
+    else:
+        LOGGER.info("Dictionary generation limit is disabled; skipping limit check for user %s", user_id)
     
     # Парсинг параметров запроса
     if not request.is_json:
@@ -382,17 +412,21 @@ def api_generate_dictionary():
                    user_id, difficulty_raw, topic or "общая")
         dictionary = generate_dict_llm(difficulty=difficulty_raw, topic=topic if topic else None)
         
-        # Обновление времени последней генерации
-        update_success, update_message = update_last_generation(user_id)
-        
-        if not update_success:
-            LOGGER.warning("Failed to update last generation time for user %s: %s", user_id, update_message)
-            # Не прерываем ответ, но логируем предупреждение
-        
-        # Вычисление времени следующей доступной генерации
-        from datetime import timedelta
-        next_available = datetime.now(timezone.utc) + timedelta(hours=24)
-        next_available_at = next_available.isoformat()
+        # Обновление времени последней генерации нужно только при включённом лимите.
+        # Пока лимит отключён, не записываем last_dict_generation, чтобы тестовые
+        # генерации не заблокировали пользователя после обратного включения лимита.
+        next_available_at = None
+        if DICT_GENERATION_LIMIT_ENABLED:
+            update_success, update_message = update_last_generation(user_id)
+
+            if not update_success:
+                LOGGER.warning("Failed to update last generation time for user %s: %s", user_id, update_message)
+                # Не прерываем ответ, но логируем предупреждение
+
+            # Вычисление времени следующей доступной генерации
+            from datetime import timedelta
+            next_available = datetime.now(timezone.utc) + timedelta(hours=DICT_GENERATION_LIMIT_HOURS)
+            next_available_at = next_available.isoformat()
         
         LOGGER.info("Dictionary generated successfully for user %s: %d words", user_id, len(dictionary))
         
@@ -400,6 +434,7 @@ def api_generate_dictionary():
             "ok": True,
             "dictionary": dictionary,
             "allowed": True,
+            "limit_enabled": DICT_GENERATION_LIMIT_ENABLED,
             "next_available_at": next_available_at,
             "count": len(dictionary)
         }), 200
@@ -448,12 +483,25 @@ def api_dict_status():
     user_id = user_data["id"]
     LOGGER.info("Dict status check for user: %s", user_data["username"])
     
-    # Проверка лимита генерации
-    limit_success, limit_message, can_generate = check_generation_limit(user_id, limit_hours=24)
-    
     # Извлечение времени последней генерации из данных пользователя
     last_generation = user_data.get("last_dict_generation")
-    
+
+    if not DICT_GENERATION_LIMIT_ENABLED:
+        LOGGER.info("Dict status for user %s: limit disabled, allowed=True", user_id)
+        return jsonify({
+            "ok": True,
+            "allowed": True,
+            "limit_enabled": False,
+            "next_available_at": None,
+            "last_generation": last_generation
+        }), 200
+
+    # Проверка лимита генерации
+    limit_success, limit_message, can_generate = check_generation_limit(
+        user_id,
+        limit_hours=DICT_GENERATION_LIMIT_HOURS,
+    )
+
     # Вычисление времени следующей доступной генерации
     next_available_at = None
     if not can_generate and "следующая попытка доступна" in limit_message:
@@ -464,14 +512,15 @@ def api_dict_status():
     elif can_generate:
         # Если генерация разрешена, следующая доступна сразу после текущей
         from datetime import timedelta
-        next_available = datetime.now(timezone.utc) + timedelta(hours=24)
+        next_available = datetime.now(timezone.utc) + timedelta(hours=DICT_GENERATION_LIMIT_HOURS)
         next_available_at = next_available.isoformat()
-    
+
     LOGGER.info("Dict status for user %s: allowed=%s", user_id, can_generate)
-    
+
     return jsonify({
         "ok": True,
         "allowed": can_generate,
+        "limit_enabled": True,
         "next_available_at": next_available_at,
         "last_generation": last_generation
     }), 200
