@@ -27,7 +27,16 @@ from user_auth import (
     _is_session_expired,
 )
 from services.llm_service import generate_dictionary as generate_dict_llm
-from services.llm_service import DictionaryGenerationError
+from services.llm_service import DictionaryGenerationError, TARGET_WORDS_COUNT
+from dictionary_store import (
+    DictionaryValidationError,
+    create_dictionary,
+    delete_dictionary,
+    get_user_dictionary,
+    initialize_database,
+    list_user_dictionaries,
+    update_dictionary,
+)
 
 ALLOWED_CATEGORIES = {"typo", "difficulty", "other"}
 DEFAULT_DATA_DIR = Path(__file__).resolve().parent.parent / "data"
@@ -42,7 +51,7 @@ app.config["SESSION_COOKIE_SECURE"] = os.environ.get("SESSION_COOKIE_SECURE", "f
 
 
 # Версия приложения фиксируется здесь, чтобы проще отслеживать сборки.
-APP_VERSION = "0.6.0"
+APP_VERSION = "0.7.0"
 
 LOGGER = logging.getLogger(__name__)
 
@@ -92,6 +101,7 @@ def _configure_logging() -> Path:
 
 # Configure logging as early as possible so that all modules share the same setup
 LOG_PATH = _configure_logging()
+initialize_database()
 
 
 def _resolve_storage_path() -> Path:
@@ -129,6 +139,30 @@ def _send_email(record: Dict[str, Any]) -> None:
 
     LOGGER.info("Sending feedback notification email")
     send_email(subject, body)
+
+
+
+
+def _difficulty_label(difficulty: str) -> str:
+    labels = {"easy": "Лёгкий", "medium": "Средний", "hard": "Сложный", "mix": "Микс"}
+    return labels.get(difficulty, difficulty)
+
+
+def _dictionary_id_from_route(value: str) -> Optional[int]:
+    try:
+        dictionary_id = int(value)
+    except (TypeError, ValueError):
+        return None
+    return dictionary_id if dictionary_id > 0 else None
+
+
+def _require_json_payload() -> Tuple[Optional[Dict[str, Any]], Optional[Tuple[Any, int]]]:
+    if not request.is_json:
+        return None, (jsonify({"ok": False, "error": "Expected JSON body"}), 400)
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return None, (jsonify({"ok": False, "error": "Malformed JSON"}), 400)
+    return payload, None
 
 
 def _validate_feedback(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
@@ -411,6 +445,21 @@ def api_generate_dictionary():
         LOGGER.info("Generating dictionary for user %s: difficulty=%s, topic=%s", 
                    user_id, difficulty_raw, topic or "общая")
         dictionary = generate_dict_llm(difficulty=difficulty_raw, topic=topic if topic else None)
+        title_topic = topic or "Общий словарь"
+        saved_dictionary = create_dictionary(
+            user_id,
+            {
+                "title": f"{title_topic} — {_difficulty_label(difficulty_raw)}",
+                "topic": title_topic,
+                "difficulty": difficulty_raw,
+                "visibility": "private",
+                "status": "draft",
+                "source": "ai",
+                "items": dictionary,
+            },
+            expected_count=TARGET_WORDS_COUNT,
+            default_source="ai",
+        )
         
         # Обновление времени последней генерации нужно только при включённом лимите.
         # Пока лимит отключён, не записываем last_dict_generation, чтобы тестовые
@@ -433,12 +482,21 @@ def api_generate_dictionary():
         return jsonify({
             "ok": True,
             "dictionary": dictionary,
+            "words": [item["term"] for item in dictionary],
+            "saved_dictionary": saved_dictionary,
+            "dictionary_id": saved_dictionary["id"],
             "allowed": True,
             "limit_enabled": DICT_GENERATION_LIMIT_ENABLED,
             "next_available_at": next_available_at,
             "count": len(dictionary)
         }), 200
         
+    except DictionaryValidationError as e:
+        LOGGER.exception("Generated dictionary validation/storage failed for user %s", user_id)
+        return jsonify({
+            "ok": False,
+            "error": f"Ошибка сохранения словаря: {e}"
+        }), 500
     except DictionaryGenerationError as e:
         LOGGER.exception("Dictionary generation failed for user %s", user_id)
         return jsonify({
@@ -457,6 +515,93 @@ def api_generate_dictionary():
             "ok": False,
             "error": f"Внутренняя ошибка сервера: {e}"
         }), 500
+
+
+@app.route("/user/dictionaries", methods=["GET"])
+def api_list_user_dictionaries():
+    success, message, user_data = _get_current_session_user()
+    if not success:
+        return jsonify({"ok": False, "error": message}), 401
+
+    dictionaries = list_user_dictionaries(user_data["id"])
+    return jsonify({"ok": True, "dictionaries": dictionaries}), 200
+
+
+@app.route("/user/dictionaries", methods=["POST"])
+def api_create_user_dictionary():
+    success, message, user_data = _get_current_session_user()
+    if not success:
+        return jsonify({"ok": False, "error": message}), 401
+
+    payload, error_response = _require_json_payload()
+    if error_response:
+        return error_response
+
+    try:
+        dictionary = create_dictionary(user_data["id"], payload or {}, default_source="manual")
+        return jsonify({"ok": True, "dictionary": dictionary}), 201
+    except DictionaryValidationError as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+    except Exception as e:
+        LOGGER.exception("Failed to create user dictionary for user %s", user_data["id"])
+        return jsonify({"ok": False, "error": f"Не удалось сохранить словарь: {e}"}), 500
+
+
+@app.route("/user/dictionaries/<dictionary_id>", methods=["GET"])
+def api_get_user_dictionary(dictionary_id: str):
+    success, message, user_data = _get_current_session_user()
+    if not success:
+        return jsonify({"ok": False, "error": message}), 401
+
+    parsed_id = _dictionary_id_from_route(dictionary_id)
+    if parsed_id is None:
+        return jsonify({"ok": False, "error": "Некорректный id словаря"}), 400
+
+    dictionary = get_user_dictionary(user_data["id"], parsed_id)
+    if dictionary is None:
+        return jsonify({"ok": False, "error": "Словарь не найден"}), 404
+    return jsonify({"ok": True, "dictionary": dictionary}), 200
+
+
+@app.route("/user/dictionaries/<dictionary_id>", methods=["PUT"])
+def api_update_user_dictionary(dictionary_id: str):
+    success, message, user_data = _get_current_session_user()
+    if not success:
+        return jsonify({"ok": False, "error": message}), 401
+
+    parsed_id = _dictionary_id_from_route(dictionary_id)
+    if parsed_id is None:
+        return jsonify({"ok": False, "error": "Некорректный id словаря"}), 400
+
+    payload, error_response = _require_json_payload()
+    if error_response:
+        return error_response
+
+    try:
+        dictionary = update_dictionary(user_data["id"], parsed_id, payload or {})
+        if dictionary is None:
+            return jsonify({"ok": False, "error": "Словарь не найден или недоступен для редактирования"}), 404
+        return jsonify({"ok": True, "dictionary": dictionary}), 200
+    except DictionaryValidationError as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+    except Exception as e:
+        LOGGER.exception("Failed to update dictionary %s for user %s", parsed_id, user_data["id"])
+        return jsonify({"ok": False, "error": f"Не удалось обновить словарь: {e}"}), 500
+
+
+@app.route("/user/dictionaries/<dictionary_id>", methods=["DELETE"])
+def api_delete_user_dictionary(dictionary_id: str):
+    success, message, user_data = _get_current_session_user()
+    if not success:
+        return jsonify({"ok": False, "error": message}), 401
+
+    parsed_id = _dictionary_id_from_route(dictionary_id)
+    if parsed_id is None:
+        return jsonify({"ok": False, "error": "Некорректный id словаря"}), 400
+
+    if not delete_dictionary(user_data["id"], parsed_id):
+        return jsonify({"ok": False, "error": "Словарь не найден или недоступен для удаления"}), 404
+    return jsonify({"ok": True}), 200
 
 
 @app.route("/dict/status", methods=["GET"])

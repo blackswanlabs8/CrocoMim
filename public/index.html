@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>CrocoMim</title>
   <meta name="description" content="Праздничная игра «CrocoMim» с быстрым и командным режимами." />
-  <meta name="app-version" content="0.6.0" />
+  <meta name="app-version" content="0.7.0" />
   <link rel="manifest" href="./manifest.json" />
   <link rel="icon" type="image/svg+xml" href="./icons/icon.svg" />
   <meta name="theme-color" content="#22c55e" />
@@ -97,6 +97,14 @@
             </div>
           </div>
           <div id="quickCustomBox" class="stack" style="display:none; margin-top:10px">
+            <label class="muted" for="quickCustomTopic">Укажите тему словаря</label>
+            <input class="input" id="quickCustomTopic" type="text" placeholder="Например: космос" autocomplete="off">
+            <div class="custom-gen-row">
+              <button class="btn" id="quickGenerateDict" type="button">Сгенерировать</button>
+              <button class="btn ghost" id="quickSaveDict" type="button">Сохранить словарь</button>
+              <div class="custom-gen-hint">Используется выбранная сложность</div>
+            </div>
+            <div class="custom-gen-status" id="quickCustomStatus" aria-live="polite"></div>
             <label class="muted" for="quickCustomWords">Вставьте слова через запятую или перенос строки</label>
             <textarea class="input" id="quickCustomWords" rows="4" placeholder="яблоко, корабль, радуга..."></textarea>
           </div>
@@ -257,6 +265,7 @@
         <input class="input" id="teamCustomTopic" type="text" placeholder="Например: космос" autocomplete="off">
         <div class="custom-gen-row">
           <button class="btn" id="teamGenerateDict" type="button">Сгенерировать</button>
+          <button class="btn ghost" id="teamSaveDict" type="button">Сохранить словарь</button>
           <div class="custom-gen-hint">Используется выбранная сложность</div>
         </div>
         <div class="custom-gen-status" id="teamCustomStatus" aria-live="polite"></div>
