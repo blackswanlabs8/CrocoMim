@@ -38,13 +38,14 @@
 
 ### `POST /generate-dictionary`
 - **Описание:** генерирует список слов по теме и выбранной сложности через OpenRouter (`backend/services/llm_service.py`).
+- **Лимит генерации:** временно отключён по умолчанию. Чтобы быстро вернуть ограничение `1 генерация в 24 часа`, задайте `DICT_GENERATION_LIMIT_ENABLED=true`; период можно изменить через `DICT_GENERATION_LIMIT_HOURS` (по умолчанию `24`).
 - **Тип:** `POST`
 - **Заголовки:** `Content-Type: application/json`
 - **Тело запроса (JSON):**
   - `topic` — **обязательный**, строка длиной от 3 символов.
   - `difficulty` — **обязательный**, одно из поддерживаемых значений (`easy`, `medium`, `hard`).
 - **Ответы:**
-  - `200 { "ok": true, "topic": "...", "difficulty": "...", "count": 30, "words": ["word1", ...] }` — словарь успешно сгенерирован.
+  - `200 { "ok": true, "dictionary": [{ "term": "...", "description": "...", "about": "..." }], "allowed": true, "limit_enabled": false, "next_available_at": null, "count": 30 }` — словарь успешно сгенерирован.
   - `400 { "ok": false, "errors": [...] }` — ошибки валидации (пустая тема, неподдерживаемая сложность).
   - `500 { "ok": false, "error": "..." }` — внешняя модель вернула ошибку.
 

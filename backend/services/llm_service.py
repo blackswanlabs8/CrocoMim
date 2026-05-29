@@ -1,6 +1,6 @@
 """
 LLM Service for dictionary generation via OpenRouter API.
-Provides functionality to generate vocabulary lists with translations, examples, and transcriptions.
+Provides functionality to generate Russian game dictionary cards with descriptions and gesture hints.
 """
 
 import json
@@ -58,90 +58,67 @@ class WordValidationError(DictionaryGenerationError):
 
 def build_prompt(difficulty: str, topic: Optional[str] = None) -> Tuple[str, str]:
     """
-    Построить системный и пользовательский промпты для генерации словаря.
-    
+    Построить системный и пользовательский промпты для генерации игрового словаря.
+
     Args:
         difficulty: Уровень сложности (easy, medium, hard)
         topic: Опциональная тема для слов (может быть None)
-    
+
     Returns:
         Кортеж (system_prompt, user_prompt)
     """
-    difficulty_info = DIFFICULTY_LEVELS.get(difficulty, DIFFICULTY_LEVELS["medium"])
-    ceFR_level = difficulty_info["level"]
-    description = difficulty_info["description"]
-    
-    topic_instruction = ""
-    if topic and topic.strip():
-        topic_instruction = f"""
-[ТЕМА]
-- Все слова должны быть связаны с темой: "{topic.strip()}"
-- Если тема не указана, используй общеупотребительную лексику.
-"""
-    else:
-        topic_instruction = """
-[ТЕМА]
-- Используй общеупотребительную лексику без привязки к конкретной теме.
-"""
-    
-    system_prompt = f"""
-Ты — профессиональный преподаватель английского языка и лексикограф.
+    normalized_topic = topic.strip() if topic and topic.strip() else "без конкретной темы"
 
-ТВОЯ ЗАДАЧА:
-Сгенерировать ровно {TARGET_WORDS_COUNT} английских слов с переводами, примерами использования и транскрипцией.
+    system_prompt = """SYSTEM PROMPT:
 
-[УРОВЕНЬ СЛОЖНОСТИ]
-Текущий уровень: {difficulty} ({ceFR_level} - {description})
+Ты — редактор словарей для русскоязычной игры «Крокодил/Пантомима».
 
-Правила подбора слов:
-- easy (A1-A2): Простые, базовые слова для начинающих. Конкретные, повседневные понятия.
-- medium (B1-B2): Слова средней сложности. Более узкие значения, тематическая лексика.
-- hard (C1-C2): Продвинутая лексика. Редкие, специфические или абстрактные понятия.
+Твоя задача — создавать качественные игровые словари на русском языке.
 
-{topic_instruction}
+Правила:
 
-[ТРЕБОВАНИЯ К СЛОВАМ]
-- Только английские существительные, глаголы, прилагательные (разнообразные части речи).
-- Без имен собственных (люди, страны, бренды, названия произведений).
-- Без аббревиатур, сленга, ненормативной лексики.
-- Без чисел и порядковых обозначений как отдельных слов.
-- Все слова должны быть разными (без повторов).
-
-[ФОРМАТ ОТВЕТА]
-Верни ТОЛЬКО один JSON-объект строгой структуры:
-{{
-  "words": [
-    {{
-      "word": "английское слово",
-      "translation": "перевод на русский",
-      "example": "пример предложения на английском с этим словом",
-      "transcription": "транскрипция в формате IPA"
-    }}
-  ]
-}}
-
-[ВАЖНО]
-- Никакого текста до или после JSON.
-- Никаких markdown-блоков, комментариев или объяснений.
-- Используй только двойные кавычки ".
-- Транскрипция в международном фонетическом алфавите (IPA), например: /ˈdɪkʃənəri/
-- Примеры предложений должны быть простыми и понятными для уровня {ceFR_level}.
-- Переводы точные и соответствующие контексту примера.
+1. Генерируй слова и словосочетания, которые реально можно показать жестами, мимикой или действиями.
+2. Не используй слишком абстрактные, политические, оскорбительные, взрослые, жестокие или спорные темы.
+3. Не используй редкие термины, которые большинство игроков не поймёт.
+4. Не добавляй одинаковые или почти одинаковые слова.
+5. Не используй английские слова, если пользователь явно не попросил.
+6. Все поля должны быть на русском языке.
+7. Поле term — короткое слово или словосочетание.
+8. Поле description — короткое понятное объяснение термина.
+9. Поле about — короткая подсказка, как можно показать это слово в игре.
+10. Сначала мысленно придумай больше вариантов, отбери лучшие, а в ответе верни ровно 30 элементов.
+11. Ответ должен строго соответствовать JSON-схеме. Без Markdown, без комментариев, без текста вне JSON.
 """.strip()
-    
-    user_prompt = f"""
-СГЕНЕРИРУЙ словарь:
-- Уровень сложности: {difficulty} ({ceFR_level})
-- Количество слов: РОВНО {TARGET_WORDS_COUNT}
-{f'- Тема: {topic}' if topic and topic.strip() else ''}
 
-ВЕРНИ:
-- Строго один JSON-объект с массивом words.
-- Каждый элемент содержит: word, translation, example, transcription.
+    user_prompt = f"""USER PROMPT:
+
+Создай словарь для игры «Крокодил/Пантомима».
+
+Тема словаря: {normalized_topic}
+Сложность: {difficulty}
+Количество итоговых слов: {TARGET_WORDS_COUNT}
+Язык: русский
+
+Требования к словам:
+
+* слова должны подходить для показа жестами;
+* слова должны быть понятны большинству игроков;
+* сложность должна соответствовать выбранному уровню;
+* не должно быть дублей;
+* не должно быть слишком похожих вариантов;
+* не должно быть слов, которые невозможно нормально показать;
+* избегай однотипности, словарь должен быть разнообразным.
+
+Формат каждого элемента:
+
+* term: слово или короткое словосочетание;
+* description: короткое объяснение;
+* about: короткая подсказка, как это показать.
+
+Верни ровно {TARGET_WORDS_COUNT} лучших слов.
 """.strip()
-    
+
     return system_prompt, user_prompt
-
 
 def call_openrouter(
     system_prompt: str,
@@ -248,7 +225,7 @@ def extract_words_from_response(raw_response: Dict[str, Any]) -> List[Dict[str, 
         raw_response: Сырой ответ от API
     
     Returns:
-        Список словарей с полями: word, translation, example, transcription
+        Список словарей с полями: term, description, about
     
     Raises:
         APIResponseError: Если не удалось распарсить ответ или структура невалидна
@@ -312,57 +289,47 @@ def extract_words_from_response(raw_response: Dict[str, Any]) -> List[Dict[str, 
     
     # 5. Нормализация и фильтрация слов
     normalized_words: List[Dict[str, str]] = []
-    seen_words: set = set()
-    required_fields = {"word", "translation", "example", "transcription"}
-    
+    seen_terms: set = set()
+
     for idx, item in enumerate(words_raw):
         if not isinstance(item, dict):
             continue
-        
-        word = (item.get("word") or "").strip()
-        translation = (item.get("translation") or "").strip()
-        example = (item.get("example") or "").strip()
-        transcription = (item.get("transcription") or "").strip()
-        
+
+        term = (item.get("term") or "").strip()
+        description = (item.get("description") or "").strip()
+        about = (item.get("about") or "").strip()
+
         # Валидация наличия обязательных полей
         missing_fields = []
-        if not word:
-            missing_fields.append("word")
-        if not translation:
-            missing_fields.append("translation")
-        if not example:
-            missing_fields.append("example")
-        if not transcription:
-            missing_fields.append("transcription")
-        
+        if not term:
+            missing_fields.append("term")
+        if not description:
+            missing_fields.append("description")
+        if not about:
+            missing_fields.append("about")
+
         if missing_fields:
             print(f"Пропуск записи #{idx}: отсутствуют поля {missing_fields}")
             continue
-        
+
         # Проверка на дубликаты (case-insensitive)
-        word_lower = word.lower()
-        if word_lower in seen_words:
-            print(f"Пропуск дубликата: {word}")
+        term_lower = term.lower()
+        if term_lower in seen_terms:
+            print(f"Пропуск дубликата: {term}")
             continue
-        
-        # Проверка на числа в слове
-        if any(ch.isdigit() for ch in word):
-            print(f"Пропуск слова с цифрами: {word}")
-            continue
-        
-        seen_words.add(word_lower)
+
+        seen_terms.add(term_lower)
         normalized_words.append({
-            "word": word,
-            "translation": translation,
-            "example": example,
-            "transcription": transcription,
+            "term": term,
+            "description": description,
+            "about": about,
         })
     
     # 6. Финальная валидация количества
     if len(normalized_words) != TARGET_WORDS_COUNT:
         raise WordValidationError(
             f"Получено {len(normalized_words)} слов вместо требуемых {TARGET_WORDS_COUNT}. "
-            f"Уникальных: {len(seen_words)}"
+            f"Уникальных: {len(seen_terms)}"
         )
     
     return normalized_words
@@ -384,7 +351,7 @@ def generate_dictionary(
         max_retries: Максимальное количество попыток при ошибке парсинга
     
     Returns:
-        Список словарей с полями: word, translation, example, transcription
+        Список словарей с полями: term, description, about
     
     Raises:
         ValueError: Если некорректная сложность
@@ -450,7 +417,7 @@ if __name__ == "__main__":
         result = generate_dictionary(difficulty="easy")
         print(f"Успешно сгенерировано {len(result)} слов:")
         for i, item in enumerate(result[:3], 1):
-            print(f"{i}. {item['word']} - {item['translation']}")
+            print(f"{i}. {item['term']} - {item['description']}")
     except DictionaryGenerationError as e:
         print(f"Ошибка генерации: {e}")
     except ValueError as e:
