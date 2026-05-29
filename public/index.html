@@ -114,6 +114,19 @@
           <button class="btn btn-full" id="startQuick">Начать игру</button>
         </div>
 
+        <div class="menu-block user-dictionaries" id="userDictionaries">
+          <div class="user-dictionaries__header">
+            <div class="menu-block-title">Мои словари</div>
+            <button class="btn ghost" type="button" data-user-dictionaries-refresh>Обновить</button>
+          </div>
+          <div class="custom-gen-status" data-user-dictionaries-status aria-live="polite"></div>
+          <div class="user-dictionaries__list" data-user-dictionaries-list>
+            <div class="dict-empty muted">Загрузка словарей…</div>
+          </div>
+        </div>
+
+        <div class="menu-block" id="dictionaryEditor" hidden></div>
+
         <div class="menu-block">
           <div class="menu-block-title">Таймер</div>
           <div class="row" style="gap:12px; align-items:center; flex-wrap:nowrap; overflow-x:auto">
@@ -463,7 +476,12 @@
       target.RUNTIME_CONFIG_READY = Promise.resolve(runtime);
     })(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : undefined));
   </script>
+  <script src="./scripts/api/client.js"></script>
+  <script src="./scripts/api/dictionaries.js"></script>
   <script src="./scripts/dicts.js"></script>
+  <script src="./scripts/features/dictionary-generator.js"></script>
+  <script src="./scripts/features/dictionary-editor.js"></script>
+  <script src="./scripts/features/user-dictionaries.js"></script>
   <script src="./scripts/feedback.js"></script>
   <script src="./scripts/app.js"></script>
 </body>
