@@ -1467,3 +1467,30 @@ body.theme-light {
     grid-template-columns:1fr;
   }
 }
+
+.auth-required-notice{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px;
+  border:1px solid var(--panel-border);
+  border-radius:14px;
+  background:var(--panel-soft);
+  color:var(--text);
+}
+.auth-required-notice[hidden]{ display:none; }
+.auth-required-notice__text{ flex:1 1 auto; color:var(--text-strong); }
+.auth-required-notice__actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+@media (max-width: 560px){
+  .auth-required-notice{
+    align-items:stretch;
+    flex-direction:column;
+  }
+  .auth-required-notice__actions{ justify-content:flex-start; }
+}

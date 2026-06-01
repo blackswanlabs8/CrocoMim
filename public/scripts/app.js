@@ -303,10 +303,28 @@ function resolveBackendUrl(path, config){
 }
 
 function showAuthRequired(){
-  const goAuth = () => { window.location.href = './auth/index.html'; };
-  if (window.confirm('Нужно войти или зарегистрироваться, чтобы продолжить. Открыть страницу входа?')){
-    goAuth();
+  const noticeId = 'authRequiredNotice';
+  let notice = document.getElementById(noticeId);
+  if (!notice){
+    notice = document.createElement('div');
+    notice.id = noticeId;
+    notice.className = 'auth-required-notice';
+    notice.setAttribute('role', 'status');
+    notice.setAttribute('aria-live', 'polite');
+    notice.innerHTML = `
+      <div class="auth-required-notice__text">Войдите или зарегистрируйтесь, чтобы пользоваться личными словарями.</div>
+      <div class="auth-required-notice__actions">
+        <a class="btn ghost" href="./auth/index.html">Войти</a>
+        <button class="btn ghost" type="button" data-auth-notice-close>Закрыть</button>
+      </div>
+    `;
+    const host = document.getElementById('viewMenu') || document.querySelector('.app') || document.body;
+    host.prepend(notice);
+    notice.querySelector('[data-auth-notice-close]')?.addEventListener('click', () => {
+      notice.hidden = true;
+    });
   }
+  notice.hidden = false;
 }
 
 function updateVersionBadge(text, options = {}){

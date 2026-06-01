@@ -75,8 +75,9 @@
     }catch(err){
       state.dictionaries = [];
       renderList([]);
-      if (err?.status === 401 && state.onAuthRequired){
-        state.onAuthRequired(err);
+      if (err?.status === 401){
+        setStatus('Войдите или зарегистрируйтесь, чтобы увидеть «Мои словари».', 'is-error');
+        return;
       }
       setStatus(err?.message || 'Не удалось загрузить словари', 'is-error');
     }
