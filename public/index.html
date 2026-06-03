@@ -82,7 +82,11 @@
               <div class="dict-grid" id="quickDictGrid">
                 <div class="dict-empty muted">Загрузка словарей…</div>
               </div>
-              <div class="dict-actions">
+              <div class="dict-actions dict-actions-ai">
+                <button class="btn ghost ai-generate-btn" type="button" title="Сгенерировать словарь с помощью ИИ">
+                  <span class="ai-icon">✨</span>
+                  <span>Сгенерировать с ИИ</span>
+                </button>
                 <button class="btn ghost dict-ok-btn" type="button">Ок</button>
               </div>
             </div>
@@ -107,6 +111,9 @@
             <div class="custom-gen-status" id="quickCustomStatus" aria-live="polite"></div>
             <label class="muted" for="quickCustomWords">Вставьте слова через запятую или перенос строки</label>
             <textarea class="input" id="quickCustomWords" rows="4" placeholder="яблоко, корабль, радуга..."></textarea>
+            <div class="custom-gen-actions">
+              <button class="btn ghost" type="button" id="quickCancelCustom">Отмена</button>
+            </div>
           </div>
         </div>
 
@@ -259,7 +266,11 @@
           <div class="dict-grid" id="teamDictGrid">
             <div class="dict-empty muted">Загрузка словарей…</div>
           </div>
-          <div class="dict-actions">
+          <div class="dict-actions dict-actions-ai">
+            <button class="btn ghost ai-generate-btn" type="button" title="Сгенерировать словарь с помощью ИИ">
+              <span class="ai-icon">✨</span>
+              <span>Сгенерировать с ИИ</span>
+            </button>
             <button class="btn ghost dict-ok-btn" type="button">Ок</button>
           </div>
         </div>
@@ -284,6 +295,9 @@
         <div class="custom-gen-status" id="teamCustomStatus" aria-live="polite"></div>
         <label class="muted" for="teamCustomWords">Вставьте слова через запятую или перенос строки</label>
         <textarea class="input" id="teamCustomWords" rows="4" placeholder="яблоко, корабль, радуга..."></textarea>
+        <div class="custom-gen-actions">
+          <button class="btn ghost" type="button" id="teamCancelCustom">Отмена</button>
+        </div>
       </div>
     </div>
 

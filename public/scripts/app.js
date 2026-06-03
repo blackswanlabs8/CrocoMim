@@ -674,6 +674,36 @@ function ensureDictionaryActions(state){
       actions.className = 'dict-actions';
       state.dictPanel.appendChild(actions);
     }
+    
+    // AI Generate button (left side)
+    let aiButton = actions.querySelector('.ai-generate-btn');
+    if (!aiButton){
+      aiButton = document.createElement('button');
+      aiButton.type = 'button';
+      aiButton.className = 'btn ghost ai-generate-btn';
+      aiButton.innerHTML = '<span class="ai-icon">✨</span><span>Сгенерировать с ИИ</span>';
+      aiButton.title = 'Сгенерировать словарь с помощью ИИ';
+      // Insert at the beginning for left alignment
+      if (actions.firstChild){
+        actions.insertBefore(aiButton, actions.firstChild);
+      }else{
+        actions.appendChild(aiButton);
+      }
+    }
+    if (!aiButton.dataset.boundAi){
+      aiButton.addEventListener('click', () => {
+        setDictionarySelectorOpen(state, false);
+        const customBox = state.customBox;
+        if (customBox){
+          customBox.style.display = 'flex';
+          const topicInput = state.topicInput;
+          if (topicInput) topicInput.focus();
+        }
+      });
+      aiButton.dataset.boundAi = '1';
+    }
+    
+    // OK button (right side)
     let okButton = actions.querySelector('.dict-ok-btn');
     if (!okButton){
       okButton = document.createElement('button');
@@ -693,6 +723,7 @@ function ensureDictionaryActions(state){
     }
     state.dictActions = actions;
     state.dictOkButton = okButton;
+    state.dictAiButton = aiButton;
   }
   return state.dictActions;
 }
@@ -1397,6 +1428,7 @@ const qs = {
   difficulty: 'easy',
   customBox: $('#quickCustomBox'),
   customTopic: $('#quickCustomTopic'),
+  topicInput: $('#quickCustomTopic'),
   customText: $('#quickCustomWords'),
   customGenerate: $('#quickGenerateDict'),
   customSave: $('#quickSaveDict'),
@@ -2250,6 +2282,7 @@ const ts = {
   difficulty: 'easy',
   customBox: $('#teamCustomBox'),
   customTopic: $('#teamCustomTopic'),
+  topicInput: $('#teamCustomTopic'),
   customText: $('#teamCustomWords'),
   customGenerate: $('#teamGenerateDict'),
   customSave: $('#teamSaveDict'),
