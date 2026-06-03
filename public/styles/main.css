@@ -370,6 +370,9 @@ body{
 .dict-card-title{ font-weight:400; font-size:14px; color:var(--text-strong); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .dict-card-custom .dict-card-title{ color:var(--text-strong); }
 .dict-actions{ display:flex; justify-content:flex-end; gap:8px; }
+.dict-actions-ai{ justify-content:space-between; align-items:center; }
+.ai-generate-btn{ display:inline-flex; align-items:center; gap:6px; color:var(--accent-2); }
+.ai-icon{ font-size:16px; }
 .btn.dict-ok-btn{ min-width:60px; padding:8px 14px; font-size:14px; border-radius:12px; }
 
 @media (max-width: 480px){
