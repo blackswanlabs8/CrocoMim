@@ -123,12 +123,18 @@
 
         <div class="menu-block user-dictionaries" id="userDictionaries">
           <div class="user-dictionaries__header">
-            <div class="menu-block-title">Мои словари</div>
+            <div class="menu-block-title">Генерация словарей</div>
             <button class="btn ghost" type="button" data-user-dictionaries-refresh>Обновить</button>
           </div>
           <div class="custom-gen-status" data-user-dictionaries-status aria-live="polite"></div>
           <div class="user-dictionaries__list" data-user-dictionaries-list>
             <div class="dict-empty muted">Загрузка словарей…</div>
+          </div>
+          <div class="user-dictionaries__actions" style="margin-top:16px; display:flex; gap:12px; flex-wrap:wrap;">
+            <button class="btn ghost ai-generate-btn" type="button" data-ai-generate-open>
+              <span class="ai-icon">✨</span>
+              <span>Сгенерировать новый словарь с ИИ</span>
+            </button>
           </div>
         </div>
 
@@ -438,6 +444,42 @@
       <p>Нажми <strong>«?»</strong> в шапке — инструкция всегда рядом!</p>
 
       <p>🎭 Жестикулируй! Угадывай! Получай удовольствие!</p>
+    </div>
+  </div>
+</div>
+
+<div id="aiGenerateModal" class="feedback-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="aiGenTitle">
+  <div class="feedback-modal__backdrop" data-ai-generate-close></div>
+  <div class="feedback-modal__panel">
+    <button class="feedback-modal__close" type="button" aria-label="Закрыть" data-ai-generate-close>
+      <span aria-hidden="true">✕</span>
+    </button>
+    <h2 id="aiGenTitle" class="menu-block-title" style="margin-bottom:16px;">Сгенерировать словарь с ИИ</h2>
+    <div class="stack" style="gap:16px;">
+      <div>
+        <label class="muted" for="aiGenTopic">Тема словаря</label>
+        <input class="input" id="aiGenTopic" type="text" placeholder="Например: космос, автомобили, еда" autocomplete="off">
+      </div>
+      <div>
+        <label class="muted">Уровень сложности</label>
+        <div class="difficulty-row" style="margin-top:8px;">
+          <button class="difficulty-btn" type="button" data-ai-difficulty="easy" aria-pressed="false">Лёгкий</button>
+          <button class="difficulty-btn" type="button" data-ai-difficulty="medium" aria-pressed="false">Средний</button>
+          <button class="difficulty-btn" type="button" data-ai-difficulty="hard" aria-pressed="false">Сложный</button>
+        </div>
+      </div>
+      <div>
+        <label class="muted" for="aiGenCount">Количество слов</label>
+        <input class="input" id="aiGenCount" type="number" min="5" max="100" value="20" autocomplete="off">
+      </div>
+      <div class="custom-gen-status" id="aiGenStatus" aria-live="polite"></div>
+      <div class="action-row action-row-primary" style="margin-top:8px;">
+        <button class="btn ghost" type="button" data-ai-generate-close>Отмена</button>
+        <button class="btn btn-hero" type="button" id="aiGenGenerateBtn">
+          <span class="ai-icon">✨</span>
+          <span>Сгенерировать</span>
+        </button>
+      </div>
     </div>
   </div>
 </div>
