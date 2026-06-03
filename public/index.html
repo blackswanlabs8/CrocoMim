@@ -89,6 +89,11 @@
                 </button>
                 <button class="btn ghost dict-ok-btn" type="button">Ок</button>
               </div>
+              <div class="user-dictionaries-section" style="margin-top:12px; border-top:1px solid var(--border); padding-top:12px;">
+                <div class="menu-block-title" style="font-size:0.9rem; margin-bottom:8px;">Мои словари</div>
+                <div data-user-dictionaries-status class="custom-gen-status" aria-live="polite"></div>
+                <div data-user-dictionaries-list class="user-dictionaries-list" style="display:grid; gap:8px;"></div>
+              </div>
             </div>
           </div>
           <div class="difficulty-block" id="quickDifficultyBlock" data-difficulty-target="quick">
@@ -100,28 +105,11 @@
               <button class="difficulty-btn" type="button" data-level="mix" aria-pressed="false" title="Все уровни сложности выбранного словаря">Микс</button>
             </div>
           </div>
-          <div id="quickCustomBox" class="stack" style="display:none; margin-top:10px">
-            <label class="muted" for="quickCustomTopic">Укажите тему словаря</label>
-            <input class="input" id="quickCustomTopic" type="text" placeholder="Например: космос" autocomplete="off">
-            <div class="custom-gen-row">
-              <button class="btn" id="quickGenerateDict" type="button">Сгенерировать</button>
-              <button class="btn ghost" id="quickSaveDict" type="button">Сохранить словарь</button>
-              <div class="custom-gen-hint">Используется выбранная сложность</div>
-            </div>
-            <div class="custom-gen-status" id="quickCustomStatus" aria-live="polite"></div>
-            <label class="muted" for="quickCustomWords">Вставьте слова через запятую или перенос строки</label>
-            <textarea class="input" id="quickCustomWords" rows="4" placeholder="яблоко, корабль, радуга..."></textarea>
-            <div class="custom-gen-actions">
-              <button class="btn ghost" type="button" id="quickCancelCustom">Отмена</button>
-            </div>
-          </div>
         </div>
 
         <div class="footer menu-footer">
           <button class="btn btn-full" id="startQuick">Начать игру</button>
         </div>
-
-        <div class="menu-block" id="dictionaryEditor" hidden></div>
 
         <div class="menu-block">
           <div class="menu-block-title">Таймер</div>
@@ -262,6 +250,11 @@
             </button>
             <button class="btn ghost dict-ok-btn" type="button">Ок</button>
           </div>
+          <div class="user-dictionaries-section" style="margin-top:12px; border-top:1px solid var(--border); padding-top:12px;">
+            <div class="menu-block-title" style="font-size:0.9rem; margin-bottom:8px;">Мои словари</div>
+            <div data-user-dictionaries-status class="custom-gen-status" aria-live="polite"></div>
+            <div data-user-dictionaries-list class="user-dictionaries-list" style="display:grid; gap:8px;"></div>
+          </div>
         </div>
       </div>
       <div class="difficulty-block" id="teamDifficultyBlock" data-difficulty-target="team">
@@ -273,22 +266,6 @@
           <button class="difficulty-btn" type="button" data-level="mix" aria-pressed="false" title="Все уровни сложности выбранного словаря">Микс</button>
         </div>
       </div>
-      <div id="teamCustomBox" class="stack" style="display:none; margin-top:10px">
-        <label class="muted" for="teamCustomTopic">Укажите тему словаря</label>
-        <input class="input" id="teamCustomTopic" type="text" placeholder="Например: космос" autocomplete="off">
-        <div class="custom-gen-row">
-          <button class="btn" id="teamGenerateDict" type="button">Сгенерировать</button>
-          <button class="btn ghost" id="teamSaveDict" type="button">Сохранить словарь</button>
-          <div class="custom-gen-hint">Используется выбранная сложность</div>
-        </div>
-        <div class="custom-gen-status" id="teamCustomStatus" aria-live="polite"></div>
-        <label class="muted" for="teamCustomWords">Вставьте слова через запятую или перенос строки</label>
-        <textarea class="input" id="teamCustomWords" rows="4" placeholder="яблоко, корабль, радуга..."></textarea>
-        <div class="custom-gen-actions">
-          <button class="btn ghost" type="button" id="teamCancelCustom">Отмена</button>
-        </div>
-      </div>
-    </div>
 
     <div class="section">
       <h2>Таймер</h2>
