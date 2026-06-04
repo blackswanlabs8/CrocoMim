@@ -723,6 +723,69 @@ body{
 }
 .custom-gen-status.is-error{ color:var(--danger); }
 .custom-gen-status.is-success{ color:var(--accent-2); }
+
+/* Стили для модального окна создания словаря */
+.create-dict-modal {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 12px;
+}
+
+.create-dict-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.create-dict-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.create-dict-tab {
+  flex: 1;
+  padding: 10px 16px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text);
+  transition: all 0.2s ease;
+}
+
+.create-dict-tab:hover {
+  background: var(--panel);
+}
+
+.create-dict-tab.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.create-dict-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input-label {
+  font-size: 13px;
+  color: var(--muted-strong, var(--text));
+  font-weight: 500;
+}
+
 .kbd{ background:var(--panel-2);border:1px solid var(--panel-border);border-radius:6px;padding:2px 6px;font-family:ui-monospace, SFMono-Regular, Menlo, monospace; color:var(--text); }
 
 .action-row{ 

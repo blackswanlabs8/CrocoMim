@@ -89,11 +89,59 @@
                 </button>
                 <button class="btn ghost dict-ok-btn" type="button">Ок</button>
               </div>
+              
+              <!-- Модальное окно создания словаря -->
+              <div id="quickCreateDictModal" class="create-dict-modal" hidden>
+                <div class="create-dict-header">
+                  <div class="menu-block-title">Создание нового словаря</div>
+                  <button class="btn ghost" type="button" id="quickCloseCreateModal" title="Закрыть">
+                    <span class="material-symbols-rounded" style="font-size:18px;">close</span>
+                  </button>
+                </div>
+                
+                <div class="create-dict-tabs">
+                  <button class="create-dict-tab active" type="button" data-tab="ai">С ИИ</button>
+                  <button class="create-dict-tab" type="button" data-tab="manual">Вручную</button>
+                </div>
+                
+                <!-- Вкладка с ИИ -->
+                <div class="create-dict-content" data-content="ai">
+                  <div class="input-group">
+                    <label for="quickAiTopic" class="input-label">Тема словаря</label>
+                    <input type="text" id="quickAiTopic" class="input" placeholder="Например: животные, космос, еда...">
+                  </div>
+                  <div class="input-group">
+                    <label for="quickAiCount" class="input-label">Количество слов</label>
+                    <input type="number" id="quickAiCount" class="input" min="5" max="100" value="20">
+                  </div>
+                  <button class="btn btn-full ai-generate-btn" type="button" id="quickGenerateAiBtn">
+                    <span class="ai-icon">✨</span>
+                    <span>Сгенерировать</span>
+                  </button>
+                </div>
+                
+                <!-- Вкладка ручного ввода -->
+                <div class="create-dict-content" data-content="manual" hidden>
+                  <div class="input-group">
+                    <label for="quickManualName" class="input-label">Название словаря</label>
+                    <input type="text" id="quickManualName" class="input" placeholder="Мой словарь">
+                  </div>
+                  <div class="input-group">
+                    <label for="quickManualWords" class="input-label">Слова (через запятую или с новой строки)</label>
+                    <textarea id="quickManualWords" class="input" placeholder="слово1, слово2, слово3..." rows="5" style="resize:vertical;"></textarea>
+                  </div>
+                  <button class="btn btn-full" type="button" id="quickSaveManualBtn">Сохранить словарь</button>
+                </div>
+                
+                <div class="create-dict-status custom-gen-status" aria-live="polite"></div>
+              </div>
+              
               <div class="user-dictionaries-section" style="margin-top:12px; border-top:1px solid var(--border); padding-top:12px;">
                 <div class="menu-block-title" style="font-size:0.9rem; margin-bottom:8px;">Мои словари</div>
-                <div class="custom-gen-row" style="margin-bottom:12px;">
-                  <textarea id="quickCustomWords" class="input" placeholder="Введите слова через запятую или с новой строки" rows="3" style="width:100%; resize:vertical;"></textarea>
-                </div>
+                <button class="btn ghost btn-full" type="button" id="quickCreateDictBtn" style="margin-bottom:12px;">
+                  <span class="ai-icon">+</span>
+                  <span>Создать новый словарь</span>
+                </button>
                 <div data-user-dictionaries-status class="custom-gen-status" aria-live="polite"></div>
                 <div data-user-dictionaries-list class="user-dictionaries-list" style="display:grid; gap:8px;"></div>
               </div>
@@ -253,8 +301,59 @@
             </button>
             <button class="btn ghost dict-ok-btn" type="button">Ок</button>
           </div>
+          
+          <!-- Модальное окно создания словаря -->
+          <div id="teamCreateDictModal" class="create-dict-modal" hidden>
+            <div class="create-dict-header">
+              <div class="menu-block-title">Создание нового словаря</div>
+              <button class="btn ghost" type="button" id="teamCloseCreateModal" title="Закрыть">
+                <span class="material-symbols-rounded" style="font-size:18px;">close</span>
+              </button>
+            </div>
+            
+            <div class="create-dict-tabs">
+              <button class="create-dict-tab active" type="button" data-tab="ai">С ИИ</button>
+              <button class="create-dict-tab" type="button" data-tab="manual">Вручную</button>
+            </div>
+            
+            <!-- Вкладка с ИИ -->
+            <div class="create-dict-content" data-content="ai">
+              <div class="input-group">
+                <label for="teamAiTopic" class="input-label">Тема словаря</label>
+                <input type="text" id="teamAiTopic" class="input" placeholder="Например: животные, космос, еда...">
+              </div>
+              <div class="input-group">
+                <label for="teamAiCount" class="input-label">Количество слов</label>
+                <input type="number" id="teamAiCount" class="input" min="5" max="100" value="20">
+              </div>
+              <button class="btn btn-full ai-generate-btn" type="button" id="teamGenerateAiBtn">
+                <span class="ai-icon">✨</span>
+                <span>Сгенерировать</span>
+              </button>
+            </div>
+            
+            <!-- Вкладка ручного ввода -->
+            <div class="create-dict-content" data-content="manual" hidden>
+              <div class="input-group">
+                <label for="teamManualName" class="input-label">Название словаря</label>
+                <input type="text" id="teamManualName" class="input" placeholder="Мой словарь">
+              </div>
+              <div class="input-group">
+                <label for="teamManualWords" class="input-label">Слова (через запятую или с новой строки)</label>
+                <textarea id="teamManualWords" class="input" placeholder="слово1, слово2, слово3..." rows="5" style="resize:vertical;"></textarea>
+              </div>
+              <button class="btn btn-full" type="button" id="teamSaveManualBtn">Сохранить словарь</button>
+            </div>
+            
+            <div class="create-dict-status custom-gen-status" aria-live="polite"></div>
+          </div>
+          
           <div class="user-dictionaries-section" style="margin-top:12px; border-top:1px solid var(--border); padding-top:12px;">
             <div class="menu-block-title" style="font-size:0.9rem; margin-bottom:8px;">Мои словари</div>
+            <button class="btn ghost btn-full" type="button" id="teamCreateDictBtn" style="margin-bottom:12px;">
+              <span class="ai-icon">+</span>
+              <span>Создать новый словарь</span>
+            </button>
             <div data-user-dictionaries-status class="custom-gen-status" aria-live="polite"></div>
             <div data-user-dictionaries-list class="user-dictionaries-list" style="display:grid; gap:8px;"></div>
           </div>
