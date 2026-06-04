@@ -1407,12 +1407,12 @@ if (profileBtn){
   });
 }
 
-// Dictionaries button - show modal with dictionary management interface
+// Dictionaries button - navigate to dictionaries page
 const btnDictionaries = document.getElementById('btnDictionaries');
 if (btnDictionaries) {
   btnDictionaries.addEventListener('click', (e) => {
     e.preventDefault();
-    showDictionaryModal();
+    window.location.href = './dictionaries';
   });
 }
 
