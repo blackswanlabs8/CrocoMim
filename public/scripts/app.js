@@ -1407,12 +1407,16 @@ if (profileBtn){
   });
 }
 
-// Dictionaries button - navigate to dictionaries page
+// Dictionaries button - open modal window
 const btnDictionaries = document.getElementById('btnDictionaries');
 if (btnDictionaries) {
   btnDictionaries.addEventListener('click', (e) => {
     e.preventDefault();
-    window.location.href = './dictionaries';
+    if (typeof window.showDictionaryModal === 'function') {
+      window.showDictionaryModal();
+    } else {
+      console.error('Функция showDictionaryModal не найдена. Проверьте подключение dictionaries.js.');
+    }
   });
 }
 
