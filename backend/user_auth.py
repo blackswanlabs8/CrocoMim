@@ -171,7 +171,9 @@ def register_user(username: str, email: str, password: str) -> Tuple[bool, str, 
         "password_hash": password_hash,
         "salt": salt,
         "created_at": now,
-        "updated_at": now
+        "updated_at": now,
+        "last_dict_generation": None,
+        "generation_count": 0
     }
     
     users_data["users"][user_id] = new_user
@@ -539,7 +541,61 @@ def update_last_generation(user_id: str) -> Tuple[bool, str]:
     now = datetime.now(timezone.utc).isoformat()
     users_data["users"][user_id]["last_dict_generation"] = now
     users_data["users"][user_id]["updated_at"] = now
+    users_data["users"][user_id]["generation_count"] = users_data["users"][user_id].get("generation_count", 0) + 1
     
     _save_users(users_data)
     
     return True, "Время последней генерации обновлено"
+
+
+def get_user_generation_info(user_id: str) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+    """
+    Получить информацию о доступных генерациях пользователя.
+    
+    Args:
+        user_id: ID пользователя
+    
+    Returns:
+        Кортеж (success, message, generation_info)
+        - success: True если информация получена успешно
+        - message: Сообщение о результате
+        - generation_info: Информация о генерациях (available, total, used, next_available_at)
+    """
+    if not user_id:
+        return False, "ID пользователя не предоставлен", None
+    
+    users_data = _load_users()
+    
+    if user_id not in users_data["users"]:
+        return False, "Пользователь не найден", None
+    
+    user = users_data["users"][user_id]
+    generation_count = user.get("generation_count", 0)
+    last_generation = user.get("last_dict_generation")
+    
+    # По умолчанию даем 10 бесплатных генераций
+    TOTAL_GENERATIONS = 10
+    used = generation_count
+    available = max(0, TOTAL_GENERATIONS - used)
+    
+    next_available_at = None
+    if last_generation and used >= TOTAL_GENERATIONS:
+        # Если все генерации использованы, вычисляем когда освободится следующая
+        try:
+            last_gen_datetime = datetime.fromisoformat(last_generation)
+            # Следующая генерация станет доступна через 24 часа после последней
+            from datetime import timedelta
+            next_available = last_gen_datetime + timedelta(hours=24)
+            next_available_at = next_available.isoformat()
+        except (ValueError, TypeError):
+            pass
+    
+    generation_info = {
+        "available": available,
+        "total": TOTAL_GENERATIONS,
+        "used": used,
+        "next_available_at": next_available_at,
+        "last_generation": last_generation
+    }
+    
+    return True, "Информация получена", generation_info

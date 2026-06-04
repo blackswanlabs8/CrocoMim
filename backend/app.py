@@ -20,6 +20,7 @@ from user_auth import (
     change_password,
     check_generation_limit,
     update_last_generation,
+    get_user_generation_info,
     _get_data_dir,
     _get_sessions_file_path,
     _load_sessions,
@@ -36,6 +37,9 @@ from dictionary_store import (
     initialize_database,
     list_user_dictionaries,
     update_dictionary,
+    list_public_dictionaries,
+    get_public_dictionary,
+    add_dictionary_to_user,
 )
 
 ALLOWED_CATEGORIES = {"typo", "difficulty", "other"}
@@ -668,6 +672,122 @@ def api_dict_status():
         "limit_enabled": True,
         "next_available_at": next_available_at,
         "last_generation": last_generation
+    }), 200
+
+
+@app.route("/marketplace/dictionaries", methods=["GET"])
+def api_list_marketplace_dictionaries():
+    """
+    Получить список публичных словарей для маркетплейса.
+    
+    Параметры:
+        difficulty: Фильтр по сложности (easy/medium/hard/mix)
+        topic: Поиск по теме словаря
+        limit: Количество результатов (по умолчанию 50)
+        offset: Смещение для пагинации
+    
+    Returns:
+        dictionaries: Список публичных словарей
+    """
+    LOGGER.info("Received /marketplace/dictionaries request")
+    
+    difficulty = request.args.get("difficulty")
+    topic = request.args.get("topic")
+    
+    try:
+        limit = int(request.args.get("limit", 50))
+        offset = int(request.args.get("offset", 0))
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "error": "Некорректные параметры пагинации"}), 400
+    
+    try:
+        dictionaries = list_public_dictionaries(
+            difficulty=difficulty,
+            topic=topic,
+            limit=limit,
+            offset=offset,
+        )
+        return jsonify({"ok": True, "dictionaries": dictionaries}), 200
+    except Exception as e:
+        LOGGER.exception("Failed to list marketplace dictionaries")
+        return jsonify({"ok": False, "error": f"Ошибка при загрузке словарей: {e}"}), 500
+
+
+@app.route("/marketplace/dictionaries/<dictionary_id>", methods=["GET"])
+def api_get_marketplace_dictionary(dictionary_id: str):
+    """
+    Получить информацию о публичном словаре без содержимого (для превью).
+    """
+    LOGGER.info("Received /marketplace/dictionaries/%s request", dictionary_id)
+    
+    parsed_id = _dictionary_id_from_route(dictionary_id)
+    if parsed_id is None:
+        return jsonify({"ok": False, "error": "Некорректный id словаря"}), 400
+    
+    dictionary = get_public_dictionary(parsed_id)
+    if dictionary is None:
+        return jsonify({"ok": False, "error": "Словарь не найден"}), 404
+    
+    return jsonify({"ok": True, "dictionary": dictionary}), 200
+
+
+@app.route("/marketplace/dictionaries/<dictionary_id>/add", methods=["POST"])
+def api_add_marketplace_dictionary(dictionary_id: str):
+    """
+    Добавить публичный словарь в библиотеку пользователя.
+    
+    Требует авторизации.
+    """
+    LOGGER.info("Received /marketplace/dictionaries/%s/add request", dictionary_id)
+    
+    success, message, user_data = _get_current_session_user()
+    if not success:
+        return jsonify({"ok": False, "error": message}), 401
+    
+    parsed_id = _dictionary_id_from_route(dictionary_id)
+    if parsed_id is None:
+        return jsonify({"ok": False, "error": "Некорректный id словаря"}), 400
+    
+    try:
+        result = add_dictionary_to_user(user_data["id"], parsed_id)
+        if result is None:
+            return jsonify({"ok": False, "error": "Словарь не найден или недоступен"}), 404
+        return jsonify({"ok": True, "dictionary": result}), 200
+    except DictionaryValidationError as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+    except Exception as e:
+        LOGGER.exception("Failed to add marketplace dictionary for user %s", user_data["id"])
+        return jsonify({"ok": False, "error": f"Ошибка при добавлении словаря: {e}"}), 500
+
+
+@app.route("/user/generation-info", methods=["GET"])
+def api_get_generation_info():
+    """
+    Получить информацию о доступных генерациях пользователя.
+    
+    Требует авторизации.
+    
+    Returns:
+        available: Количество доступных генераций
+        total: Общее количество генераций
+        used: Количество использованных генераций
+        next_available_at: Время следующей доступной генерации (если все использованы)
+    """
+    LOGGER.info("Received /user/generation-info request")
+    
+    success, message, user_data = _get_current_session_user()
+    if not success:
+        return jsonify({"ok": False, "error": message}), 401
+    
+    user_id = user_data["id"]
+    gen_success, gen_message, generation_info = get_user_generation_info(user_id)
+    
+    if not gen_success:
+        return jsonify({"ok": False, "error": gen_message}), 400
+    
+    return jsonify({
+        "ok": True,
+        **generation_info
     }), 200
 
 

@@ -338,6 +338,62 @@ def list_user_dictionaries(user_id: str) -> List[Dict[str, Any]]:
         return [_row_to_summary(row) for row in rows]
 
 
+def list_public_dictionaries(
+    *,
+    difficulty: Optional[str] = None,
+    topic: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> List[Dict[str, Any]]:
+    """Получить список публичных словарей для маркетплейса."""
+    initialize_database()
+    with _connect() as conn:
+        base_query = """
+            SELECT d.*, COUNT(di.id) AS items_count
+            FROM dictionaries d
+            LEFT JOIN dictionary_items di ON di.dictionary_id = d.id
+            WHERE d.visibility = 'public' AND d.status = 'published'
+        """
+        params: List[Any] = []
+        
+        if difficulty and difficulty in ALLOWED_DIFFICULTIES:
+            base_query += " AND d.difficulty = ?"
+            params.append(difficulty)
+        
+        if topic:
+            base_query += " AND d.topic LIKE ?"
+            params.append(f"%{topic}%")
+        
+        base_query += """
+            GROUP BY d.id
+            ORDER BY d.updated_at DESC, d.id DESC
+            LIMIT ? OFFSET ?
+        """
+        params.extend([limit, offset])
+        
+        rows = conn.execute(base_query, params).fetchall()
+        return [_row_to_summary(row) for row in rows]
+
+
+def get_public_dictionary(dictionary_id: int) -> Optional[Dict[str, Any]]:
+    """Получить публичный словарь по ID для просмотра в маркетплейсе."""
+    initialize_database()
+    with _connect() as conn:
+        row = conn.execute(
+            """
+            SELECT d.*, COUNT(di.id) AS items_count
+            FROM dictionaries d
+            LEFT JOIN dictionary_items di ON di.dictionary_id = d.id
+            WHERE d.id = ? AND d.visibility = 'public' AND d.status = 'published'
+            GROUP BY d.id
+            """,
+            (dictionary_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        return _row_to_summary(row)
+
+
 def get_user_dictionary(user_id: str, dictionary_id: int) -> Optional[Dict[str, Any]]:
     if not user_id:
         return None
