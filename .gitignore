@@ -1,1 +1,23 @@
-(public/dictionaries/index.html, public/scripts/dictionaries.js, public/styles/dictionaries.css, public/index.html, public/scripts/app.js are source files)
+```
+# Compiled Python files
+*.pyc
+__pycache__/
+
+# Logs
+*.log
+backend.log
+
+# Environment files
+.env
+.env.local
+*.env.*
+
+# Editors
+.vscode/
+.idea/
+
+# Dependencies
+node_modules/
+venv/
+.venv/
+```

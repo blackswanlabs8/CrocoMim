@@ -8,11 +8,11 @@
 
   // API Endpoints
   const API = {
-    MY_DICTIONARIES: '/api/user/dictionaries',
-    MARKETPLACE: '/api/marketplace/dictionaries',
-    GENERATION_INFO: '/api/user/generation-info',
-    GENERATE: '/api/generate-dictionary',
-    ADD_TO_LIBRARY: (id) => `/api/marketplace/dictionaries/${id}/add`
+    MY_DICTIONARIES: '/user/dictionaries',
+    MARKETPLACE: '/marketplace/dictionaries',
+    GENERATION_INFO: '/user/generation-info',
+    GENERATE: '/generate-dictionary',
+    ADD_TO_LIBRARY: (id) => `/marketplace/dictionaries/${id}/add`
   };
 
   // State
@@ -95,7 +95,7 @@
     const backBtn = document.getElementById('btnBack');
     if (backBtn) {
       backBtn.addEventListener('click', () => {
-        window.location.href = '../index.html';
+        window.location.href = '/';
       });
     }
 

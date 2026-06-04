@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from flask import Flask, jsonify, request, session
+from flask import Flask, jsonify, request, session, send_from_directory
 
 from smtp_send import send_email
 from user_auth import (
@@ -47,7 +47,7 @@ DEFAULT_DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 DEFAULT_FEEDBACK_FILE = "feedback.log"
 DEFAULT_LOG_FILE = "backend.log"
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="../public", static_url_path="")
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-key-change-me")
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
@@ -995,6 +995,17 @@ def api_change_password():
     
     LOGGER.info("Password changed for user: %s", user_data["username"])
     return jsonify({"ok": True, "message": message}), 200
+
+
+# ============================================================================
+# STATIC FILES ROUTES
+# ============================================================================
+
+@app.route("/dictionaries")
+def serve_dictionaries_index():
+    """Serve the dictionaries page as a standalone page."""
+    LOGGER.info("Serving /dictionaries page")
+    return send_from_directory(app.static_folder, "dictionaries/index.html")
 
 
 if __name__ == "__main__":
