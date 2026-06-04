@@ -1,16 +1,41 @@
 ```
-# Logs and temp files
-*.log
+# Compiled Python files
+*.pyc
+__pycache__/
 
-# Environment
+# Logs and temporary files
+*.log
+*.tmp
+
+# Environment files
 .env
 .env.local
-.env.*
+*.env.*
 
-# Editors
+# Editors/IDE
 .vscode/
 .idea/
 
-# Original rules preserved
-*.log
+# Dependencies
+.venv/
+venv/
+node_modules/
+
+# Build artifacts
+dist/
+build/
+target/
+
+# Coverage reports
+coverage/
+htmlcov/
+.coverage
+
+# Python cache
+.mypy_cache/
+.pytest_cache/
+
+# System files
+.DS_Store
+Thumbs.db
 ```

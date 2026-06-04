@@ -249,9 +249,11 @@
     }
   }
 
-  // My Dictionaries
-  async function loadMyDictionaries() {
-    if (!elements.myDictionariesGrid) return;
+  // My Dictionaries - export to window for modal usage
+  window.loadMyDictionaries = async function() {
+    const myDictionariesGrid = document.getElementById('myDictionariesGrid');
+    const myDictionariesEmpty = document.getElementById('myDictionariesEmpty');
+    if (!myDictionariesGrid) return;
     
     elements.myDictionariesGrid.innerHTML = `
       <div class="loading-state">
@@ -744,6 +746,256 @@
   window.deleteWord = function(index) {
     state.generatedWords.splice(index, 1);
     renderWordsTable(state.generatedWords);
+  };
+
+  // Export function for app.js to call
+  window.showDictionaryModal = function() {
+    // Create modal container if it doesn't exist
+    let modal = document.getElementById('dictionaryManagementModal');
+    if (modal) {
+      modal.remove();
+    }
+
+    modal = document.createElement('div');
+    modal.id = 'dictionaryManagementModal';
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal-content" style="max-width:900px; width:95%; max-height:85vh; overflow:auto; background:var(--bg-card); border-radius:16px; padding:24px; position:relative;">
+        <button class="btn ghost" onclick="document.getElementById('dictionaryManagementModal').remove()" style="position:absolute; top:12px; right:12px; padding:8px;" title="Закрыть">
+          <span class="material-symbols-rounded" style="font-size:20px;">close</span>
+        </button>
+        
+        <h2 style="margin-bottom:20px;">📚 Мои Словари</h2>
+        
+        <!-- Tabs -->
+        <div class="tabs" style="display:flex; gap:8px; margin-bottom:20px; border-bottom:2px solid var(--border);">
+          <button class="tab-btn active" data-tab="my-dictionaries" style="padding:10px 16px; background:transparent; border:none; border-bottom:2px solid var(--primary); color:var(--text); cursor:pointer; font-weight:500;">Мои словари</button>
+          <button class="tab-btn" data-tab="marketplace" style="padding:10px 16px; background:transparent; border:none; border-bottom:2px solid transparent; color:var(--text-secondary); cursor:pointer; font-weight:500;">Маркетплейс</button>
+          <button class="tab-btn" data-tab="generator" style="padding:10px 16px; background:transparent; border:none; border-bottom:2px solid transparent; color:var(--text-secondary); cursor:pointer; font-weight:500;">Конструктор</button>
+        </div>
+        
+        <!-- Tab Contents -->
+        <div id="tab-my-dictionaries" class="tab-content">
+          <div style="display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
+            <input type="text" id="myDictSearch" placeholder="Поиск..." style="flex:1; min-width:200px; padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg-input); color:var(--text);">
+            <select id="myDictCategory" style="padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg-input); color:var(--text);">
+              <option value="">Все категории</option>
+              <option value="animals">Животные</option>
+              <option value="geography">География</option>
+              <option value="professions">Профессии</option>
+              <option value="technology">Технологии</option>
+              <option value="entertainment">Развлечения</option>
+            </select>
+            <select id="myDictPrivacy" style="padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg-input); color:var(--text);">
+              <option value="">Все</option>
+              <option value="private">Приватные</option>
+              <option value="public">Публичные</option>
+            </select>
+          </div>
+          <div id="myDictionariesGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:16px;"></div>
+          <div id="myDictionariesEmpty" style="text-align:center; padding:40px; color:var(--text-secondary);" hidden>
+            <p>У вас пока нет словарей</p>
+            <button class="btn" onclick="document.querySelector('[data-tab=\\'generator\\']').click()" style="margin-top:12px;">Создать первый словарь</button>
+          </div>
+        </div>
+        
+        <div id="tab-marketplace" class="tab-content" hidden>
+          <div style="display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
+            <input type="text" id="marketplaceSearch" placeholder="Поиск..." style="flex:1; min-width:200px; padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg-input); color:var(--text);">
+            <select id="marketplaceCategory" style="padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg-input); color:var(--text);">
+              <option value="">Все категории</option>
+              <option value="animals">Животные</option>
+              <option value="geography">География</option>
+              <option value="professions">Профессии</option>
+              <option value="technology">Технологии</option>
+              <option value="entertainment">Развлечения</option>
+            </select>
+            <select id="marketplaceLanguage" style="padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg-input); color:var(--text);">
+              <option value="">Все языки</option>
+              <option value="en-ru">Английский → Русский</option>
+              <option value="ru-en">Русский → Английский</option>
+            </select>
+          </div>
+          <div id="marketplaceGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:16px;"></div>
+          <div id="marketplaceEmpty" style="text-align:center; padding:40px; color:var(--text-secondary);" hidden>
+            <p>Маркетплейс пуст</p>
+          </div>
+        </div>
+        
+        <div id="tab-generator" class="tab-content" hidden>
+          <div style="margin-bottom:16px;">
+            <div style="display:inline-block; padding:8px 16px; background:var(--primary); color:white; border-radius:20px; font-size:0.9rem;">
+              Доступно генераций: <strong id="genCountValue">${state.generationInfo.available}</strong> из ${state.generationInfo.total}
+            </div>
+          </div>
+          
+          <!-- Step 1: Basic Settings -->
+          <div id="genStep1" class="wizard-step">
+            <h3>Шаг 1: Основные настройки</h3>
+            <div style="display:grid; gap:16px; margin:16px 0;">
+              <div>
+                <label style="display:block; margin-bottom:6px; font-weight:500;">Тема словаря</label>
+                <input type="text" id="genTopic" placeholder="Например: животные, космос, еда..." style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--bg-input); color:var(--text);">
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div>
+                  <label style="display:block; margin-bottom:6px; font-weight:500;">Язык слов</label>
+                  <select id="genSourceLang" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--bg-input); color:var(--text);">
+                    <option value="ru">Русский</option>
+                    <option value="en">Английский</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="display:block; margin-bottom:6px; font-weight:500;">Язык описаний</label>
+                  <select id="genTargetLang" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--bg-input); color:var(--text);">
+                    <option value="ru">Русский</option>
+                    <option value="en">Английский</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label style="display:block; margin-bottom:6px; font-weight:500;">Сложность</label>
+                <select id="genDifficulty" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--bg-input); color:var(--text);">
+                  <option value="easy">Лёгкий</option>
+                  <option value="medium" selected>Средний</option>
+                  <option value="hard">Сложный</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block; margin-bottom:6px; font-weight:500;">Количество слов</label>
+                <input type="number" id="genWordCount" min="5" max="50" value="20" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--bg-input); color:var(--text);">
+              </div>
+            </div>
+            <button class="btn" id="genNextBtn1" style="margin-top:16px;">Далее →</button>
+          </div>
+          
+          <!-- Step 2: Review & Edit -->
+          <div id="genStep2" class="wizard-step" hidden>
+            <h3>Шаг 2: Редактирование слов</h3>
+            <div style="margin:16px 0; overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse;">
+                <thead>
+                  <tr style="border-bottom:2px solid var(--border);">
+                    <th style="padding:8px; text-align:left;">Слово</th>
+                    <th style="padding:8px; text-align:left;">Описание</th>
+                    <th style="padding:8px;">Действия</th>
+                  </tr>
+                </thead>
+                <tbody id="wordsTableBody"></tbody>
+              </table>
+            </div>
+            <div style="display:flex; gap:12px; margin-top:16px;">
+              <button class="btn ghost" id="genBackBtn2">← Назад</button>
+              <button class="btn" id="genNextBtn2">Далее →</button>
+            </div>
+          </div>
+          
+          <!-- Step 3: Save Settings -->
+          <div id="genStep3" class="wizard-step" hidden>
+            <h3>Шаг 3: Сохранение словаря</h3>
+            <div style="display:grid; gap:16px; margin:16px 0;">
+              <div>
+                <label style="display:block; margin-bottom:6px; font-weight:500;">Название словаря</label>
+                <input type="text" id="dictName" placeholder="Мой словарь" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--bg-input); color:var(--text);">
+              </div>
+              <div>
+                <label style="display:block; margin-bottom:6px; font-weight:500;">Описание (необязательно)</label>
+                <textarea id="dictDescription" rows="3" placeholder="Краткое описание словаря..." style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--bg-input); color:var(--text); resize:vertical;"></textarea>
+              </div>
+              <div>
+                <label style="display:block; margin-bottom:6px; font-weight:500;">Видимость</label>
+                <div style="display:flex; gap:16px;">
+                  <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                    <input type="radio" name="dictPrivacy" value="private" checked>
+                    <span>Приватный (только я)</span>
+                  </label>
+                  <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                    <input type="radio" name="dictPrivacy" value="public">
+                    <span>Публичный (маркетплейс)</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex; gap:12px; margin-top:16px;">
+              <button class="btn ghost" id="genBackBtn3">← Назад</button>
+              <button class="btn" id="genSaveBtn">Сохранить словарь</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Preview Modal -->
+        <div id="dictionaryPreviewModal" class="modal-overlay" hidden>
+          <div class="modal-content" style="max-width:600px; width:90%; background:var(--bg-card); border-radius:16px; padding:24px; position:relative;">
+            <button class="btn ghost" onclick="document.getElementById('dictionaryPreviewModal').hidden=true" style="position:absolute; top:12px; right:12px; padding:8px;">✕</button>
+            <h3 id="previewTitle" style="margin-bottom:12px;"></h3>
+            <div id="previewMeta" style="color:var(--text-secondary); margin-bottom:16px;"></div>
+            <div id="previewWords" style="max-height:300px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:12px;"></div>
+            <button class="btn btn-full" id="previewAddBtn" style="margin-top:16px;">Добавить в библиотеку</button>
+          </div>
+        </div>
+        
+        <!-- Word Edit Modal -->
+        <div id="wordEditModal" class="modal-overlay" hidden>
+          <div class="modal-content" style="max-width:500px; width:90%; background:var(--bg-card); border-radius:16px; padding:24px; position:relative;">
+            <button class="btn ghost" onclick="document.getElementById('wordEditModal').hidden=true" style="position:absolute; top:12px; right:12px; padding:8px;">✕</button>
+            <h3>Редактировать слово</h3>
+            <div style="display:grid; gap:12px; margin:16px 0;">
+              <div>
+                <label style="display:block; margin-bottom:6px;">Слово</label>
+                <input type="text" id="editWordText" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--bg-input); color:var(--text);">
+              </div>
+              <div>
+                <label style="display:block; margin-bottom:6px;">Описание</label>
+                <textarea id="editWordDesc" rows="4" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--bg-input); color:var(--text); resize:vertical;"></textarea>
+              </div>
+            </div>
+            <button class="btn btn-full" id="saveWordEditBtn">Сохранить</button>
+          </div>
+        </div>
+        
+        <!-- Toast Container -->
+        <div id="toastContainer" style="position:fixed; bottom:20px; right:20px; z-index:10000;"></div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Re-initialize dictionaries functionality
+    if (window.initDictionariesPage) {
+      window.initDictionariesPage();
+    }
+
+    // Setup tab switching
+    const tabs = modal.querySelectorAll('.tab-btn');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => {
+          t.classList.remove('active');
+          t.style.borderBottomColor = 'transparent';
+          t.style.color = 'var(--text-secondary)';
+        });
+        tab.classList.add('active');
+        tab.style.borderBottomColor = 'var(--primary)';
+        tab.style.color = 'var(--text)';
+
+        const tabId = tab.dataset.tab;
+        modal.querySelectorAll('.tab-content').forEach(content => {
+          content.hidden = content.id !== `tab-${tabId}`;
+        });
+
+        // Load data based on tab
+        if (tabId === 'my-dictionaries' && window.loadMyDictionaries) {
+          window.loadMyDictionaries();
+        } else if (tabId === 'marketplace' && window.loadMarketplace) {
+          window.loadMarketplace();
+        }
+      });
+    });
+
+    // Initialize first tab
+    if (window.loadMyDictionaries) {
+      window.loadMyDictionaries();
+    }
   };
 
 })();

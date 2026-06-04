@@ -1407,10 +1407,13 @@ if (profileBtn){
   });
 }
 
-// Dictionaries button - navigate to dictionaries page
+// Dictionaries button - show modal with dictionary management interface
 const btnDictionaries = document.getElementById('btnDictionaries');
 if (btnDictionaries) {
-  // Already a link, no JS needed
+  btnDictionaries.addEventListener('click', (e) => {
+    e.preventDefault();
+    showDictionaryModal();
+  });
 }
 
 $('#goTeam').onclick = () => {
