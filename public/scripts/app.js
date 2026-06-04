@@ -1407,6 +1407,12 @@ if (profileBtn){
   });
 }
 
+// Dictionaries button - navigate to dictionaries page
+const btnDictionaries = document.getElementById('btnDictionaries');
+if (btnDictionaries) {
+  // Already a link, no JS needed
+}
+
 $('#goTeam').onclick = () => {
   ensureTeamsSeed();
   renderTeams();
