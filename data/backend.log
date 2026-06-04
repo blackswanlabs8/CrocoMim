@@ -14,3 +14,17 @@
 2026-06-04 08:10:41,894 [INFO] app - Logging configured. Writing to /workspace/data/backend.log
 2026-06-04 12:23:46,257 [INFO] app - Logging configured. Writing to /workspace/data/backend.log
 2026-06-04 12:23:49,878 [INFO] app - Logging configured. Writing to /workspace/data/backend.log
+2026-06-04 12:33:58,337 [INFO] app - Logging configured. Writing to /workspace/data/backend.log
+2026-06-04 12:34:31,082 [INFO] __main__ - Logging configured. Writing to /workspace/data/backend.log
+2026-06-04 12:34:31,116 [INFO] __main__ - Starting Flask app. Version=0.7.0
+2026-06-04 12:34:31,121 [INFO] werkzeug - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3000
+ * Running on http://21.0.2.193:3000
+2026-06-04 12:34:31,121 [INFO] werkzeug - [33mPress CTRL+C to quit[0m
+2026-06-04 12:34:34,982 [INFO] __main__ - Serving /dictionaries page
+2026-06-04 12:34:35,002 [INFO] werkzeug - 127.0.0.1 - - [04/Jun/2026 12:34:35] "GET /dictionaries HTTP/1.1" 200 -
+2026-06-04 12:34:38,395 [INFO] __main__ - Received /marketplace/dictionaries request
+2026-06-04 12:34:38,398 [INFO] werkzeug - 127.0.0.1 - - [04/Jun/2026 12:34:38] "GET /marketplace/dictionaries HTTP/1.1" 200 -
+2026-06-04 12:34:41,198 [INFO] __main__ - Received /user/generation-info request
+2026-06-04 12:34:41,198 [INFO] werkzeug - 127.0.0.1 - - [04/Jun/2026 12:34:41] "[31m[1mGET /user/generation-info HTTP/1.1[0m" 401 -
