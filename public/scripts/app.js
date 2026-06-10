@@ -2448,6 +2448,7 @@ const tUI = {
   turnName: $('#turnTeamName'),
   tBox: $('#tTimerBox'), tLabel: $('#tTimer'),
   table: $('#scoreTable'),
+  renameBtn: $('#teamRename'),
   next: $('#tNext'), hit: $('#tHitBtn'), skip: $('#tSkipBtn'),
   hideBtn: $('#tHideBtn'), meaning: $('#tMeaningBtn'),
   startRound: $('#tStartRound'), endRound: $('#tEndRound'),
@@ -2681,6 +2682,32 @@ function renderScore(){
       <div class="chip">Пропущено: ${team.miss}</div>
       ${teamPointsEnabled ? `<div class="chip">Очки: ${team.points}</div>` : ''}`;
     tUI.table.appendChild(row);
+  });
+}
+
+if (tUI.renameBtn){
+  tUI.renameBtn.addEventListener('click', () => {
+    if (!Array.isArray(teams) || !teams.length){
+      alert('Добавьте хотя бы одну команду в настройках.');
+      return;
+    }
+    const safeTurn = Number.isInteger(turn) && turn >= 0 ? turn % teams.length : 0;
+    const targetIndex = Math.max(0, Math.min(teams.length - 1, Number.isFinite(safeTurn) ? safeTurn : 0));
+    const team = teams[targetIndex] || teams[0];
+    if (!team) return;
+    const fallbackName = team.name?.trim() ? team.name.trim() : defaultTeamName(targetIndex);
+    const message = `Введите новое название для команды «${fallbackName}»`;
+    const nextName = window.prompt(message, fallbackName);
+    if (nextName === null) return;
+    const normalized = nextName.replace(/\s+/g, ' ').trim();
+    const limited = normalized ? Array.from(normalized).slice(0, 40).join('') : '';
+    const finalName = limited || defaultTeamName(targetIndex);
+    if (finalName === fallbackName) return;
+    team.name = finalName;
+    persistTeams();
+    renderTeams();
+    renderScore();
+    updateTurnHeader();
   });
 }
 
