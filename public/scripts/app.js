@@ -877,9 +877,13 @@ const backBtn = $('#btnBack');
 const helpBtn = $('#btnHelp');
 const modeQuickBtn = $('#modeQuick');
 const themeSlider = $('#themeSlider');
+const themeSliderWrap = $('#themeSliderWrap');
 const themeSunBtn = $('#themeSun');
 const themeMoonBtn = $('#themeMoon');
+const themePinkBtn = $('#themePink');
 const themeContainer = $('#themeContainer');
+const themeMeta = document.querySelector('meta[name="theme-color"]');
+const themeButtons = [themeSunBtn, themeMoonBtn, themePinkBtn].filter(Boolean);
 const headerTitle = $('.title');
 const bodyEl = document.body;
 const helpOverlay = $('#helpOverlay');
@@ -963,6 +967,14 @@ const TEAM_SETTINGS_KEY = 'croc-team-settings';
 const QUICK_SESSION_KEY = 'croc-quick-session';
 const TEAM_SESSION_KEY = 'croc-team-session';
 
+const THEME_MODES = ['light','dark','pink'];
+const THEME_META_COLORS = {
+  light:'#eef2ff',
+  dark:'#0f172a',
+  pink:'#fdf2f8'
+};
+const isValidTheme = mode => THEME_MODES.includes(mode);
+
 let quickSavedProfile = null;
 let teamSavedProfile = null;
 let quickInitialSelectedIds = [];
@@ -979,22 +991,39 @@ let quickPendingSession = null;
 let teamPendingSession = null;
 
 const syncThemeControls = mode => {
-  if (themeSlider) themeSlider.value = mode === 'dark' ? '1' : '0';
-  const isDark = mode === 'dark';
-  if (themeSunBtn){
-    themeSunBtn.classList.toggle('is-active', !isDark);
-    themeSunBtn.setAttribute('aria-pressed', (!isDark).toString());
+  const resolved = isValidTheme(mode) ? mode : 'light';
+  const isDark = resolved === 'dark';
+  const isPink = resolved === 'pink';
+  if (themeSlider){
+    themeSlider.value = isDark ? '1' : '0';
+    themeSlider.disabled = isPink;
+    if (isPink){
+      themeSlider.setAttribute('aria-disabled', 'true');
+    }else{
+      themeSlider.removeAttribute('aria-disabled');
+    }
   }
-  if (themeMoonBtn){
-    themeMoonBtn.classList.toggle('is-active', isDark);
-    themeMoonBtn.setAttribute('aria-pressed', isDark.toString());
+  if (themeSliderWrap){
+    themeSliderWrap.classList.toggle('is-disabled', isPink);
   }
+  themeButtons.forEach(btn => {
+    const target = btn.dataset.theme;
+    const isActive = target === resolved;
+    btn.classList.toggle('is-active', isActive);
+    btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
 };
 const applyTheme = mode => {
-  const themeClass = mode === 'dark' ? 'theme-dark' : 'theme-light';
-  bodyEl.classList.remove('theme-light','theme-dark');
+  const resolved = isValidTheme(mode) ? mode : 'light';
+  const themeClass = `theme-${resolved}`;
+  bodyEl.classList.remove('theme-light','theme-dark','theme-pink');
   bodyEl.classList.add(themeClass);
-  syncThemeControls(mode);
+  const metaColor = THEME_META_COLORS[resolved];
+  if (themeMeta && metaColor){
+    themeMeta.setAttribute('content', metaColor);
+  }
+  syncThemeControls(resolved);
+  return resolved;
 };
 const readThemePref = () => {
   try{ return localStorage.getItem(THEME_KEY); }
@@ -1088,27 +1117,34 @@ function persistTeamSettings(){
   teamSavedProfile = { ...profile };
   writeJson(TEAM_SETTINGS_KEY, profile);
 }
-const initialTheme = readThemePref();
-applyTheme(initialTheme === 'dark' ? 'dark' : 'light');
+const resolveInitialTheme = () => {
+  const stored = readThemePref();
+  if (isValidTheme(stored)) return stored;
+  try{
+    const prefersDark = typeof window !== 'undefined'
+      && typeof window.matchMedia === 'function'
+      && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return prefersDark ? 'dark' : 'light';
+  }catch{
+    return 'light';
+  }
+};
+const initialTheme = resolveInitialTheme();
+applyTheme(initialTheme);
 if (themeSlider){
   themeSlider.addEventListener('input', e => {
+    if (themeSlider.disabled) return;
     const mode = e.target.value === '1' ? 'dark' : 'light';
-    applyTheme(mode);
-    writeThemePref(mode);
+    const resolved = applyTheme(mode);
+    writeThemePref(resolved);
   });
 }
-if (themeSunBtn){
-  themeSunBtn.addEventListener('click', ()=>{
-    applyTheme('light');
-    writeThemePref('light');
+themeButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const resolved = applyTheme(btn.dataset.theme);
+    writeThemePref(resolved);
   });
-}
-if (themeMoonBtn){
-  themeMoonBtn.addEventListener('click', ()=>{
-    applyTheme('dark');
-    writeThemePref('dark');
-  });
-}
+});
 
 const TEAM_ICONS = [
   {id:'sun', emoji:'🌞', bg:'linear-gradient(135deg,#fde047,#f97316)', color:'#1f2937'},
