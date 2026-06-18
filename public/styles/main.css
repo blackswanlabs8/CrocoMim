@@ -778,7 +778,7 @@ body{
   align-items:center;
   gap:6px;
 }
-.team-avatar-btn{
+.team-avatar{
   width:64px;
   height:64px;
   border-radius:20px;
@@ -791,13 +791,8 @@ body{
   color:#0b0b0b;
   box-shadow:0 6px 16px rgba(15,23,42,.35);
   flex:0 0 auto;
-  border:none;
-  cursor:pointer;
-  transition:transform .1s ease;
 }
-.team-avatar-btn span{ filter:drop-shadow(0 2px 4px rgba(0,0,0,.45)); }
-.team-avatar-btn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
-.team-avatar-btn:active{ transform:scale(.96); }
+.team-avatar span{ filter:drop-shadow(0 2px 4px rgba(0,0,0,.45)); }
 .team-body{
   width:100%;
   display:flex;
@@ -811,34 +806,7 @@ body{
   color:var(--text-strong);
   text-align:center;
   word-break:break-word;
-}
-.team-name[data-editable="true"]{
-  cursor:pointer;
-}
-.team-name[data-editable="true"]:focus-visible{
-  outline:2px solid var(--accent);
-  outline-offset:2px;
-  border-radius:12px;
-}
-.team-card.is-editing .team-name{ display:none; }
-.team-edit{
-  display:none;
-  width:100%;
-  flex-direction:column;
-  gap:8px;
-}
-.team-card.is-editing .team-edit{ display:flex; }
-.team-edit-input{ width:100%; font-size:14px; }
-.team-edit-actions{
-  display:flex;
-  gap:8px;
-  justify-content:center;
-  flex-wrap:wrap;
-}
-.btn-small{
-  padding:8px 12px;
-  min-height:auto;
-  font-size:14px;
+  cursor:default;
 }
 .team-delete{
   width:32px;
