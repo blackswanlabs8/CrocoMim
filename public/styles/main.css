@@ -6,9 +6,9 @@
   --warning:#f59e0b;
   --radius:18px;
   /* Отступ для статус-бара мобильного устройства (время, батарея и т.д.) */
-  --safe-top:max(20px, env(safe-area-inset-top, 0px));
+  --safe-top:max(16px, env(safe-area-inset-top, 0px));
   --safe-bottom:max(20px, env(safe-area-inset-bottom, 0px));
-  --mobile-status-bar:44px; /* Фиксированный отступ под системную панель */
+  --mobile-status-bar:16px; /* Небольшой отступ под системную панель */
 }
 body.theme-light{
   --bg:#eef2ff;
