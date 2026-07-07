@@ -44,6 +44,9 @@
     </div>
     <div class="title"><span class="title-icon" aria-hidden="true">🐊</span><span class="title-text">CrocoMim</span></div>
     <div class="header-right">
+      <div class="icon-btn" id="btnProfile" title="Личный кабинет" aria-label="Личный кабинет">
+        <span class="material-symbols-rounded" aria-hidden="true">account_circle</span>
+      </div>
       <div class="icon-btn" id="btnHelp" title="Справка" aria-label="Справка">
         <span class="icon-btn-symbol" aria-hidden="true">?</span>
       </div>
@@ -150,6 +153,96 @@
         <button class="btn ghost btn-full feedback-menu-btn" id="menuFeedbackBtn" type="button" title="Обратная связь" aria-label="Открыть форму обратной связи">
           <span>Обратная связь</span>
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROFILE VIEW -->
+  <div id="viewProfile" class="stack" style="display:none">
+    <div class="section stack">
+      <h2>Личный кабинет</h2>
+      
+      <!-- Not logged in -->
+      <div id="profileNotLoggedIn">
+        <div class="stack" style="gap:16px">
+          <p class="muted">Войдите или зарегистрируйтесь, чтобы сохранять статистику игр.</p>
+          
+          <div class="auth-form">
+            <div class="form-tabs">
+              <button class="form-tab active" data-tab="login" type="button">Вход</button>
+              <button class="form-tab" data-tab="register" type="button">Регистрация</button>
+            </div>
+            
+            <!-- Login form -->
+            <div id="loginForm" class="form-body">
+              <div class="form-group">
+                <label for="loginEmail">Email</label>
+                <input type="email" id="loginEmail" class="input" placeholder="your@email.com" autocomplete="email">
+              </div>
+              <div class="form-group">
+                <label for="loginPassword">Пароль</label>
+                <input type="password" id="loginPassword" class="input" placeholder="••••••••" autocomplete="current-password">
+              </div>
+              <button class="btn btn-full" id="btnLoginSubmit">Войти</button>
+              <div id="loginError" class="error-msg" hidden></div>
+            </div>
+            
+            <!-- Register form -->
+            <div id="registerForm" class="form-body" hidden>
+              <div class="form-group">
+                <label for="registerEmail">Email</label>
+                <input type="email" id="registerEmail" class="input" placeholder="your@email.com" autocomplete="email">
+              </div>
+              <div class="form-group">
+                <label for="registerPassword">Пароль (мин. 6 символов)</label>
+                <input type="password" id="registerPassword" class="input" placeholder="••••••••" autocomplete="new-password">
+              </div>
+              <button class="btn btn-full" id="btnRegisterSubmit">Зарегистрироваться</button>
+              <div id="registerError" class="error-msg" hidden></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Logged in -->
+      <div id="profileLoggedIn" hidden>
+        <div class="stack" style="gap:16px">
+          <div class="profile-header">
+            <div class="profile-email" id="profileEmail"></div>
+            <button class="btn ghost" id="btnLogout">Выйти</button>
+          </div>
+          
+          <div class="profile-stats">
+            <h3>Статистика</h3>
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-value" id="statQuickGames">0</div>
+                <div class="stat-label">Быстрых игр</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="statQuickHit">0</div>
+                <div class="stat-label">Угадано слов</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="statQuickMiss">0</div>
+                <div class="stat-label">Пропущено слов</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="statTeamGames">0</div>
+                <div class="stat-label">Командных игр</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="statTeamRounds">0</div>
+                <div class="stat-label">Раундов</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="profile-meta muted">
+            <div>Дата регистрации: <span id="profileCreatedAt">—</span></div>
+            <div>Последний вход: <span id="profileLastLogin">—</span></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -453,6 +546,7 @@
   </script>
   <script src="./scripts/dicts.js"></script>
   <script src="./scripts/feedback.js"></script>
+  <script src="./scripts/profile.js"></script>
   <script src="./scripts/app.js"></script>
 </body>
 </html>
