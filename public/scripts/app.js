@@ -874,6 +874,7 @@ function setupDictionarySelector(state){
   }
 }
 const backBtn = $('#btnBack');
+const profileBtn = $('#btnProfile');
 const helpBtn = $('#btnHelp');
 const modeQuickBtn = $('#modeQuick');
 const themeSlider = $('#themeSlider');
@@ -1252,6 +1253,12 @@ if (helpBtn){
   helpBtn.addEventListener('click', event => {
     event.preventDefault();
     openHelp();
+  });
+}
+if (profileBtn){
+  profileBtn.addEventListener('click', event => {
+    event.preventDefault();
+    window.location.href = './auth/index.html';
   });
 }
 

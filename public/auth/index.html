@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Личный кабинет - CrocoMim</title>
+    <link rel="stylesheet" href="../styles/main.css?v=2024-07-06">
+    <script>
+        // Инициализируем RUNTIME_CONFIG и RUNTIME_FLAGS перед загрузкой auth.js
+        (function(target){
+            const loc = target.location || { origin: '', href: '' };
+            const href = typeof loc.href === 'string' ? loc.href : '';
+            const inTestPath = href.includes('/test/');
+            const env = inTestPath ? 'test' : 'prod';
+            const runtimeFlags = {
+                env,
+                testMode: env === 'test',
+                debug: env === 'test'
+            };
+            target.RUNTIME_FLAGS = runtimeFlags;
+            
+            const runtime = (target.RUNTIME_CONFIG && typeof target.RUNTIME_CONFIG === 'object')
+                ? target.RUNTIME_CONFIG
+                : {};
+            const origin = loc && typeof loc.origin === 'string' ? loc.origin : '';
+            const apiPath = runtimeFlags.testMode ? '/test/api' : '/api';
+            const apiBase = origin ? `${origin}${apiPath}` : apiPath;
+            runtime.publicApiBaseUrl = apiBase;
+            runtime.backendBaseUrl = apiBase;
+            target.RUNTIME_CONFIG = runtime;
+            target.RUNTIME_CONFIG_READY = Promise.resolve(runtime);
+        })(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : undefined));
+    </script>
+    <style>
+        .auth-container {
+            max-width: 400px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .form-group label {
+            font-weight: 500;
+            color: var(--text-primary, #333);
+        }
+        
+        .form-group input {
+            padding: 12px;
+            border: 1px solid var(--border-color, #ddd);
+            border-radius: 8px;
+            font-size: 16px;
+            background: var(--bg-primary, #fff);
+            color: var(--text-primary, #333);
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-color, #22c55e);
+        }
+        
+        .error-message {
+            color: #ef4444;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+        
+        .success-message {
+            color: #22c55e;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+        
+        .auth-toggle {
+            text-align: center;
+            margin-top: 20px;
+            color: var(--text-secondary, #666);
+        }
+        
+        .auth-toggle a {
+            color: var(--primary-color, #22c55e);
+            text-decoration: none;
+            cursor: pointer;
+        }
+        
+        .auth-toggle a:hover {
+            text-decoration: underline;
+        }
+        
+        .profile-section {
+            max-width: 500px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        
+        .profile-card {
+            background: var(--bg-secondary, #f9f9f9);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .profile-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color, #ddd);
+        }
+        
+        .profile-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-light, #eee);
+        }
+        
+        .info-label {
+            color: var(--text-secondary, #666);
+            font-size: 14px;
+        }
+        
+        .info-value {
+            font-weight: 500;
+            color: var(--text-primary, #333);
+        }
+        
+        .edit-form {
+            display: none;
+            flex-direction: column;
+            gap: 16px;
+            margin-top: 16px;
+            padding: 16px;
+            background: var(--bg-primary, #fff);
+            border-radius: 8px;
+        }
+        
+        .edit-form.active {
+            display: flex;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+        }
+        
+        .user-menu {
+            position: relative;
+        }
+        
+        .user-menu-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid var(--border-color, #ddd);
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--text-primary, #333);
+        }
+        
+        .user-menu-btn:hover {
+            background: var(--bg-secondary, #f5f5f5);
+        }
+        
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 8px;
+            background: var(--bg-primary, #fff);
+            border: 1px solid var(--border-color, #ddd);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            min-width: 180px;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .dropdown-menu.show {
+            display: block;
+        }
+        
+        .dropdown-item {
+            display: block;
+            width: 100%;
+            padding: 12px 16px;
+            text-align: left;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: var(--text-primary, #333);
+        }
+        
+        .dropdown-item:hover {
+            background: var(--bg-secondary, #f5f5f5);
+        }
+        
+        .dropdown-item:first-child {
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .dropdown-item:last-child {
+            border-radius: 0 0 8px 8px;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body class="theme-light">
+    <div class="app" id="app">
+        <!-- HEADER -->
+        <div class="header">
+            <div class="header-left">
+                <a href="../index.html" class="icon-btn" title="Назад в меню" aria-label="Назад">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M15 6L9 12L15 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </a>
+            </div>
+            <div class="title">
+                <span class="title-icon" aria-hidden="true">🐊</span>
+                <span class="title-text">CrocoMim</span>
+            </div>
+            <div class="header-right">
+                <div class="user-menu" id="userMenu">
+                    <button class="user-menu-btn" id="userMenuBtn" type="button">
+                        <span>👤</span>
+                        <span id="menuUserName">Гость</span>
+                    </button>
+                    <div class="dropdown-menu" id="userDropdown">
+                        <button class="dropdown-item" id="menuProfileBtn" type="button">Профиль</button>
+                        <button class="dropdown-item" id="menuLogoutBtn" type="button">Выйти</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AUTH FORMS -->
+        <div id="authForms" class="auth-container">
+            <!-- Login Form -->
+            <div id="loginForm" class="auth-form">
+                <h2 style="text-align: center;">Вход</h2>
+                
+                <div class="form-group">
+                    <label for="loginUsername">Имя пользователя или Email</label>
+                    <input type="text" id="loginUsername" placeholder="Введите имя или email" autocomplete="username">
+                </div>
+                
+                <div class="form-group">
+                    <label for="loginPassword">Пароль</label>
+                    <input type="password" id="loginPassword" placeholder="Введите пароль" autocomplete="current-password">
+                </div>
+                
+                <div id="loginError" class="error-message hidden"></div>
+                
+                <button class="btn btn-full" id="loginBtn" type="button">Войти</button>
+                
+                <div class="auth-toggle">
+                    Нет аккаунта? <a id="showRegister">Зарегистрироваться</a>
+                </div>
+            </div>
+            
+            <!-- Register Form -->
+            <div id="registerForm" class="auth-form hidden">
+                <h2 style="text-align: center;">Регистрация</h2>
+                
+                <div class="form-group">
+                    <label for="regUsername">Имя пользователя</label>
+                    <input type="text" id="regUsername" placeholder="Придумайте имя" autocomplete="username">
+                    <div id="regUsernameError" class="error-message hidden"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="regEmail">Email</label>
+                    <input type="email" id="regEmail" placeholder="example@mail.com" autocomplete="email">
+                    <div id="regEmailError" class="error-message hidden"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="regPassword">Пароль</label>
+                    <input type="password" id="regPassword" placeholder="Минимум 6 символов" autocomplete="new-password">
+                    <div id="regPasswordError" class="error-message hidden"></div>
+                </div>
+                
+                <div id="registerError" class="error-message hidden"></div>
+                <div id="registerSuccess" class="success-message hidden"></div>
+                
+                <button class="btn btn-full" id="registerBtn" type="button">Зарегистрироваться</button>
+                
+                <div class="auth-toggle">
+                    Уже есть аккаунт? <a id="showLogin">Войти</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- PROFILE VIEW -->
+        <div id="profileView" class="profile-section hidden">
+            <div class="profile-card">
+                <div class="profile-header">
+                    <h2>Личный кабинет</h2>
+                </div>
+                
+                <div class="profile-info">
+                    <div class="info-row">
+                        <span class="info-label">Имя пользователя</span>
+                        <span class="info-value" id="profileUsername">—</span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">Email</span>
+                        <span class="info-value" id="profileEmail">—</span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">Отображаемое имя</span>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span class="info-value" id="profileDisplayName">—</span>
+                            <button class="btn ghost" id="editDisplayNameBtn" type="button" title="Редактировать">✏️</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Edit Display Name Form -->
+                <div class="edit-form" id="editDisplayNameForm">
+                    <div class="form-group">
+                        <label for="newDisplayName">Новое отображаемое имя</label>
+                        <input type="text" id="newDisplayName" placeholder="Введите новое имя" maxlength="50">
+                    </div>
+                    <div id="displayNameError" class="error-message hidden"></div>
+                    <div id="displayNameSuccess" class="success-message hidden"></div>
+                    <div class="btn-group">
+                        <button class="btn" id="saveDisplayNameBtn" type="button">Сохранить</button>
+                        <button class="btn ghost" id="cancelEditBtn" type="button">Отмена</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="./auth.js"></script>
+    <script>
+        // Состояние приложения
+        let currentUser = null;
+        
+        // DOM элементы
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        const authForms = document.getElementById('authForms');
+        const profileView = document.getElementById('profileView');
+        const userMenu = document.getElementById('userMenu');
+        const userDropdown = document.getElementById('userDropdown');
+        const menuUserName = document.getElementById('menuUserName');
+        
+        // Переключение форм
+        document.getElementById('showRegister').addEventListener('click', () => {
+            loginForm.classList.add('hidden');
+            registerForm.classList.remove('hidden');
+            clearErrors();
+        });
+        
+        document.getElementById('showLogin').addEventListener('click', () => {
+            registerForm.classList.add('hidden');
+            loginForm.classList.remove('hidden');
+            clearErrors();
+        });
+        
+        // Очистка ошибок
+        function clearErrors() {
+            document.querySelectorAll('.error-message').forEach(el => {
+                el.textContent = '';
+                el.classList.add('hidden');
+            });
+            document.querySelectorAll('.success-message').forEach(el => {
+                el.textContent = '';
+                el.classList.add('hidden');
+            });
+        }
+        
+        // Вход
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            clearErrors();
+            
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!username || !password) {
+                showError('loginError', 'Заполните все поля');
+                return;
+            }
+            
+            const result = await AuthAPI.login(username, password);
+            
+            if (result.success) {
+                currentUser = result.user;
+                showProfile();
+            } else {
+                showError('loginError', result.message);
+            }
+        });
+        
+        // Регистрация
+        document.getElementById('registerBtn').addEventListener('click', async () => {
+            clearErrors();
+            
+            const username = document.getElementById('regUsername').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const password = document.getElementById('regPassword').value;
+            
+            let hasError = false;
+            
+            if (!username || username.length < 3) {
+                showError('regUsernameError', 'Имя должно содержать минимум 3 символа');
+                hasError = true;
+            }
+            
+            if (!email || !email.includes('@')) {
+                showError('regEmailError', 'Введите корректный email');
+                hasError = true;
+            }
+            
+            if (!password || password.length < 6) {
+                showError('regPasswordError', 'Пароль должен содержать минимум 6 символов');
+                hasError = true;
+            }
+            
+            if (hasError) return;
+            
+            const result = await AuthAPI.register(username, email, password);
+            
+            if (result.success) {
+                showSuccess('registerSuccess', 'Регистрация успешна! Теперь вы можете войти.');
+                setTimeout(() => {
+                    document.getElementById('showLogin').click();
+                }, 1500);
+            } else {
+                showError('registerError', result.message);
+            }
+        });
+        
+        // Выход
+        document.getElementById('menuLogoutBtn').addEventListener('click', async () => {
+            await AuthAPI.logout();
+            currentUser = null;
+            showAuthForms();
+            userDropdown.classList.remove('show');
+        });
+        
+        // Показать профиль
+        document.getElementById('menuProfileBtn').addEventListener('click', () => {
+            userDropdown.classList.remove('show');
+        });
+        
+        // Меню пользователя
+        document.getElementById('userMenuBtn').addEventListener('click', () => {
+            userDropdown.classList.toggle('show');
+        });
+        
+        // Закрытие меню при клике вне
+        document.addEventListener('click', (e) => {
+            if (!userMenu.contains(e.target)) {
+                userDropdown.classList.remove('show');
+            }
+        });
+        
+        // Редактирование отображаемого имени
+        document.getElementById('editDisplayNameBtn').addEventListener('click', () => {
+            document.getElementById('editDisplayNameForm').classList.add('active');
+            document.getElementById('newDisplayName').value = currentUser.display_name;
+        });
+        
+        document.getElementById('cancelEditBtn').addEventListener('click', () => {
+            document.getElementById('editDisplayNameForm').classList.remove('active');
+            clearErrors();
+        });
+        
+        document.getElementById('saveDisplayNameBtn').addEventListener('click', async () => {
+            clearErrors();
+            
+            const newDisplayName = document.getElementById('newDisplayName').value.trim();
+            
+            if (!newDisplayName) {
+                showError('displayNameError', 'Введите имя');
+                return;
+            }
+            
+            const result = await AuthAPI.updateProfile(newDisplayName);
+            
+            if (result.success) {
+                currentUser = result.user;
+                updateProfileUI();
+                showSuccess('displayNameSuccess', 'Имя обновлено');
+                document.getElementById('editDisplayNameForm').classList.remove('active');
+            } else {
+                showError('displayNameError', result.message);
+            }
+        });
+        
+        // Утилиты
+        function showError(elementId, message) {
+            const el = document.getElementById(elementId);
+            el.textContent = message;
+            el.classList.remove('hidden');
+        }
+        
+        function showSuccess(elementId, message) {
+            const el = document.getElementById(elementId);
+            el.textContent = message;
+            el.classList.remove('hidden');
+        }
+        
+        function showAuthForms() {
+            authForms.classList.remove('hidden');
+            profileView.classList.add('hidden');
+            userMenu.classList.add('hidden');
+            loginForm.classList.remove('hidden');
+            registerForm.classList.add('hidden');
+            clearErrors();
+        }
+        
+        function showProfile() {
+            authForms.classList.add('hidden');
+            profileView.classList.remove('hidden');
+            userMenu.classList.remove('hidden');
+            updateProfileUI();
+        }
+        
+        function updateProfileUI() {
+            if (currentUser) {
+                menuUserName.textContent = currentUser.display_name || currentUser.username;
+                document.getElementById('profileUsername').textContent = currentUser.username;
+                document.getElementById('profileEmail').textContent = currentUser.email;
+                document.getElementById('profileDisplayName').textContent = currentUser.display_name;
+            }
+        }
+        
+        // Инициализация
+        async function init() {
+            if (AuthAPI.isAuthenticated()) {
+                const result = await AuthAPI.getCurrentUser();
+                if (result.success) {
+                    currentUser = result.user;
+                    showProfile();
+                } else {
+                    showAuthForms();
+                }
+            } else {
+                showAuthForms();
+            }
+        }
+        
+        init();
+    </script>
+</body>
+</html>
